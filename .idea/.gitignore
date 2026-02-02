@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.sqlite
+*.db
+dist/
+build/
+data/app.db
+data/imports/*
+data/exports/*
+data/logs/*
+!.gitkeep

@@ -1,0 +1,29 @@
+body { margin:0; font-family: system-ui, Segoe UI, Arial; }
+.topbar { display:flex; gap:16px; align-items:center; padding:10px 14px; border-bottom:1px solid #ddd; }
+.brand { font-weight:700; }
+.nav button { margin-right:8px; }
+main { padding:14px; }
+.card { border:1px solid #ddd; border-radius:10px; padding:12px; margin-bottom:12px; }
+.row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+input, select, button { padding:8px; }
+table { border-collapse: collapse; width:100%; }
+th, td { border-bottom:1px solid #eee; padding:8px; text-align:left; }
+.small { color:#666; font-size:12px; }
+
+.dropcell { vertical-align: top; }
+.cellbox { display:flex; flex-direction:column; gap:6px; min-height:60px; }
+.chip {
+  display:inline-block;
+  padding:6px 8px;
+  border:1px solid #ddd;
+  border-radius:10px;
+  cursor:grab;
+  background:#fff;
+}
+.placeholder {
+  padding:6px 8px;
+  border:1px dashed #ddd;
+  border-radius:10px;
+  color:#888;
+  text-align:center;
+}

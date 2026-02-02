@@ -1,0 +1,111 @@
+2026-02-02 15:51:55,387 | DEBUG | pywebview | Using WinForms / Chromium
+2026-02-02 15:51:55,453 | DEBUG | pywebview | Comon path for local URLs: F:\Desktop\Top Files\Intellij Prog\Turni-CN\ui
+2026-02-02 15:51:55,453 | DEBUG | pywebview | HTTP server root path: F:\Desktop\Top Files\Intellij Prog\Turni-CN\ui
+2026-02-02 15:51:57,679 | DEBUG | pywebview | before_load event fired. injecting pywebview object
+2026-02-02 15:51:57,680 | DEBUG | pywebview | Loading JS files from F:\Desktop\Top Files\Intellij Prog\Turni-CN\.venv\Lib\site-packages\webview\js
+2026-02-02 15:51:57,783 | DEBUG | pywebview | _pywebviewready event fired
+2026-02-02 15:51:57,784 | ERROR | pywebview | Error while processing paths.data_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,784 | ERROR | pywebview | Error while processing paths.data_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,785 | ERROR | pywebview | Error while processing paths.data_dir.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,785 | ERROR | pywebview | Error while processing paths.data_dir.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,786 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,792 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,794 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,794 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,795 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,796 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,796 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent.parent.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,797 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent.parent.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,802 | ERROR | pywebview | Error while processing paths.db_path._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,802 | ERROR | pywebview | Error while processing paths.db_path._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,803 | ERROR | pywebview | Error while processing paths.db_path.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,804 | ERROR | pywebview | Error while processing paths.db_path.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,807 | ERROR | pywebview | Error while processing paths.exports_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,807 | ERROR | pywebview | Error while processing paths.exports_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,809 | ERROR | pywebview | Error while processing paths.imports_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,809 | ERROR | pywebview | Error while processing paths.imports_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,810 | ERROR | pywebview | Error while processing paths.logs_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,810 | ERROR | pywebview | Error while processing paths.logs_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,812 | ERROR | pywebview | Error while processing paths.root._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,812 | ERROR | pywebview | Error while processing paths.root._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,813 | ERROR | pywebview | Error while processing paths.ui_dir._drv: 'pathlib._local.WindowsPath' object has no attribute '_drv'
+2026-02-02 15:51:57,813 | ERROR | pywebview | Error while processing paths.ui_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,813 | ERROR | pywebview | Error while processing paths.ui_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,815 | ERROR | pywebview | Error while processing paths.ui_index._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:51:57,815 | ERROR | pywebview | Error while processing paths.ui_index._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:51:57,847 | DEBUG | pywebview | loaded event fired
+2026-02-02 15:52:04,991 | ERROR | pywebview | Traceback (most recent call last):
+  File "F:\Desktop\Top Files\Intellij Prog\Turni-CN\.venv\Lib\site-packages\webview\util.py", line 254, in _call
+    result = func(*func_params)
+  File "F:\Desktop\Top Files\Intellij Prog\Turni-CN\app\api.py", line 63, in settings_get
+    return get_settings(conn)
+  File "F:\Desktop\Top Files\Intellij Prog\Turni-CN\app\db\repo_settings.py", line 12, in get_settings
+    rows = conn.execute("SELECT key,value FROM settings").fetchall()
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: settings
+
+2026-02-02 15:54:18,616 | DEBUG | pywebview | Using WinForms / Chromium
+2026-02-02 15:54:18,662 | DEBUG | pywebview | Comon path for local URLs: F:\Desktop\Top Files\Intellij Prog\Turni-CN\ui
+2026-02-02 15:54:18,662 | DEBUG | pywebview | HTTP server root path: F:\Desktop\Top Files\Intellij Prog\Turni-CN\ui
+2026-02-02 15:54:19,485 | DEBUG | pywebview | before_load event fired. injecting pywebview object
+2026-02-02 15:54:19,486 | DEBUG | pywebview | Loading JS files from F:\Desktop\Top Files\Intellij Prog\Turni-CN\.venv\Lib\site-packages\webview\js
+2026-02-02 15:54:19,506 | DEBUG | pywebview | _pywebviewready event fired
+2026-02-02 15:54:19,506 | ERROR | pywebview | Error while processing paths.data_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,506 | ERROR | pywebview | Error while processing paths.data_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,508 | ERROR | pywebview | Error while processing paths.data_dir.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,508 | ERROR | pywebview | Error while processing paths.data_dir.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,509 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,509 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,510 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,510 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,511 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,511 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,512 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent.parent.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,512 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent.parent.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,518 | ERROR | pywebview | Error while processing paths.db_path._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,518 | ERROR | pywebview | Error while processing paths.db_path._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,519 | ERROR | pywebview | Error while processing paths.db_path.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,519 | ERROR | pywebview | Error while processing paths.db_path.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,521 | ERROR | pywebview | Error while processing paths.exports_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,521 | ERROR | pywebview | Error while processing paths.exports_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,522 | ERROR | pywebview | Error while processing paths.imports_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,522 | ERROR | pywebview | Error while processing paths.imports_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,524 | ERROR | pywebview | Error while processing paths.logs_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,524 | ERROR | pywebview | Error while processing paths.logs_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,525 | ERROR | pywebview | Error while processing paths.root._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,525 | ERROR | pywebview | Error while processing paths.root._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,526 | ERROR | pywebview | Error while processing paths.ui_dir._drv: 'pathlib._local.WindowsPath' object has no attribute '_drv'
+2026-02-02 15:54:19,526 | ERROR | pywebview | Error while processing paths.ui_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,526 | ERROR | pywebview | Error while processing paths.ui_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,528 | ERROR | pywebview | Error while processing paths.ui_index._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:54:19,528 | ERROR | pywebview | Error while processing paths.ui_index._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:54:19,555 | DEBUG | pywebview | loaded event fired
+2026-02-02 15:55:17,780 | ERROR | pywebview | Error while processing paths.data_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,781 | ERROR | pywebview | Error while processing paths.data_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,782 | ERROR | pywebview | Error while processing paths.data_dir.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,782 | ERROR | pywebview | Error while processing paths.data_dir.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,783 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,783 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,784 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,784 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,785 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,785 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,786 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent.parent.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,786 | ERROR | pywebview | Error while processing paths.data_dir.parent.parent.parent.parent.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,791 | ERROR | pywebview | Error while processing paths.db_path._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,791 | ERROR | pywebview | Error while processing paths.db_path._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,792 | ERROR | pywebview | Error while processing paths.db_path.parent._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,792 | ERROR | pywebview | Error while processing paths.db_path.parent._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,794 | ERROR | pywebview | Error while processing paths.exports_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,794 | ERROR | pywebview | Error while processing paths.exports_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,795 | ERROR | pywebview | Error while processing paths.imports_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,796 | ERROR | pywebview | Error while processing paths.imports_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,797 | ERROR | pywebview | Error while processing paths.logs_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,797 | ERROR | pywebview | Error while processing paths.logs_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,798 | ERROR | pywebview | Error while processing paths.root._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,798 | ERROR | pywebview | Error while processing paths.root._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,799 | ERROR | pywebview | Error while processing paths.ui_dir._drv: 'pathlib._local.WindowsPath' object has no attribute '_drv'
+2026-02-02 15:55:17,800 | ERROR | pywebview | Error while processing paths.ui_dir._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,800 | ERROR | pywebview | Error while processing paths.ui_dir._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
+2026-02-02 15:55:17,802 | ERROR | pywebview | Error while processing paths.ui_index._hash: 'pathlib._local.WindowsPath' object has no attribute '_hash'
+2026-02-02 15:55:17,802 | ERROR | pywebview | Error while processing paths.ui_index._resolving: 'pathlib._local.WindowsPath' object has no attribute '_resolving'
