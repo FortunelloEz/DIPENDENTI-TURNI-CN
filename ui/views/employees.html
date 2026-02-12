@@ -35,7 +35,7 @@
         <div class="modal-body">
             <div class="form-grid">
                 <div class="form-field">
-                    <label>Nome (come vuoi vederlo)</label>
+                    <label>Nome</label>
                     <input id="empName" type="text" placeholder="Es. RANIERO" />
                 </div>
 
@@ -45,6 +45,20 @@
                         <input id="empPermanent" type="checkbox" />
                         <span class="slider"></span>
                     </label>
+                </div>
+
+                <div class="form-field">
+                    <label>Slot-orario</label>
+                    <div class="check-row">
+                        <label class="check">
+                            <input id="empSlotMorning" type="checkbox" checked />
+                            <span>Mattina</span>
+                        </label>
+                        <label class="check">
+                            <input id="empSlotEvening" type="checkbox" checked />
+                            <span>Pomeriggio</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="form-field">
@@ -61,10 +75,13 @@
                 </div>
             </div>
 
-            <div class="subhead">Skill per mansione (1–5)</div>
-            <div class="skills-grid" id="empSkillsGrid"></div>
+            <details class="emp-adv" style="margin-top:12px">
+                <summary class="emp-adv-summary">Avanzate (skill)</summary>
+                <div class="subhead" style="margin-top:10px">Skill per mansione (1–5)</div>
+                <div class="skills-grid" id="empSkillsGrid"></div>
+            </details>
 
-            <div class="row gap end">
+            <div class="row gap end" style="margin-top:14px">
                 <button class="btn" id="empModalCancel">Annulla</button>
                 <button class="btn primary" id="empModalSave">Salva</button>
             </div>

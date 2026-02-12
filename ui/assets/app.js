@@ -960,7 +960,6 @@ async function initHome(){
     renderCalendar();
   });
 
-  document.getElementById("btnEditSquads")?.addEventListener("click", () => loadView("squads"));
   document.getElementById("btnPermManage")?.addEventListener("click", () => openPermanentModal());
 
   // mouseup globale: se stavi selezionando -> picker su quelle mezz'ore
@@ -1127,5 +1126,23 @@ async function initEmployees() {
 }
 
 /* ---------- BOOT ---------- */
-bindNavigation();
-loadView("home");
+let _booted = false;
+
+function boot() {
+  if (_booted) return;
+  _booted = true;
+
+  bindNavigation();
+  loadView("home");
+}
+
+// Se siamo dentro PyWebView, aspetta che l'API JS sia pronta
+window.addEventListener("pywebviewready", boot);
+
+// Fallback: se non siamo in PyWebView (es. apri index.html in browser)
+window.addEventListener("DOMContentLoaded", () => {
+  // Se pywebviewready non arriverà mai, partiamo comunque
+  setTimeout(() => {
+    if (!_booted) boot();
+  }, 0);
+});

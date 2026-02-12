@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional
 # Singleton DB (semplice e robusto per MVP)
 _DB: Optional["Db"] = None
 
-
 def week_id_from_ui_weekkey(week_key: str) -> str:
     """
     week_id blindato = martedì.
@@ -49,6 +48,29 @@ def apply_retention(months: int = 6) -> int:
 
 
 class Db:
+    def squads_template_save(self, name: str, payload: dict) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO squads_templates(name, payload_json) VALUES (?, ?)",
+                (name, json.dumps(payload, ensure_ascii=False)),
+            )
+
+    def squads_template_list(self) -> list[str]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT name FROM squads_templates ORDER BY name COLLATE NOCASE"
+            ).fetchall()
+            return [r["name"] for r in rows]
+
+    def squads_template_get(self, name: str) -> dict:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT payload_json FROM squads_templates WHERE name=?",
+                (name,),
+            ).fetchone()
+            if not row:
+                raise ValueError(f"Template '{name}' non trovato")
+            return json.loads(row["payload_json"])
     def __init__(self, db_path: str):
         self.db_path = db_path
         Path(os.path.dirname(db_path)).mkdir(parents=True, exist_ok=True)
@@ -59,6 +81,10 @@ class Db:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON;")
         return conn
+    def _ensure_column(self, conn: sqlite3.Connection, table: str, col: str, ddl: str) -> None:
+        cols = [r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+        if col not in cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
 
     def _init_schema(self) -> None:
         with self._connect() as conn:
@@ -69,9 +95,11 @@ class Db:
                     name            TEXT NOT NULL UNIQUE,
                     is_permanent    INTEGER NOT NULL DEFAULT 0,
                     preferred_role  TEXT NULL,
+                    slot_morning    INTEGER NOT NULL DEFAULT 1,
+                    slot_evening    INTEGER NOT NULL DEFAULT 1,
                     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
                 );
-
+    
                 CREATE TABLE IF NOT EXISTS employee_skills (
                     employee_id INTEGER NOT NULL,
                     role        TEXT NOT NULL,
@@ -79,44 +107,50 @@ class Db:
                     PRIMARY KEY (employee_id, role),
                     FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
                 );
-
-                -- Override manuali (oggi effective = overrides)
+    
                 CREATE TABLE IF NOT EXISTS schedule_override (
                     week_id      TEXT NOT NULL,
                     day_index    INTEGER NOT NULL,
                     role         TEXT NOT NULL,
-                    time_label   TEXT NOT NULL,  -- es "10:00"
-                    employee_ids TEXT NOT NULL,  -- JSON list di id dipendenti
+                    time_label   TEXT NOT NULL,
+                    employee_ids TEXT NOT NULL,
                     updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
                     PRIMARY KEY (week_id, day_index, role, time_label)
                 );
-
-                -- Squadre / fabbisogni: giorno + fascia (mattina/pomeriggio) + ruolo => required
+    
                 CREATE TABLE IF NOT EXISTS squads_required (
                     week_id     TEXT NOT NULL,
                     day_index   INTEGER NOT NULL,
-                    shift       TEXT NOT NULL, -- 'morning' | 'evening'
+                    shift       TEXT NOT NULL,
                     role        TEXT NOT NULL,
                     required    INTEGER NOT NULL,
                     PRIMARY KEY (week_id, day_index, shift, role)
                 );
-
-                -- Parametri settimana per indeterminati (riposo + ore target)
+    
                 CREATE TABLE IF NOT EXISTS permanent_week (
                     week_id       TEXT NOT NULL,
                     employee_id   INTEGER NOT NULL,
-                    day_off       INTEGER NULL,  -- 0..6 (Lun..Dom) oppure NULL
+                    day_off       INTEGER NULL,
                     target_hours  INTEGER NOT NULL DEFAULT 40,
                     PRIMARY KEY (week_id, employee_id),
                     FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
                 );
-
+    
+                CREATE TABLE IF NOT EXISTS squads_templates (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name         TEXT NOT NULL UNIQUE,
+                    payload_json TEXT NOT NULL,
+                    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+    
                 CREATE INDEX IF NOT EXISTS idx_override_week ON schedule_override(week_id);
                 CREATE INDEX IF NOT EXISTS idx_squads_week ON squads_required(week_id);
                 CREATE INDEX IF NOT EXISTS idx_perm_week ON permanent_week(week_id);
                 """
             )
 
+            self._ensure_column(conn, "employees", "slot_morning", "slot_morning INTEGER NOT NULL DEFAULT 1")
+            self._ensure_column(conn, "employees", "slot_evening", "slot_evening INTEGER NOT NULL DEFAULT 1")
     # ---------- Retention ----------
     def purge_old_weeks(self, months: int = 6) -> int:
         cutoff = date.today() - timedelta(days=int(30.5 * months))
@@ -146,6 +180,8 @@ class Db:
                         name=r["name"],
                         is_permanent=bool(r["is_permanent"]),
                         preferred_role=r["preferred_role"],
+                        slot_morning=int(r["slot_morning"]) if r["slot_morning"] is not None else 1,
+                        slot_evening=int(r["slot_evening"]) if r["slot_evening"] is not None else 1,
                         skills={s["role"]: int(s["rank"]) for s in skills},
                     )
                 )
@@ -159,11 +195,12 @@ class Db:
         is_perm = 1 if payload.get("is_permanent") else 0
         pref = payload.get("preferred_role") or None
         skills: Dict[str, int] = payload.get("skills") or {}
-
+        slot_morning = 1 if payload.get("slot_morning", 1) else 0
+        slot_evening = 1 if payload.get("slot_evening", 1) else 0
         with self._connect() as conn:
             cur = conn.execute(
-                "INSERT INTO employees(name,is_permanent,preferred_role) VALUES (?,?,?)",
-                (name, is_perm, pref),
+                "INSERT INTO employees(name,is_permanent,preferred_role,slot_morning,slot_evening) VALUES (?,?,?,?,?)",
+                (name, is_perm, pref, slot_morning, slot_evening),
             )
             emp_id = int(cur.lastrowid)
             for role, rank in skills.items():
@@ -182,11 +219,12 @@ class Db:
         is_perm = 1 if payload.get("is_permanent") else 0
         pref = payload.get("preferred_role") or None
         skills: Dict[str, int] = payload.get("skills") or {}
-
+        slot_morning = 1 if payload.get("slot_morning", 1) else 0
+        slot_evening = 1 if payload.get("slot_evening", 1) else 0
         with self._connect() as conn:
             conn.execute(
-                "UPDATE employees SET name=?, is_permanent=?, preferred_role=? WHERE id=?",
-                (name, is_perm, pref, emp_id),
+                "UPDATE employees SET name=?, is_permanent=?, preferred_role=?, slot_morning=?, slot_evening=? WHERE id=?",
+                (name, is_perm, pref, slot_morning, slot_evening, emp_id),
             )
             conn.execute("DELETE FROM employee_skills WHERE employee_id=?", (emp_id,))
             for role, rank in skills.items():
@@ -318,3 +356,7 @@ class Db:
                             "INSERT INTO squads_required(week_id, day_index, shift, role, required) VALUES (?,?,?,?,?)",
                             (week_id, d, shift, str(role), int(req or 0)),
                         )
+    def squads_template_delete(self, name: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM squads_templates WHERE name=?", (name,))
+            conn.execute("DELETE FROM squads_templates_required WHERE template_name=?", (name,))

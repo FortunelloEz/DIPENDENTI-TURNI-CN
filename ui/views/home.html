@@ -8,14 +8,13 @@
         <div class="page-actions">
             <button class="btn" id="btnTodayTop">Settimana corrente</button>
             <button class="btn" id="btnPermManage">Gestisci indeterminati</button>
-            <button class="btn" id="btnEditSquads">Modifica squadre settimana</button>
             <button class="btn btn-ghost" id="btnClear">Svuota Settimana</button>
         </div>
     </header>
 
-    <div class="home-layout">
+    <div class="home-layout home-layout-full">
         <!-- CALENDARIO -->
-        <section class="calendar-card">
+        <section class="calendar-card full-width">
             <div class="calendar-head">
                 <div class="calendar-left">
                     <div class="calendar-meta" id="weekLabel">Settimana:</div>
@@ -37,22 +36,5 @@
                 <div class="calendar-grid" id="calendarGrid"></div>
             </div>
         </section>
-
-        <!-- MENU DX (solo homepage) -->
-        <aside class="rightbar">
-            <button class="accordion right-acc open" data-acc="employees">
-                <span class="acc-ic">👥</span>
-                <span class="acc-txt">Dipendenti</span>
-                <span class="chev">▾</span>
-            </button>
-
-            <div class="panel open" id="acc-employees">
-                <div class="emp-list" id="empList"></div>
-
-                <div class="hint">
-                    Tip: clicca una cella del calendario per assegnare un dipendente.
-                </div>
-            </div>
-        </aside>
     </div>
 </div>

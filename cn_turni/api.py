@@ -78,3 +78,17 @@ class Api:
     def permanent_week_set(self, week_key: str, items: List[Dict[str, Any]]) -> None:
         week_id = week_id_from_ui_weekkey(week_key)
         self.db.permanent_week_set(week_id, items or [])
+
+    def squads_template_save(self, name: str, payload: dict):
+        self.db.squads_template_save(name, payload)
+        return {"ok": True}
+
+    def squads_template_list(self):
+        return self.db.squads_template_list()
+
+    def squads_template_get(self, name: str):
+        return self.db.squads_template_get(name)
+
+    def squads_template_delete(self, name: str) -> Dict[str, Any]:
+        self.db.squads_template_delete(name)
+        return {"ok": True}

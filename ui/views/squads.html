@@ -1,26 +1,40 @@
 <div class="page">
+
     <header class="page-header">
         <div class="page-title">
             <h1>Squadre</h1>
-            <p>Fabbisogno per giorno e fascia (mattina/pomeriggio). Le modifiche si salvano automaticamente.</p>
+            <p>Fabbisogno per giorno e fascia (mattina / pomeriggio). Le modifiche si salvano automaticamente.</p>
         </div>
 
-        <div class="page-actions">
-            <button class="btn btn-ghost" id="btnSquadsReload">Ricarica da DB</button>
-            <span class="chip" id="squadsSaveStatus">Pronto</span>
+        <div class="page-actions squads-actions">
+
+            <div class="squads-row-top">
+                <button class="btn btn-ghost" id="btnSquadsSaveTemplate">
+                    Salva template
+                </button>
+
+                <span class="chip" id="squadsSaveStatus">Pronto</span>
+            </div>
+
+            <div class="squads-row-bottom">
+                <select id="squadsTemplateSelect" class="select"></select>
+
+                <button class="btn" id="btnSquadsApplyTemplate">
+                    Applica
+                </button>
+
+                <button class="btn btn-ghost" id="btnSquadsUndo" disabled>
+                    Annulla
+                </button>
+            </div>
+
         </div>
     </header>
 
     <section class="calendar-card">
         <div class="calendar-head">
             <div class="calendar-left">
-                <div class="calendar-meta" id="squadsWeekLabel">Settimana:</div>
-
-                <div class="week-nav">
-                    <button class="btn btn-small btn-ghost" id="btnSquadsPrevWeek">←</button>
-                    <button class="btn btn-small btn-ghost" id="btnSquadsNextWeek">→</button>
-                    <button class="btn btn-small" id="btnSquadsToday">Oggi</button>
-                </div>
+                <div class="calendar-meta" id="squadsWeekLabel">Squadre</div>
             </div>
         </div>
 
@@ -30,4 +44,34 @@
             </div>
         </div>
     </section>
+
+    <!-- MODAL: Salva Template -->
+    <div class="modal-backdrop hidden" id="tplModal">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tplTitle">
+
+            <div class="modal-head">
+                <div class="modal-title" id="tplTitle">Salva template</div>
+                <button class="modal-close" id="tplClose" aria-label="Chiudi">✕</button>
+                <button class="btn btn-ghost" id="btnTplDelete">Elimina template</button>
+            </div>
+
+            <div class="modal-body">
+                <input
+                        class="modal-input"
+                        id="tplName"
+                        placeholder="Nome univoco (es. 'Inverno 2026')"
+                />
+                <div class="modal-hint">
+                    Il nome deve essere unico. Il template salva i valori attuali della settimana.
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-ghost" id="tplCancel">Annulla</button>
+                <button class="btn" id="tplSave">Salva</button>
+            </div>
+
+        </div>
+    </div>
+
 </div>

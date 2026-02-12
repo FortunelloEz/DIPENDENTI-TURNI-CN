@@ -4,14 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="07257b00-7490-4583-b715-83f38d4dd07b" name="Changes" comment="progetto funzionante . manca db">
-      <change afterPath="$PROJECT_DIR$/ui/assets/squads.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/views/squads.html" afterDir="false" />
+    <list default="true" id="07257b00-7490-4583-b715-83f38d4dd07b" name="Changes" comment="add squadra sulla barra di navigazione">
+      <change afterPath="$PROJECT_DIR$/ui/assets/calendar.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/assets/squad.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/api.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/api.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/app.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/db_adapter.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/db_adapter.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/squads.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/squads.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/views/employees.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/employees.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/views/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/home.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/views/squads.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/squads.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -146,11 +153,20 @@
       <option name="project" value="LOCAL" />
       <updated>1770902459915</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="add squadra sulla barra di navigazione">
+      <option name="closed" value="true" />
+      <created>1770904135778</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1770904135778</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="progetto funzionante . manca db" />
-    <option name="LAST_COMMIT_MESSAGE" value="progetto funzionante . manca db" />
+    <MESSAGE value="add squadra sulla barra di navigazione" />
+    <option name="LAST_COMMIT_MESSAGE" value="add squadra sulla barra di navigazione" />
   </component>
 </project>

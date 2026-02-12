@@ -25,12 +25,10 @@ def main():
         title="Turni CN",
         url=index_path,
         js_api=api,
-        width=1400,
-        height=900,
-        min_size=(1100, 700),
+        maximized=True
     )
 
-    webview.start(debug=False)
+    webview.start()
 
 
 if __name__ == "__main__":

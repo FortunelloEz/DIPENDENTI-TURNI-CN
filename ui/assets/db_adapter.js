@@ -119,3 +119,14 @@ async function loadSquadsFromDb(weekKey){
 
   squads.set(weekKey, base);
 }
+async function squadsTemplateList(){
+  return await apiCall("squads_template_list");
+}
+
+async function squadsTemplateSave(name, payload){
+  return await apiCall("squads_template_save", name, payload);
+}
+
+async function squadsTemplateGet(name){
+  return await apiCall("squads_template_get", name);
+}
