@@ -1,0 +1,155 @@
+/* =========================================================
+   DIPENDENTI PAGE (SCOPED) - NO REGRESSIONS
+   Richiede: <div class="page employees-page"> in employees.html
+   ========================================================= */
+
+.employees-page{
+  padding: 0; /* usa layout esistente */
+}
+
+/* header già esiste nel tema, qui solo piccoli aggiustamenti */
+.employees-page .page-header{
+  gap: 12px;
+}
+
+/* bottoni: riusa .btn esistente, aggiungo solo variante "primary" se serve */
+.employees-page .btn.primary{
+  background: rgba(37, 99, 235, .18);
+  border-color: rgba(37, 99, 235, .35);
+}
+
+/* pannello contenitore tabella */
+.employees-page .panel{
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+/* tabella */
+.employees-page .table-wrap{
+  overflow: auto;
+}
+
+.employees-page table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.employees-page thead th{
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #eef2ff;
+  border-bottom: 1px solid rgba(15,23,42,.12);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.employees-page tbody td{
+  border-bottom: 1px solid rgba(15,23,42,.10);
+  padding: 10px 12px;
+  vertical-align: top;
+}
+
+/* griglia form */
+.employees-page .form-grid{
+  display: grid;
+  grid-template-columns: 1fr 220px 260px;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.employees-page .form-field label{
+  display: block;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.employees-page .form-field input,
+.employees-page .form-field select{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(15,23,42,.14);
+  background: #fff;
+  color: var(--text);
+}
+
+/* skills grid */
+.employees-page .skills-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.employees-page .skill-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15,23,42,.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,.70);
+}
+
+.employees-page .skill-role{
+  font-weight: 900;
+}
+
+.employees-page .skill-rank{
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(15,23,42,.14);
+  background: #fff;
+}
+
+/* modal dipendenti: NON tocchiamo .modal globale del calendario.
+   Quindi qui stiliamo SOLO quando il modal è dentro employees-page. */
+.employees-page .modal-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,.40);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 2000;
+}
+
+.employees-page .modal{
+  width: min(820px, 96vw);
+  background: #fff;
+  color: var(--text);
+  border-radius: 16px;
+  border: 1px solid rgba(15,23,42,.16);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.employees-page .modal-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(15,23,42,.10);
+  background: #f8fafc;
+}
+
+.employees-page .modal-title{
+  font-weight: 900;
+}
+
+.employees-page .modal-close{
+  border: 1px solid rgba(15,23,42,.16);
+  background: #fff;
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.employees-page .modal-body{
+  padding: 14px;
+}

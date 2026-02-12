@@ -71,7 +71,16 @@ let employees = [];
 function getEmployeeById(id){
   return employees.find(e => String(e.id) === String(id)) || null;
 }
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
+async function retryUntil(fn, predicate, { tries = 15, delayMs = 120 } = {}){
+  for (let i = 0; i < tries; i++){
+    try { await fn(); } catch (e) { /* ignora e ritenta */ }
+    try { if (predicate()) return true; } catch (e) {}
+    await sleep(delayMs);
+  }
+  return false;
+}
 /* ---------- TEMPI ---------- */
 function buildTimeSlots_30min(startMin, endMinExclusive){
   const out = [];
@@ -901,7 +910,13 @@ async function initHome(){
 
   const wk = weekKeyOf(currentWeekStart);
 
-  await loadEmployeesFromDb();
+  await retryUntil(
+    async () => { await loadEmployeesFromDb(); },
+    () => Array.isArray(employees) && employees.length > 0,
+    { tries: 20, delayMs: 100 }
+  );
+
+  // anche se week è vuota “legittimamente”, la carichiamo comunque
   await loadWeekFromDb(wk);
 
   renderEmployees();
@@ -1009,12 +1024,11 @@ function boot() {
   loadView("home");
 }
 
-// Se siamo dentro PyWebView, aspetta che l'API JS sia pronta
 window.addEventListener("pywebviewready", boot);
 
-// Fallback: se non siamo in PyWebView (es. apri index.html in browser)
 window.addEventListener("DOMContentLoaded", () => {
-  // Se pywebviewready non arriverà mai, partiamo comunque
+  const inPyWebView = typeof window.pywebview !== "undefined";
+  if (inPyWebView) return; // in PyWebView aspetta pywebviewready
   setTimeout(() => {
     if (!_booted) boot();
   }, 0);

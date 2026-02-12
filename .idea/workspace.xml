@@ -5,12 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="07257b00-7490-4583-b715-83f38d4dd07b" name="Changes" comment="update">
+      <change afterPath="$PROJECT_DIR$/ui/assets/employees.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/assets/employees.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cn_turni/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/app.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/assets/squad.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/squad.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/assets/squads.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/squads.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/views/squads.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/squads.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -164,7 +163,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770930372086</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="update">
+      <option name="closed" value="true" />
+      <created>1770939165785</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1770939165785</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
