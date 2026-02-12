@@ -1,18 +1,73 @@
-<section class="card">
-    <h2>Dipendenti</h2>
-    <div class="row">
-        <input id="empName" placeholder="Nome dipendente" />
-        <input id="empSkills" placeholder="Skill (csv) es: sala,bar" />
-        <button id="btnEmpAdd">Aggiungi</button>
+<div class="page employees-page">
+    <div class="page-header">
+        <h2>Dipendenti</h2>
+        <div class="row gap">
+            <button id="btnEmpNew" class="btn primary">+ Aggiungi</button>
+            <button id="btnEmpRefresh" class="btn">Aggiorna</button>
+        </div>
     </div>
-</section>
 
-<section class="card">
-    <h3>Elenco</h3>
-    <table>
-        <thead>
-        <tr><th>ID</th><th>Nome</th><th>Skills</th><th></th></tr>
-        </thead>
-        <tbody id="employeesList"></tbody>
-    </table>
-</section>
+    <div class="panel">
+        <div class="table-wrap">
+            <table class="table" id="empTable">
+                <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Tempo indeterminato</th>
+                    <th>Mansione preferita</th>
+                    <th>Skill (1–5)</th>
+                    <th style="width:160px">Azioni</th>
+                </tr>
+                </thead>
+                <tbody id="empTbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="empModalBackdrop" style="display:none">
+    <div class="modal" style="max-width:760px">
+        <div class="modal-head">
+            <div class="modal-title" id="empModalTitle">Dipendente</div>
+            <button class="modal-close" id="empModalClose">✕</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Nome (come vuoi vederlo)</label>
+                    <input id="empName" type="text" placeholder="Es. RANIERO" />
+                </div>
+
+                <div class="form-field">
+                    <label>Tempo indeterminato</label>
+                    <label class="switch">
+                        <input id="empPermanent" type="checkbox" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="form-field">
+                    <label>Mansione preferita (opzionale)</label>
+                    <select id="empPreferredRole">
+                        <option value="">(vuota)</option>
+                        <option value="Cassa">Cassa</option>
+                        <option value="Runner">Runner</option>
+                        <option value="Bar">Bar</option>
+                        <option value="Comande">Comande</option>
+                        <option value="Accoglienza">Accoglienza</option>
+                        <option value="Jolly">Jolly</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="subhead">Skill per mansione (1–5)</div>
+            <div class="skills-grid" id="empSkillsGrid"></div>
+
+            <div class="row gap end">
+                <button class="btn" id="empModalCancel">Annulla</button>
+                <button class="btn primary" id="empModalSave">Salva</button>
+            </div>
+        </div>
+    </div>
+</div>

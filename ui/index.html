@@ -3,25 +3,39 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Turni Cascina</title>
-    <link rel="stylesheet" href="assets/app.css" />
+    <title>Turni CN</title>
+    <link rel="stylesheet" href="./assets/app.css" />
 </head>
 <body>
-<header class="topbar">
-    <div class="brand">Turni Cascina</div>
-    <nav class="nav">
-        <button data-view="employees">Dipendenti</button>
-        <button data-view="availability">Disponibilità</button>
-        <button data-view="planner">Planner</button>
-        <button data-view="settings">Impostazioni</button>
-    </nav>
-    <div class="right">
-        <button id="btnPing">Ping</button>
-    </div>
-</header>
+<div class="app">
+    <!-- SIDEBAR SINISTRA (globale) -->
+    <aside class="sidebar">
+        <nav class="nav">
+            <button class="accordion open" data-acc="main">
+                <span class="acc-ic">🧭</span>
+                <span class="acc-txt">Navigazione</span>
+                <span class="chev">▾</span>
+            </button>
 
-<main id="app"></main>
+            <div class="panel open" id="acc-main">
+                <button class="nav-item active" data-route="home">Homepage</button>
+                <button class="nav-item" data-route="employees">Dipendenti</button>
+            </div>
+        </nav>
 
-<script src="assets/app.js"></script>
+        <div class="sidebar-footer">
+            <span class="chip">MVP UI</span>
+        </div>
+    </aside>
+
+    <!-- CONTENUTO -->
+    <main class="content">
+        <div id="view"></div>
+    </main>
+</div>
+
+<script src="./assets/app.js"></script>
+<script src="./assets/db_adapter.js"></script>
+
 </body>
 </html>

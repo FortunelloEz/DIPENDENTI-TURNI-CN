@@ -1,0 +1,166 @@
+
+/* =========================
+   Turni CN - DB / Gestionali
+   (pagina dipendenti, modali gestione)
+   ========================= */
+
+.emp-page{
+  border:1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.03);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.emp-page .emp-head{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom:1px solid var(--line);
+}
+
+.emp-page .emp-actions{
+  display:flex;
+  gap: 8px;
+}
+
+.emp-page table{
+  width:100%;
+  border-collapse: collapse;
+}
+
+.emp-page th, .emp-page td{
+  border-bottom:1px solid var(--line);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text);
+  vertical-align: top;
+}
+
+.emp-page th{
+  color: var(--muted);
+  font-weight: 600;
+  background: rgba(255,255,255,.02);
+}
+
+.emp-page td.actions{
+  white-space: nowrap;
+}
+
+/* Modal dipendenti: più minimal */
+.modal-backdrop{
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(6px);
+}
+
+.emp-modal{
+  width: min(720px, calc(100vw - 40px));
+  border:1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, .95);
+  box-shadow: 0 30px 80px rgba(0,0,0,.55);
+}
+
+.emp-modal .modal-head{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom:1px solid var(--line);
+}
+
+.emp-modal .modal-body{
+  padding: 14px;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-field label{
+  display:block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.form-field input[type="text"],
+.form-field input[type="number"],
+.form-field select{
+  width: 100%;
+  padding: 10px 10px;
+  border-radius: 10px;
+  border:1px solid var(--line);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  outline: none;
+}
+
+.form-field input:focus,
+.form-field select:focus{
+  border-color: rgba(106,166,255,.55);
+  box-shadow: 0 0 0 3px rgba(106,166,255,.15);
+}
+
+.check-row{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.check{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  padding: 8px 10px;
+  border:1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  cursor: pointer;
+  user-select:none;
+}
+
+.check input{ accent-color: var(--accent); }
+
+
+
+/* ===== Employees page ===== */
+.emp-page{ padding: 18px; }
+.emp-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:14px; }
+.emp-title{ font-size:20px; font-weight:800; letter-spacing:.2px; }
+.emp-sub{ opacity:.75; font-size:12px; margin-top:2px; }
+.emp-actions{ display:flex; gap:10px; }
+
+.emp-card{ background:#fff; border:1px solid #e6e6e6; border-radius:12px; overflow:hidden; }
+.emp-table{ width:100%; border-collapse:collapse; font-size:13px; }
+.emp-table th, .emp-table td{ padding:10px 12px; border-bottom:1px solid #eee; vertical-align:top; }
+.emp-table thead th{ background:#fafafa; font-weight:700; }
+.emp-table tr:hover td{ background:#fcfcfc; }
+
+.modal-db{ width:min(760px, calc(100vw - 40px)); }
+.form-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+.fg{ display:flex; flex-direction:column; gap:6px; }
+.fg.row{ grid-column:1 / -1; }
+.lbl{ font-size:12px; font-weight:700; opacity:.85; }
+.inp{ width:100%; padding:10px 12px; border:1px solid #e2e2e2; border-radius:10px; outline:none; font-size:13px; }
+.inp:focus{ border-color:#c9c9c9; box-shadow:0 0 0 3px rgba(0,0,0,.04); }
+
+.check{ display:flex; align-items:center; gap:8px; font-size:13px; user-select:none; }
+.check input{ transform: translateY(1px); }
+
+.pref-shifts{ display:flex; flex-direction:column; gap:8px; padding:10px 12px; border:1px dashed #e4e4e4; border-radius:10px; background:#fafafa; }
+
+.skills-block{ margin-top:14px; padding-top:12px; border-top:1px solid #eee; }
+.skills-grid{ display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; }
+@media (max-width: 900px){ .form-grid{ grid-template-columns: 1fr; } .skills-grid{ grid-template-columns: 1fr; } }
+
+.skill-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1px solid #eee; border-radius:10px; background:#fff; }
+.skill-name{ font-size:13px; font-weight:700; opacity:.85; text-transform:capitalize; }
+.skill-range{ width:160px; }
+.skill-val{ width:22px; text-align:right; font-weight:800; font-size:13px; opacity:.75; }
+
+.help{ margin-top:8px; font-size:12px; opacity:.7; }
