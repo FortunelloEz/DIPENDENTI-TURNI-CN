@@ -105,3 +105,17 @@ async function loadPermanentWeekFromDb(weekKey){
 async function savePermanentWeekToDb(weekKey, items){
   await apiCall("permanent_week_set", weekKey, items || []);
 }
+async function loadSquadsFromDb(weekKey){
+  const sq = await apiCall("squads_get_week", weekKey);
+  const base = {};
+  DAYS.forEach((_, i) => base[i] = defaultSquadDay());
+
+  if (sq && typeof sq === "object"){
+    Object.keys(sq).forEach(dayKey => {
+      const d = Number(dayKey);
+      base[d] = sq[dayKey] || defaultSquadDay();
+    });
+  }
+
+  squads.set(weekKey, base);
+}

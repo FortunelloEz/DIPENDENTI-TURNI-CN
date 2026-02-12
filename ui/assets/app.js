@@ -15,6 +15,7 @@ async function loadView(route) {
 
   if (route === "home") initHome();
   if (route === "employees") initEmployees();
+  if (route === "squads") initSquadsPage();
 }
 
 /* ---------- ACCORDION UI ---------- */
@@ -959,7 +960,7 @@ async function initHome(){
     renderCalendar();
   });
 
-  document.getElementById("btnEditSquads")?.addEventListener("click", () => openSquadsModal());
+  document.getElementById("btnEditSquads")?.addEventListener("click", () => loadView("squads"));
   document.getElementById("btnPermManage")?.addEventListener("click", () => openPermanentModal());
 
   // mouseup globale: se stavi selezionando -> picker su quelle mezz'ore
