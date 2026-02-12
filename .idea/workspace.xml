@@ -4,20 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="07257b00-7490-4583-b715-83f38d4dd07b" name="Changes" comment="add squadra sulla barra di navigazione">
-      <change afterPath="$PROJECT_DIR$/ui/assets/calendar.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/assets/squad.css" afterDir="false" />
+    <list default="true" id="07257b00-7490-4583-b715-83f38d4dd07b" name="Changes" comment="update">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cn_turni/api.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/api.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cn_turni/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/db.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cn_turni/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/assets/app.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/assets/db_adapter.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/db_adapter.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/squad.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/squad.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/squads.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/squads.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/views/employees.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/employees.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/views/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/home.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/views/squads.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/squads.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -35,18 +27,21 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "FortunelloEz"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;FortunelloEz&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/FortunelloEz/DIPENDENTI-TURNI-CN.git",
-    "accountId": "914bde5a-5dfe-470b-b9df-d007646cd46d"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/FortunelloEz/DIPENDENTI-TURNI-CN.git&quot;,
+    &quot;accountId&quot;: &quot;914bde5a-5dfe-470b-b9df-d007646cd46d&quot;
   }
-}]]></component>
+}</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 8
 }</component>
@@ -161,12 +156,21 @@
       <option name="project" value="LOCAL" />
       <updated>1770904135778</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="update">
+      <option name="closed" value="true" />
+      <created>1770930372086</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1770930372086</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="progetto funzionante . manca db" />
     <MESSAGE value="add squadra sulla barra di navigazione" />
-    <option name="LAST_COMMIT_MESSAGE" value="add squadra sulla barra di navigazione" />
+    <MESSAGE value="update" />
+    <option name="LAST_COMMIT_MESSAGE" value="update" />
   </component>
 </project>

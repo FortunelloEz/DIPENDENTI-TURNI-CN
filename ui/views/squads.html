@@ -14,6 +14,8 @@
                 </button>
 
                 <span class="chip" id="squadsSaveStatus">Pronto</span>
+                <button class="btn btn-danger" id="btnSquadsDeleteTemplate">Elimina template</button>
+
             </div>
 
             <div class="squads-row-bottom">
@@ -44,7 +46,24 @@
             </div>
         </div>
     </section>
+    <!-- MODAL: Conferma eliminazione template -->
+    <div class="modal-backdrop hidden" id="tplDeleteModal">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tplDeleteTitle">
+            <div class="modal-head">
+                <div class="modal-title" id="tplDeleteTitle">Elimina template</div>
+                <button class="modal-close" id="tplDeleteClose" aria-label="Chiudi">✕</button>
+            </div>
 
+            <div class="modal-body">
+                <div class="modal-hint" id="tplDeleteText">Eliminare il template?</div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-ghost" id="tplDeleteCancel">Annulla</button>
+                <button class="btn btn-danger" id="tplDeleteConfirm">Elimina</button>
+            </div>
+        </div>
+    </div>
     <!-- MODAL: Salva Template -->
     <div class="modal-backdrop hidden" id="tplModal">
         <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tplTitle">
@@ -52,7 +71,7 @@
             <div class="modal-head">
                 <div class="modal-title" id="tplTitle">Salva template</div>
                 <button class="modal-close" id="tplClose" aria-label="Chiudi">✕</button>
-                <button class="btn btn-ghost" id="btnTplDelete">Elimina template</button>
+
             </div>
 
             <div class="modal-body">

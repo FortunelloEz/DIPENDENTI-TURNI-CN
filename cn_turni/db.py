@@ -359,4 +359,8 @@ class Db:
     def squads_template_delete(self, name: str) -> None:
         with self._connect() as conn:
             conn.execute("DELETE FROM squads_templates WHERE name=?", (name,))
-            conn.execute("DELETE FROM squads_templates_required WHERE template_name=?", (name,))
+            try:
+                conn.execute("DELETE FROM squads_templates_required WHERE template_name=?", (name,))
+            except sqlite3.OperationalError:
+                # tabella non presente nello schema (vecchie versioni)
+                pass

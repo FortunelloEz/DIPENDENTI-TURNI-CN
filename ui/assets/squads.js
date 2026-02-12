@@ -7,6 +7,9 @@
 let _squadsAutoSaveTimer = null;
 let _undoSnapshot = null;
 
+// evita doppio binding listeners se initSquadsPage viene richiamata
+let _squadsDeleteUiBound = false;
+
 // Tabella squadre unica (non per settimana)
 const SQUADS_GLOBAL_KEY = weekKeyOf(getMondayOfCurrentWeek(new Date()));
 
@@ -18,26 +21,12 @@ function setUndoEnabled(enabled){
   const b = document.getElementById("btnSquadsUndo");
   if (b) b.disabled = !enabled;
 }
-async function deleteTemplate(templateId){
-  if (!templateId) return;
 
-  const ok = confirm("Eliminare questo template?");
-  if (!ok) return;
-
-  await apiCall("template_delete", templateId);
-
-  await refreshTemplatesUI();   // ricarica select/lista
-  document.getElementById("btnTplDelete")?.addEventListener("click", async () => {
-    const sel = document.getElementById("tplSelect");   // <-- cambia ID se il tuo è diverso
-    const name = sel?.value;
-    if (!name) return;
-
-    if (!confirm(`Eliminare il template "${name}"?`)) return;
-
-    await apiCall("squads_template_delete", name);
-    await refreshTemplatesUI();
-  });
+/** DELETE template (API) */
+async function squadsTemplateDelete(name){
+  return apiCall("squads_template_delete", name);
 }
+
 async function refreshTemplatesUI(){
   const sel = document.getElementById("squadsTemplateSelect");
   if (!sel) return;
@@ -45,7 +34,12 @@ async function refreshTemplatesUI(){
   const names = await squadsTemplateList();
   sel.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join("");
   sel.disabled = names.length === 0;
-  const b = document.getElementById("btnSquadsApplyTemplate"); if (b) b.disabled = (names.length === 0);
+
+  const bApply = document.getElementById("btnSquadsApplyTemplate");
+  if (bApply) bApply.disabled = (names.length === 0);
+
+  const bDel = document.getElementById("btnSquadsDeleteTemplate");
+  if (bDel) bDel.disabled = (names.length === 0);
 }
 
 function setSquadsStatus(txt, kind){
@@ -158,6 +152,7 @@ async function reloadSquadsFromDbForWeek(weekKey){
   buildSquadsTable(weekKey, getWeekSquad(weekKey));
   setSquadsStatus("Pronto", null);
 }
+
 function openTplModal(){
   const m = document.getElementById("tplModal");
   const inp = document.getElementById("tplName");
@@ -172,6 +167,59 @@ function closeTplModal(){
   if (!m) return;
   m.classList.add("hidden");
 }
+
+/* ---------- MODALE DELETE TEMPLATE (custom, no window.confirm) ---------- */
+function openDeleteTplModal(name){
+  const m = document.getElementById("tplDeleteModal");
+  const t = document.getElementById("tplDeleteText");
+  if (!m || !t) return;
+
+  m.dataset.tplName = name;
+  t.textContent = `Eliminare il template "${name}"?`;
+  m.classList.remove("hidden");
+}
+
+function closeDeleteTplModal(){
+  document.getElementById("tplDeleteModal")?.classList.add("hidden");
+}
+
+function bindDeleteTplUIOnce(){
+  if (_squadsDeleteUiBound) return;
+  _squadsDeleteUiBound = true;
+
+  document.getElementById("btnSquadsDeleteTemplate")?.addEventListener("click", () => {
+    const sel = document.getElementById("squadsTemplateSelect");
+    const name = sel?.value;
+    if (!name) return;
+    openDeleteTplModal(name);
+  });
+
+  document.getElementById("tplDeleteClose")?.addEventListener("click", closeDeleteTplModal);
+  document.getElementById("tplDeleteCancel")?.addEventListener("click", closeDeleteTplModal);
+
+  // click fuori -> chiudi
+  document.getElementById("tplDeleteModal")?.addEventListener("click", (e) => {
+    if (e.target?.id === "tplDeleteModal") closeDeleteTplModal();
+  });
+
+  document.getElementById("tplDeleteConfirm")?.addEventListener("click", async () => {
+    const m = document.getElementById("tplDeleteModal");
+    const name = m?.dataset?.tplName;
+    if (!name) return;
+
+    try {
+      setSquadsStatus("Eliminazione…", "chip-warn");
+      await squadsTemplateDelete(name);
+      closeDeleteTplModal();
+      await refreshTemplatesUI();
+      setSquadsStatus("Template eliminato", "chip-ok");
+    } catch (e) {
+      console.error("DELETE TEMPLATE ERROR:", e);
+      setSquadsStatus("Errore eliminazione", "chip-bad");
+    }
+  });
+}
+
 async function initSquadsPage(){
   initAccordions();
 
@@ -187,6 +235,9 @@ async function initSquadsPage(){
 
   await refreshTemplatesUI();
   setUndoEnabled(false);
+
+  bindDeleteTplUIOnce();
+
   document.getElementById("tplClose")?.addEventListener("click", closeTplModal);
   document.getElementById("tplCancel")?.addEventListener("click", closeTplModal);
 
@@ -196,7 +247,6 @@ async function initSquadsPage(){
   });
 
   document.getElementById("tplSave")?.addEventListener("click", async () => {
-    const weekKey = SQUADS_GLOBAL_KEY;
     const payload = getWeekSquad(weekKey);
 
     const nameEl = document.getElementById("tplName");
@@ -217,6 +267,7 @@ async function initSquadsPage(){
       setSquadsStatus("Nome già usato", "chip-bad");
     }
   });
+
   document.getElementById("btnSquadsSaveTemplate")?.addEventListener("click", () => {
     openTplModal();
   });
@@ -225,8 +276,6 @@ async function initSquadsPage(){
     const sel = document.getElementById("squadsTemplateSelect");
     const templateName = sel?.value;
     if (!templateName) return;
-
-    const weekKey = SQUADS_GLOBAL_KEY;
 
     try{
       // snapshot per CTRL+Z
@@ -251,8 +300,6 @@ async function initSquadsPage(){
 
   document.getElementById("btnSquadsUndo")?.addEventListener("click", async () => {
     if (!_undoSnapshot) return;
-
-    const weekKey = SQUADS_GLOBAL_KEY;
 
     try{
       squads.set(weekKey, deepClone(_undoSnapshot));
