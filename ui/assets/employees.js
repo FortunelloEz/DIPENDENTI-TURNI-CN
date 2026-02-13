@@ -247,6 +247,12 @@
   }
 
   // ---- Render table ----
+  function formatPermInfo(emp) {
+    const days = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
+    const d = (emp.perm_day_off === null || emp.perm_day_off === undefined) ? "—" : (days[Number(emp.perm_day_off)] || "—");
+    const h = Number(emp.perm_target_hours ?? 40);
+    return `Riposo: ${d} · Ore Settimana: ${h}`;
+  }
   function formatSlots(emp) {
     const m = emp.slot_morning ? "Mattina" : null;
     const e = emp.slot_evening ? "Pomeriggio" : null;
@@ -277,7 +283,14 @@
           <b>${escapeHtml(emp.name)}</b>
           <div style="opacity:.70;font-size:12px;margin-top:2px">${escapeHtml(formatSlots(emp))}</div>
         </td>
-        <td>${emp.is_permanent ? "Sì" : "No"}</td>
+        <td>
+          ${emp.is_permanent ? "Sì" : "No"}
+          ${emp.is_permanent ? `
+            <div style="opacity:.70;font-size:12px;margin-top:2px">
+              ${formatPermInfo(emp)}
+            </div>
+          ` : ""}
+        </td>
         <td>${escapeHtml(emp.preferred_role || "—")}</td>
         <td>${escapeHtml(formatSkills(emp))}</td>
         <td>
@@ -322,6 +335,38 @@
     const list = (rows || [])
       .map(r => ({ ...r, label: r.name }))
       .sort((a, b) => Number(b.id) - Number(a.id));
+
+    // --- aggiunta: carica giorno riposo + ore target per la settimana corrente ---
+    try {
+      if (typeof window.loadPermanentWeekFromDb === "function" &&
+          typeof window.weekKeyOf === "function") {
+
+        const weekKey =
+          window._permWeekKey ||
+          (window.currentWeekStart ? window.weekKeyOf(window.currentWeekStart) : null);
+
+        if (!weekKey) throw new Error("Week non disponibile (currentWeekStart non inizializzato).");
+
+        const permRows = await window.loadPermanentWeekFromDb(weekKey);
+
+        const permMap = new Map();
+        (permRows || []).forEach(r => {
+          permMap.set(Number(r.employee_id), {
+            day_off: (r.day_off === null || r.day_off === undefined) ? null : Number(r.day_off),
+            target_hours: Number(r.target_hours ?? 40)
+          });
+        });
+
+        list.forEach(emp => {
+          const p = permMap.get(Number(emp.id));
+          emp.perm_day_off = p ? p.day_off : null;
+          emp.perm_target_hours = p ? p.target_hours : 40;
+        });
+      }
+    } catch (e) {
+      console.warn("[employees] perm settings load failed:", e);
+      // non bloccare la pagina: se fallisce, mostri solo "Sì"
+    }
 
     window.employees = list;
     renderEmployeesTable(E, list);
@@ -386,6 +431,10 @@
 
     // 1) Bind bottoni SEMPRE
     E.btnNew.onclick = () => openEmpModal(E, "new", {});
+    const btnPermManage = document.getElementById("btnPermManage");
+    if (btnPermManage) {
+      btnPermManage.onclick = () => openPermanentModal();
+    }
 
     E.btnClose.onclick = () => closeEmpModal(E);
     E.btnCancel.onclick = () => closeEmpModal(E);
@@ -450,9 +499,10 @@
 // =========================================================
 function openPermanentModal(){
   const weekKey = weekKeyOf(currentWeekStart);
+  window._permWeekKey = weekKey;
   closeModal();
 
-  const permanents = employees.filter(e => !!e.is_permanent);
+  const permanents = (window.employees || []).filter(e => !!e.is_permanent);
 
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
@@ -476,7 +526,7 @@ function openPermanentModal(){
   const info = document.createElement("div");
   info.style.opacity = ".85";
   info.style.marginBottom = "10px";
-  info.textContent = "Imposta giorno di riposo e ore target (default 40) per ogni dipendente a tempo indeterminato.";
+  info.textContent = "Imposta giorni di riposo.";
   body.appendChild(info);
 
   const table = document.createElement("table");
@@ -562,6 +612,11 @@ function openPermanentModal(){
       });
     });
     await savePermanentWeekToDb(weekKey, items);
+    window._permWeekKey = weekKey;
+    if (document.querySelector(".employees-page")) {
+      // se sei nei dipendenti, refresh immediato
+      window.initEmployees?.(); // oppure chiama direttamente refreshEmployeesUI se lo esponi
+    }
     closeModal();
   });
 
