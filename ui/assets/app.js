@@ -72,7 +72,9 @@ function getEmployeeById(id){
   return employees.find(e => String(e.id) === String(id)) || null;
 }
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-
+function nextFrame(){
+  return new Promise(r => requestAnimationFrame(() => r()));
+}
 async function retryUntil(fn, predicate, { tries = 15, delayMs = 120 } = {}){
   for (let i = 0; i < tries; i++){
     try { await fn(); } catch (e) { /* ignora e ritenta */ }
@@ -677,227 +679,6 @@ function getWeekSquad(weekKey){
   }
   return squads.get(weekKey);
 }
-
-function openSquadsModal(){
-  const weekKey = weekKeyOf(currentWeekStart);
-  const data = getWeekSquad(weekKey);
-
-  closeModal();
-
-  const overlay = document.createElement("div");
-  overlay.className = "modal-overlay";
-  overlay.addEventListener("mousedown", (e) => {
-    if (e.target === overlay) closeModal();
-  });
-
-  const modal = document.createElement("div");
-  modal.className = "modal";
-
-  const head = document.createElement("div");
-  head.className = "modal-head";
-  head.innerHTML = `<div class="modal-title">Squadra settimana (${weekKey})</div>`;
-  const close = document.createElement("div");
-  close.className = "modal-close";
-  close.textContent = "✕";
-  close.addEventListener("click", closeModal);
-  head.appendChild(close);
-
-  const body = document.createElement("div");
-  body.className = "modal-body";
-
-  const table = document.createElement("table");
-  table.className = "squad-table";
-
-  const thead = document.createElement("thead");
-  const hr = document.createElement("tr");
-  hr.innerHTML = `<th style="width:140px">Giorno</th><th style="width:110px">Fascia</th>` + ROLES.map(r => `<th>${r}</th>`).join("");
-  thead.appendChild(hr);
-  table.appendChild(thead);
-
-  const tbody = document.createElement("tbody");
-
-  DAYS.forEach((day, dayIndex) => {
-    ["morning","evening"].forEach((band, bi) => {
-      const tr = document.createElement("tr");
-      const dayCell = bi === 0 ? `<td rowspan="2"><b>${day}</b></td>` : "";
-      const bandLabelTxt = band === "morning" ? "Mattina" : "Pomeriggio";
-      tr.innerHTML = `${dayCell}<td>${bandLabelTxt}</td>` + ROLES.map(role => {
-        const v = data[dayIndex][band][role] ?? 0;
-        return `<td><input class="squad-input" type="number" min="0" value="${v}" data-day="${dayIndex}" data-band="${band}" data-role="${role}"></td>`;
-      }).join("");
-      tbody.appendChild(tr);
-    });
-  });
-
-  table.appendChild(tbody);
-  body.appendChild(table);
-
-  const foot = document.createElement("div");
-  foot.className = "modal-foot";
-
-  const btnCancel = document.createElement("button");
-  btnCancel.className = "btn btn-ghost";
-  btnCancel.textContent = "Chiudi";
-  btnCancel.addEventListener("click", closeModal);
-
-  const btnSave = document.createElement("button");
-  btnSave.className = "btn";
-  btnSave.textContent = "Salva";
-  btnSave.addEventListener("click", async () => {
-    modal.querySelectorAll("input.squad-input").forEach(inp => {
-      const d = Number(inp.dataset.day);
-      const band = inp.dataset.band;
-      const role = inp.dataset.role;
-      data[d][band][role] = Number(inp.value || 0);
-    });
-    squads.set(weekKey, data);
-
-    await saveSquadsToDb(weekKey, data);
-
-    closeModal();
-  });
-
-  foot.appendChild(btnCancel);
-  foot.appendChild(btnSave);
-
-  modal.appendChild(head);
-  modal.appendChild(body);
-  modal.appendChild(foot);
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-  activeModalEl = overlay;
-}
-
-/* ---------- MODAL: INDETERMINATI SETTIMANA ---------- */
-function openPermanentModal(){
-  const weekKey = weekKeyOf(currentWeekStart);
-  closeModal();
-
-  const permanents = employees.filter(e => !!e.is_permanent);
-
-  const overlay = document.createElement("div");
-  overlay.className = "modal-overlay";
-  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) closeModal(); });
-
-  const modal = document.createElement("div");
-  modal.className = "modal";
-
-  const head = document.createElement("div");
-  head.className = "modal-head";
-  head.innerHTML = `<div class="modal-title">Indeterminati – settimana (${weekKey})</div>`;
-  const close = document.createElement("div");
-  close.className = "modal-close";
-  close.textContent = "✕";
-  close.addEventListener("click", closeModal);
-  head.appendChild(close);
-
-  const body = document.createElement("div");
-  body.className = "modal-body";
-
-  const info = document.createElement("div");
-  info.style.opacity = ".85";
-  info.style.marginBottom = "10px";
-  info.textContent = "Imposta giorno di riposo e ore target (default 40) per ogni dipendente a tempo indeterminato.";
-  body.appendChild(info);
-
-  const table = document.createElement("table");
-  table.className = "squad-table";
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th style="width:260px">Dipendente</th>
-        <th style="width:160px">Giorno riposo</th>
-        <th style="width:140px">Ore target</th>
-      </tr>
-    </thead>
-    <tbody id="permTbody"></tbody>
-  `;
-  body.appendChild(table);
-
-  const tbody = table.querySelector("#permTbody");
-
-  const days = ["(nessuno)","Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
-
-  (async () => {
-    const rows = await loadPermanentWeekFromDb(weekKey);
-    const map = new Map();
-    (rows || []).forEach(r => {
-      map.set(String(r.employee_id), {
-        day_off: r.day_off,
-        target_hours: r.target_hours ?? 40
-      });
-    });
-
-    permanents
-      .slice()
-      .sort((a,b)=>a.label.localeCompare(b.label,"it"))
-      .forEach(emp => {
-        const s = map.get(String(emp.id)) || { day_off: null, target_hours: 40 };
-
-        const tr = document.createElement("tr");
-        const sel = document.createElement("select");
-        sel.className = "squad-input";
-        sel.dataset.emp = emp.id;
-        sel.innerHTML = days.map((d,i)=>`<option value="${i===0 ? "" : (i-1)}">${d}</option>`).join("");
-        sel.value = (s.day_off === null || s.day_off === undefined) ? "" : String(s.day_off);
-
-        const hours = document.createElement("input");
-        hours.type = "number";
-        hours.min = "0";
-        hours.className = "squad-input";
-        hours.dataset.emp = emp.id;
-        hours.value = String(Number(s.target_hours ?? 40));
-
-        tr.innerHTML = `<td><b>${emp.label}</b></td>`;
-        const tdDay = document.createElement("td");
-        tdDay.appendChild(sel);
-        const tdHours = document.createElement("td");
-        tdHours.appendChild(hours);
-
-        tr.appendChild(tdDay);
-        tr.appendChild(tdHours);
-        tbody.appendChild(tr);
-      });
-  })();
-
-  const foot = document.createElement("div");
-  foot.className = "modal-foot";
-
-  const btnCancel = document.createElement("button");
-  btnCancel.className = "btn btn-ghost";
-  btnCancel.textContent = "Chiudi";
-  btnCancel.addEventListener("click", closeModal);
-
-  const btnSave = document.createElement("button");
-  btnSave.className = "btn";
-  btnSave.textContent = "Salva";
-  btnSave.addEventListener("click", async () => {
-    const items = [];
-    tbody.querySelectorAll("tr").forEach(tr => {
-      const selEl = tr.querySelector("select");
-      const inp = tr.querySelector('input[type="number"]');
-      items.push({
-        employee_id: Number(selEl.dataset.emp),
-        day_off: selEl.value === "" ? null : Number(selEl.value),
-        target_hours: Number(inp.value || 40)
-      });
-    });
-    await savePermanentWeekToDb(weekKey, items);
-    closeModal();
-  });
-
-  foot.appendChild(btnCancel);
-  foot.appendChild(btnSave);
-
-  modal.appendChild(head);
-  modal.appendChild(body);
-  modal.appendChild(foot);
-
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-  activeModalEl = overlay;
-}
-
 /* ---------- INIT HOME ---------- */
 let _homeMouseupInited = false;
 
@@ -1024,12 +805,32 @@ function boot() {
   loadView("home");
 }
 
-window.addEventListener("pywebviewready", boot);
+function isPywebviewApiReady(){
+  return !!(window.pywebview && window.pywebview.api);
+}
 
-window.addEventListener("DOMContentLoaded", () => {
+function bootWhenReady(){
+  // Se non è PyWebView, parti subito
   const inPyWebView = typeof window.pywebview !== "undefined";
-  if (inPyWebView) return; // in PyWebView aspetta pywebviewready
-  setTimeout(() => {
-    if (!_booted) boot();
-  }, 0);
-});
+  if (!inPyWebView) {
+    boot();
+    return;
+  }
+
+  // PyWebView: aspetta davvero l'API (polling)
+  const tick = () => {
+    if (_booted) return;
+    if (isPywebviewApiReady()) {
+      boot();
+      return;
+    }
+    setTimeout(tick, 50);
+  };
+  tick();
+}
+
+// 1) prova evento standard
+window.addEventListener("pywebviewready", bootWhenReady);
+
+// 2) fallback: comunque al DOMContentLoaded prova a partire quando pronto
+window.addEventListener("DOMContentLoaded", bootWhenReady);

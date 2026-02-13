@@ -1,0 +1,498 @@
+// =========================================================
+// employees.js - Dipendenti (CRUD) + modale Indeterminati
+// Obiettivo: pagina Dipendenti NON più vuota + bottoni sempre funzionanti
+// Strategia:
+//   1) Render immediato da window.employees (se già popolato dal calendario/picker)
+//   2) Refresh da DB con loader "che già ti funziona" (loadEmployeesFromDb) se presente
+//   3) Fallback su pywebview.api.employees_list() (0 argomenti) o apiCall
+// Compatibile PyWebView (script classici, NO import/export)
+// =========================================================
+
+(function () {
+  const ROLES = ["Cassa", "Runner", "Bar", "Comande", "Accoglienza", "Jolly"];
+  window.employees = window.employees || [];
+
+  function $(id) { return document.getElementById(id); }
+  function q(sel) { return document.querySelector(sel); }
+
+  function escapeHtml(s) {
+    s = String(s ?? "");
+    return s.replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+  }
+
+  function normalizeUpper(s) { return String(s || "").trim().toUpperCase(); }
+
+  function els() {
+    return {
+      btnNew: $("btnEmpNew"),
+      btnRefresh: $("btnEmpRefresh"),
+      tbody: $("empTbody"),
+      panel: q(".employees-page .panel"),
+
+      backdrop: $("empModalBackdrop"),
+      title: $("empModalTitle"),
+      btnClose: $("empModalClose"),
+      btnCancel: $("empModalCancel"),
+      btnSave: $("empModalSave"),
+
+      inpName: $("empName"),
+      chkPermanent: $("empPermanent"),
+      chkMorning: $("empSlotMorning"),
+      chkEvening: $("empSlotEvening"),
+      selPreferred: $("empPreferredRole"),
+      skillsGrid: $("empSkillsGrid"),
+    };
+  }
+
+  function ensureBanner(E) {
+    if (!E.panel) return null;
+    let b = E.panel.querySelector(".emp-banner");
+    if (!b) {
+      b = document.createElement("div");
+      b.className = "emp-banner";
+      b.style.padding = "10px 12px";
+      b.style.borderRadius = "12px";
+      b.style.marginBottom = "10px";
+      b.style.fontSize = "13px";
+      b.style.opacity = ".92";
+      b.style.display = "none";
+      E.panel.prepend(b);
+    }
+    return b;
+  }
+
+  function showBanner(E, msg, kind) {
+    const b = ensureBanner(E);
+    if (!b) return;
+    if (!msg) { b.style.display = "none"; b.innerHTML = ""; return; }
+
+    b.style.display = "block";
+    if (kind === "error") {
+      b.style.background = "rgba(239,68,68,.10)";
+      b.style.border = "1px solid rgba(239,68,68,.25)";
+    } else {
+      b.style.background = "rgba(2,132,199,.08)";
+      b.style.border = "1px solid rgba(2,132,199,.18)";
+    }
+    b.innerHTML = msg;
+  }
+
+  async function waitFor(fn, timeoutMs = 3500) {
+    const t0 = Date.now();
+    while (Date.now() - t0 < timeoutMs) {
+      try {
+        const v = fn();
+        if (v) return v;
+      } catch (_) {}
+      await new Promise(r => setTimeout(r, 60));
+    }
+    return null;
+  }
+
+  // ---- API wrappers ----
+  async function listFromDbAdapterIfAny() {
+    if (typeof window.loadEmployeesFromDb === "function") {
+      try {
+        const rows = await window.loadEmployeesFromDb();
+        return Array.isArray(rows) ? rows : null;
+      } catch (e) {
+        console.error("[employees] loadEmployeesFromDb error:", e);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  async function listFromPywebviewIfAny() {
+    const api = await waitFor(() => window.pywebview && window.pywebview.api && window.pywebview.api.employees_list, 3500);
+    if (api) {
+      // employees_list vuole 0 args
+      return await window.pywebview.api.employees_list();
+    }
+    return null;
+  }
+
+  async function listFromApiCallIfAny() {
+    if (typeof window.apiCall === "function") {
+      // IMPORTANT: employees_list senza payload
+      return await window.apiCall("employees_list");
+    }
+    return null;
+  }
+
+  async function employeesList() {
+    const a = await listFromDbAdapterIfAny();
+    if (Array.isArray(a) && a.length) return a;
+
+    const b = await listFromPywebviewIfAny();
+    if (Array.isArray(b) && b.length) return b;
+
+    const c = await listFromApiCallIfAny();
+    if (Array.isArray(c) && c.length) return c;
+
+    // se sono tutti vuoti, torna comunque un array (priorità: a > b > c)
+    if (Array.isArray(a)) return a;
+    if (Array.isArray(b)) return b;
+    if (Array.isArray(c)) return c;
+
+    throw new Error("Nessun canale API disponibile per employees_list.");
+  }
+
+
+  async function employeeCreate(payload) {
+    const api = await waitFor(() => window.pywebview && window.pywebview.api && window.pywebview.api.employee_create, 3500);
+    if (!api) throw new Error("pywebview.api.employee_create non disponibile.");
+    return await window.pywebview.api.employee_create(payload);
+  }
+
+  async function employeeUpdate(payload) {
+    const api = await waitFor(() => window.pywebview && window.pywebview.api && window.pywebview.api.employee_update, 3500);
+    if (!api) throw new Error("pywebview.api.employee_update non disponibile.");
+    return await window.pywebview.api.employee_update(payload);
+  }
+
+  async function employeeDelete(empId) {
+    const api = await waitFor(() => window.pywebview && window.pywebview.api && window.pywebview.api.employee_delete, 3500);
+    if (!api) throw new Error("pywebview.api.employee_delete non disponibile.");
+    // Api.employee_delete(emp_id:int) => PASSARE INT
+    return await window.pywebview.api.employee_delete(Number(empId));
+  }
+
+  // ---- Skills grid ----
+  function renderSkillsGrid(E, skills) {
+    const map = skills || {};
+    E.skillsGrid.innerHTML = "";
+    ROLES.forEach(role => {
+      const row = document.createElement("div");
+      row.className = "skill-row";
+      const current = Number(map[role] ?? 3);
+      row.innerHTML = `
+        <div class="skill-role">${escapeHtml(role)}</div>
+        <select class="skill-rank" data-role="${escapeHtml(role)}">
+          ${[1,2,3,4,5].map(n => `<option value="${n}" ${n===current?"selected":""}>${n}</option>`).join("")}
+        </select>
+      `;
+      E.skillsGrid.appendChild(row);
+    });
+  }
+
+  function readSkillsFromGrid(E) {
+    const out = {};
+    E.skillsGrid.querySelectorAll("select[data-role]").forEach(sel => {
+      const role = sel.getAttribute("data-role");
+      if (role) out[role] = Number(sel.value || 0);
+    });
+    return out;
+  }
+
+  // ---- Modal CRUD ----
+  let _editingId = null;
+
+  function openEmpModal(E, mode, emp) {
+    _editingId = (mode === "edit") ? Number(emp.id) : null;
+    E.backdrop.style.display = "flex";
+    E.title.textContent = (mode === "edit") ? "Modifica dipendente" : "Nuovo dipendente";
+
+    E.inpName.value = emp?.name ? String(emp.name) : "";
+    E.chkPermanent.checked = !!emp?.is_permanent;
+    E.chkMorning.checked = (emp?.slot_morning ?? 1) ? true : false;
+    E.chkEvening.checked = (emp?.slot_evening ?? 1) ? true : false;
+    E.selPreferred.value = emp?.preferred_role || "";
+
+    renderSkillsGrid(E, emp?.skills || {});
+  }
+
+  function closeEmpModal(E) {
+    E.backdrop.style.display = "none";
+    _editingId = null;
+  }
+
+  // ---- Render table ----
+  function formatSlots(emp) {
+    const m = emp.slot_morning ? "Mattina" : null;
+    const e = emp.slot_evening ? "Pomeriggio" : null;
+    if (m && e) return "Mattina + Pomeriggio";
+    if (m) return "Mattina";
+    if (e) return "Pomeriggio";
+    return "—";
+  }
+
+  function formatSkills(emp) {
+    const s = emp.skills || {};
+    const parts = ROLES.filter(r => s[r] != null).map(r => `${r}:${Number(s[r])}`);
+    return parts.length ? parts.join(" • ") : "—";
+  }
+
+  function renderEmployeesTable(E, list) {
+    E.tbody.innerHTML = "";
+
+    if (!list || list.length === 0) {
+      E.tbody.innerHTML = `<tr><td colspan="5" style="opacity:.70;padding:14px">Nessun dipendente trovato.</td></tr>`;
+      return;
+    }
+
+    list.forEach(emp => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>
+          <b>${escapeHtml(emp.name)}</b>
+          <div style="opacity:.70;font-size:12px;margin-top:2px">${escapeHtml(formatSlots(emp))}</div>
+        </td>
+        <td>${emp.is_permanent ? "Sì" : "No"}</td>
+        <td>${escapeHtml(emp.preferred_role || "—")}</td>
+        <td>${escapeHtml(formatSkills(emp))}</td>
+        <td>
+          <div class="row gap">
+            <button class="btn btn-ghost" data-action="edit" data-id="${emp.id}" title="Modifica">✎</button>
+            <button class="btn btn-ghost" data-action="del" data-id="${emp.id}" title="Elimina">🗑</button>
+          </div>
+        </td>
+      `;
+      E.tbody.appendChild(tr);
+    });
+
+    E.tbody.querySelectorAll("button[data-action]").forEach(btn => {
+      btn.onclick = async () => {
+        const id = Number(btn.getAttribute("data-id"));
+        const action = btn.getAttribute("data-action");
+        const emp = (window.employees || []).find(e => Number(e.id) === id);
+
+        try {
+          if (action === "edit") {
+            if (!emp) return;
+            openEmpModal(E, "edit", emp);
+            return;
+          }
+          if (action === "del") {
+            if (!emp) return;
+            if (!confirm(`Eliminare '${emp.name}'?`)) return;
+            await employeeDelete(id);
+            await refreshEmployeesUI(E);
+          }
+        } catch (err) {
+          console.error(err);
+          showBanner(E, `<b>Errore</b>: ${escapeHtml(err?.message || String(err))}`, "error");
+        }
+      };
+    });
+  }
+
+  async function refreshEmployeesUI(E) {
+    showBanner(E, "", "");
+    const rows = await employeesList();
+    const list = (rows || []).map(r => ({ ...r, label: r.name }));
+    window.employees = list;
+    renderEmployeesTable(E, list);
+  }
+
+  async function onSave(E) {
+    const name = normalizeUpper(E.inpName.value);
+    if (!name) return alert("Inserisci il nome del dipendente.");
+
+    const payload = {
+      name,
+      is_permanent: !!E.chkPermanent.checked,
+      preferred_role: E.selPreferred.value || null,
+      slot_morning: E.chkMorning.checked ? 1 : 0,
+      slot_evening: E.chkEvening.checked ? 1 : 0,
+      skills: readSkillsFromGrid(E),
+    };
+
+    if (!payload.slot_morning && !payload.slot_evening) {
+      return alert("Seleziona almeno uno slot: Mattina o Pomeriggio.");
+    }
+
+    try {
+      if (_editingId == null) await employeeCreate(payload);
+      else await employeeUpdate({ id: _editingId, ...payload });
+
+      closeEmpModal(E);
+      await refreshEmployeesUI(E);
+    } catch (err) {
+      console.error(err);
+      alert(String(err?.message || err));
+    }
+  }
+
+  // ---- init (sempre bind anche se refresh fallisce) ----
+  async function initEmployees() {
+    const E = els();
+
+    // Se la view non è quella giusta, non fare nulla (ma spiegalo chiaramente)
+    if (!E.btnNew || !E.btnRefresh || !E.tbody || !E.backdrop) {
+      console.warn("[employees] elementi mancanti. Attesi ID: btnEmpNew, btnEmpRefresh, empTbody, empModalBackdrop");
+      return;
+    }
+
+    // 1) Bind bottoni SEMPRE
+    E.btnNew.onclick = () => openEmpModal(E, "new", {});
+    E.btnRefresh.onclick = async () => {
+      try { await refreshEmployeesUI(E); }
+      catch (err) {
+        console.error(err);
+        showBanner(E, `<b>Impossibile caricare i dipendenti.</b><br><span style="opacity:.75">${escapeHtml(err?.message || String(err))}</span>`, "error");
+      }
+    };
+
+    E.btnClose.onclick = () => closeEmpModal(E);
+    E.btnCancel.onclick = () => closeEmpModal(E);
+    E.backdrop.onmousedown = (e) => { if (e.target === E.backdrop) closeEmpModal(E); };
+    E.btnSave.onclick = async () => { await onSave(E); };
+
+    renderSkillsGrid(E, {});
+
+    // 2) Render immediato da window.employees (così non è mai vuoto)
+    if (Array.isArray(window.employees) && window.employees.length > 0) {
+      renderEmployeesTable(E, window.employees);
+    } else {
+      renderEmployeesTable(E, []);
+    }
+
+    // 3) Refresh da DB (se fallisce, almeno vedi un errore in pagina)
+    try {
+      await refreshEmployeesUI(E);
+    } catch (err) {
+      console.error(err);
+      showBanner(E, `<b>Non riesco a leggere dal DB.</b> Premi “Aggiorna”.<br><span style="opacity:.75">${escapeHtml(err?.message || String(err))}</span>`, "error");
+    }
+  }
+
+  window.initEmployees = initEmployees;
+})();
+
+
+// =========================================================
+// MODAL: INDETERMINATI SETTIMANA (lasciato COME NEL TUO FILE)
+// =========================================================
+function openPermanentModal(){
+  const weekKey = weekKeyOf(currentWeekStart);
+  closeModal();
+
+  const permanents = employees.filter(e => !!e.is_permanent);
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) closeModal(); });
+
+  const modal = document.createElement("div");
+  modal.className = "modal";
+
+  const head = document.createElement("div");
+  head.className = "modal-head";
+  head.innerHTML = `<div class="modal-title">Indeterminati – settimana (${weekKey})</div>`;
+  const close = document.createElement("div");
+  close.className = "modal-close";
+  close.textContent = "✕";
+  close.addEventListener("click", closeModal);
+  head.appendChild(close);
+
+  const body = document.createElement("div");
+  body.className = "modal-body";
+
+  const info = document.createElement("div");
+  info.style.opacity = ".85";
+  info.style.marginBottom = "10px";
+  info.textContent = "Imposta giorno di riposo e ore target (default 40) per ogni dipendente a tempo indeterminato.";
+  body.appendChild(info);
+
+  const table = document.createElement("table");
+  table.className = "squad-table";
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th style="width:260px">Dipendente</th>
+        <th style="width:160px">Giorno riposo</th>
+        <th style="width:140px">Ore target</th>
+      </tr>
+    </thead>
+    <tbody id="permTbody"></tbody>
+  `;
+  body.appendChild(table);
+
+  const tbody = table.querySelector("#permTbody");
+
+  const days = ["(nessuno)","Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
+
+  (async () => {
+    const rows = await loadPermanentWeekFromDb(weekKey);
+    const map = new Map();
+    (rows || []).forEach(r => {
+      map.set(String(r.employee_id), {
+        day_off: r.day_off,
+        target_hours: r.target_hours ?? 40
+      });
+    });
+
+    permanents
+      .slice()
+      .sort((a,b)=>a.label.localeCompare(b.label,"it"))
+      .forEach(emp => {
+        const s = map.get(String(emp.id)) || { day_off: null, target_hours: 40 };
+
+        const tr = document.createElement("tr");
+        const sel = document.createElement("select");
+        sel.className = "squad-input";
+        sel.dataset.emp = emp.id;
+        sel.innerHTML = days.map((d,i)=>`<option value="${i===0 ? "" : (i-1)}">${d}</option>`).join("");
+        sel.value = (s.day_off === null || s.day_off === undefined) ? "" : String(s.day_off);
+
+        const hours = document.createElement("input");
+        hours.type = "number";
+        hours.min = "0";
+        hours.className = "squad-input";
+        hours.dataset.emp = emp.id;
+        hours.value = String(Number(s.target_hours ?? 40));
+
+        tr.innerHTML = `<td><b>${emp.label}</b></td>`;
+        const tdDay = document.createElement("td");
+        tdDay.appendChild(sel);
+        const tdHours = document.createElement("td");
+        tdHours.appendChild(hours);
+
+        tr.appendChild(tdDay);
+        tr.appendChild(tdHours);
+        tbody.appendChild(tr);
+      });
+  })();
+
+  const foot = document.createElement("div");
+  foot.className = "modal-foot";
+
+  const btnCancel = document.createElement("button");
+  btnCancel.className = "btn btn-ghost";
+  btnCancel.textContent = "Chiudi";
+  btnCancel.addEventListener("click", closeModal);
+
+  const btnSave = document.createElement("button");
+  btnSave.className = "btn";
+  btnSave.textContent = "Salva";
+  btnSave.addEventListener("click", async () => {
+    const items = [];
+    tbody.querySelectorAll("tr").forEach(tr => {
+      const selEl = tr.querySelector("select");
+      const inp = tr.querySelector('input[type="number"]');
+      items.push({
+        employee_id: Number(selEl.dataset.emp),
+        day_off: selEl.value === "" ? null : Number(selEl.value),
+        target_hours: Number(inp.value || 40)
+      });
+    });
+    await savePermanentWeekToDb(weekKey, items);
+    closeModal();
+  });
+
+  foot.appendChild(btnCancel);
+  foot.appendChild(btnSave);
+
+  modal.appendChild(head);
+  modal.appendChild(body);
+  modal.appendChild(foot);
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  activeModalEl = overlay;
+}

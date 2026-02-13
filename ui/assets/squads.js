@@ -6,12 +6,99 @@
 
 let _squadsAutoSaveTimer = null;
 let _undoSnapshot = null;
-
-// evita doppio binding listeners se initSquadsPage viene richiamata
 let _squadsDeleteUiBound = false;
 
 // Tabella squadre unica (non per settimana)
 const SQUADS_GLOBAL_KEY = weekKeyOf(getMondayOfCurrentWeek(new Date()));
+function openSquadsModal(){
+  const weekKey = weekKeyOf(currentWeekStart);
+  const data = getWeekSquad(weekKey);
+
+  closeModal();
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.addEventListener("mousedown", (e) => {
+    if (e.target === overlay) closeModal();
+  });
+
+  const modal = document.createElement("div");
+  modal.className = "modal";
+
+  const head = document.createElement("div");
+  head.className = "modal-head";
+  head.innerHTML = `<div class="modal-title">Squadra settimana (${weekKey})</div>`;
+  const close = document.createElement("div");
+  close.className = "modal-close";
+  close.textContent = "✕";
+  close.addEventListener("click", closeModal);
+  head.appendChild(close);
+
+  const body = document.createElement("div");
+  body.className = "modal-body";
+
+  const table = document.createElement("table");
+  table.className = "squad-table";
+
+  const thead = document.createElement("thead");
+  const hr = document.createElement("tr");
+  hr.innerHTML = `<th style="width:140px">Giorno</th><th style="width:110px">Fascia</th>` + ROLES.map(r => `<th>${r}</th>`).join("");
+  thead.appendChild(hr);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+
+  DAYS.forEach((day, dayIndex) => {
+    ["morning","evening"].forEach((band, bi) => {
+      const tr = document.createElement("tr");
+      const dayCell = bi === 0 ? `<td rowspan="2"><b>${day}</b></td>` : "";
+      const bandLabelTxt = band === "morning" ? "Mattina" : "Pomeriggio";
+      tr.innerHTML = `${dayCell}<td>${bandLabelTxt}</td>` + ROLES.map(role => {
+        const v = data[dayIndex][band][role] ?? 0;
+        return `<td><input class="squad-input" type="number" min="0" value="${v}" data-day="${dayIndex}" data-band="${band}" data-role="${role}"></td>`;
+      }).join("");
+      tbody.appendChild(tr);
+    });
+  });
+
+  table.appendChild(tbody);
+  body.appendChild(table);
+
+  const foot = document.createElement("div");
+  foot.className = "modal-foot";
+
+  const btnCancel = document.createElement("button");
+  btnCancel.className = "btn btn-ghost";
+  btnCancel.textContent = "Chiudi";
+  btnCancel.addEventListener("click", closeModal);
+
+  const btnSave = document.createElement("button");
+  btnSave.className = "btn";
+  btnSave.textContent = "Salva";
+  btnSave.addEventListener("click", async () => {
+    modal.querySelectorAll("input.squad-input").forEach(inp => {
+      const d = Number(inp.dataset.day);
+      const band = inp.dataset.band;
+      const role = inp.dataset.role;
+      data[d][band][role] = Number(inp.value || 0);
+    });
+    squads.set(weekKey, data);
+
+    await saveSquadsToDb(weekKey, data);
+
+    closeModal();
+  });
+
+  foot.appendChild(btnCancel);
+  foot.appendChild(btnSave);
+
+  modal.appendChild(head);
+  modal.appendChild(body);
+  modal.appendChild(foot);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  activeModalEl = overlay;
+}
 
 function deepClone(obj){
   return JSON.parse(JSON.stringify(obj));

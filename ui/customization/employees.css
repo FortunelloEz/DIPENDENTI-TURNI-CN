@@ -1,0 +1,326 @@
+/* =========================================================
+   DIPENDENTI PAGE (SCOPED) - NO REGRESSIONS
+   Richiede: <div class="page employees-page"> in employees.html
+   ========================================================= */
+
+.employees-page{
+  padding: 0; /* usa layout esistente */
+}
+
+/* header già esiste nel tema, qui solo piccoli aggiustamenti */
+.employees-page .page-header{
+  gap: 12px;
+}
+
+/* bottoni: riusa .btn esistente, aggiungo solo variante "primary" se serve */
+.employees-page .btn.primary{
+  background: rgba(37, 99, 235, .18);
+  border-color: rgba(37, 99, 235, .35);
+}
+
+/* pannello contenitore tabella */
+.employees-page .panel{
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+/* tabella */
+.employees-page .table-wrap{
+  overflow: auto;
+}
+
+.employees-page table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.employees-page thead th{
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #eef2ff;
+  border-bottom: 1px solid rgba(15,23,42,.12);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.employees-page tbody td{
+  border-bottom: 1px solid rgba(15,23,42,.10);
+  padding: 10px 12px;
+  vertical-align: top;
+}
+
+/* griglia form */
+.employees-page .form-grid{
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.employees-page .form-field label{
+  display: block;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.employees-page .form-field input,
+.employees-page .form-field select{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(15,23,42,.14);
+  background: #fff;
+  color: var(--text);
+}
+
+/* skills grid */
+.employees-page .skills-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.employees-page .skill-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15,23,42,.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,.70);
+}
+
+.employees-page .skill-role{
+  font-weight: 900;
+}
+
+.employees-page .skill-rank{
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(15,23,42,.14);
+  background: #fff;
+}
+
+/* modal dipendenti: NON tocchiamo .modal globale del calendario.
+   Quindi qui stiliamo SOLO quando il modal è dentro employees-page. */
+.employees-page .modal-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,.40);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 2000;
+}
+
+.employees-page .modal{
+  width: min(820px, 96vw);
+  background: #fff;
+  color: var(--text);
+  border-radius: 16px;
+  border: 1px solid rgba(15,23,42,.16);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.employees-page .modal-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(15,23,42,.10);
+  background: #f8fafc;
+}
+
+.employees-page .modal-title{
+  font-weight: 900;
+}
+
+.employees-page .modal-close{
+  border: 1px solid rgba(15,23,42,.16);
+  background: #fff;
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.employees-page .modal-body{
+  padding: 14px;
+}
+
+
+/* =========================================================
+   EMPLOYEES - MODALE INSERIMENTO (MINIMAL / SEQUENZIALE)
+   Incolla alla FINE del tuo employees.css (ultimo wins)
+   ========================================================= */
+
+#empModalBackdrop{
+  /* già gestito dal tuo backdrop; qui solo micro safe */
+}
+
+#empModalBackdrop .modal{
+  max-width: 640px !important;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+#empModalBackdrop .modal-head{
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid rgba(15,23,42,.08);
+}
+
+#empModalBackdrop .modal-title{
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: .2px;
+}
+
+#empModalBackdrop .modal-close{
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 10px;
+}
+
+#empModalBackdrop .modal-body{
+  padding: 12px 16px 16px;
+}
+
+/* --- FORM: tutto in sequenza (1 colonna) --- */
+#empModalBackdrop .form-grid{
+  display: grid;
+  grid-template-columns: 1fr !important; /* sequenziale */
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+/* label più piccole, leggere */
+#empModalBackdrop .form-field label{
+  font-size: 11.5px;
+  font-weight: 600;
+  opacity: .78;
+  margin-bottom: 6px;
+}
+
+/* input/select più bassi e puliti */
+#empModalBackdrop input[type="text"],
+#empModalBackdrop input[type="number"],
+#empModalBackdrop select{
+  width: 100%;
+  height: 32px;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 10px;
+  border: 1px solid rgba(15,23,42,.14);
+  background: #fff;
+}
+
+/* --- blocco compatto "Tempo indeterminato" + "Slot-orario" --- */
+#empModalBackdrop .form-grid > .form-field:nth-child(2),
+#empModalBackdrop .form-grid > .form-field:nth-child(3){
+  background: rgba(15,23,42,.03);
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+/* switch un pelo più compatto */
+#empModalBackdrop .switch{
+  transform: scale(.92);
+  transform-origin: left center;
+}
+
+/* check "Mattina/Pomeriggio" più minimal */
+#empModalBackdrop .check-row{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+#empModalBackdrop .check{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.75);
+  font-size: 12.5px;
+}
+
+#empModalBackdrop .check input{
+  transform: scale(.95);
+}
+
+/* --- ADVANCED (skill) più elegante --- */
+#empModalBackdrop details.emp-adv{
+  margin-top: 10px !important;
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 14px;
+  background: rgba(15,23,42,.02);
+  padding: 8px 10px;
+}
+
+#empModalBackdrop .emp-adv-summary{
+  cursor: pointer;
+  font-size: 12px;
+  opacity: .78;
+}
+
+#empModalBackdrop .subhead{
+  font-size: 12px;
+  font-weight: 650;
+  opacity: .85;
+}
+
+/* skills: più compatte, 2 colonne se c’è spazio */
+#empModalBackdrop .skills-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+  margin-top: 10px;
+}
+
+#empModalBackdrop .skill-row{
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.72);
+}
+
+#empModalBackdrop .skill-role{
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+#empModalBackdrop .skill-rank{
+  height: 30px;
+  padding: 6px 8px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+
+/* --- footer buttons: bassi, allineati, minimal --- */
+#empModalBackdrop .row.end{
+  margin-top: 12px !important;
+  gap: 10px;
+}
+
+#empModalBackdrop .btn{
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  border-radius: 12px;
+}
+/* FIX: la classe .panel globale (accordion) nasconde i pannelli.
+   Forziamo visibilità SOLO nella pagina dipendenti. */
+.employees-page .panel{
+  display: block !important;
+}
