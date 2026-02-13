@@ -29,9 +29,8 @@
   function els() {
     return {
       btnNew: $("btnEmpNew"),
-      btnRefresh: $("btnEmpRefresh"),
       tbody: $("empTbody"),
-      panel: q(".employees-page .panel"),
+      panel: q(".employees-page .emp-panel"),
 
       backdrop: $("empModalBackdrop"),
       title: $("empModalTitle"),
@@ -46,6 +45,41 @@
       selPreferred: $("empPreferredRole"),
       skillsGrid: $("empSkillsGrid"),
     };
+  }
+  function ensureModalBanner(E) {
+    if (!E.backdrop) return null;
+    const body = E.backdrop.querySelector(".modal-body");
+    if (!body) return null;
+
+    let b = body.querySelector(".emp-modal-banner");
+    if (!b) {
+      b = document.createElement("div");
+      b.className = "emp-modal-banner";
+      b.style.padding = "10px 12px";
+      b.style.borderRadius = "12px";
+      b.style.marginBottom = "10px";
+      b.style.fontSize = "13px";
+      b.style.opacity = ".92";
+      b.style.display = "none";
+      body.prepend(b); // in alto nel popup
+    }
+    return b;
+  }
+
+  function showModalBanner(E, msg, kind) {
+    const b = ensureModalBanner(E);
+    if (!b) return;
+    if (!msg) { b.style.display = "none"; b.innerHTML = ""; return; }
+
+    b.style.display = "block";
+    if (kind === "error") {
+      b.style.background = "rgba(239,68,68,.10)";
+      b.style.border = "1px solid rgba(239,68,68,.25)";
+    } else {
+      b.style.background = "rgba(2,132,199,.08)";
+      b.style.border = "1px solid rgba(2,132,199,.18)";
+    }
+    b.innerHTML = msg;
   }
 
   function ensureBanner(E) {
@@ -108,9 +142,8 @@
   }
 
   async function listFromPywebviewIfAny() {
-    const api = await waitFor(() => window.pywebview && window.pywebview.api && window.pywebview.api.employees_list, 3500);
+    const api = await waitFor(() => window.pywebview && window.pywebview.api && window.pywebview.api.employees_list, 12000);
     if (api) {
-      // employees_list vuole 0 args
       return await window.pywebview.api.employees_list();
     }
     return null;
@@ -144,19 +177,19 @@
 
 
   async function employeeCreate(payload) {
-    const api = await waitFor(() => window.pywebview && window.pywebview.api && window.pywebview.api.employee_create, 3500);
+    const api = await waitFor(() => window.pywebview && window.pywebview.api && window.pywebview.api.employee_create, 12000);
     if (!api) throw new Error("pywebview.api.employee_create non disponibile.");
     return await window.pywebview.api.employee_create(payload);
   }
 
   async function employeeUpdate(payload) {
-    const api = await waitFor(() => window.pywebview && window.pywebview.api && window.pywebview.api.employee_update, 3500);
+    const api = await waitFor(() => window.pywebview && window.pywebview.api && window.pywebview.api.employee_update, 12000);
     if (!api) throw new Error("pywebview.api.employee_update non disponibile.");
     return await window.pywebview.api.employee_update(payload);
   }
 
   async function employeeDelete(empId) {
-    const api = await waitFor(() => window.pywebview && window.pywebview.api && window.pywebview.api.employee_delete, 3500);
+    const api = await waitFor(() => window.pywebview && window.pywebview.api && window.pywebview.api.employee_delete, 12000);
     if (!api) throw new Error("pywebview.api.employee_delete non disponibile.");
     // Api.employee_delete(emp_id:int) => PASSARE INT
     return await window.pywebview.api.employee_delete(Number(empId));
@@ -204,6 +237,8 @@
     E.selPreferred.value = emp?.preferred_role || "";
 
     renderSkillsGrid(E, emp?.skills || {});
+    showModalBanner(E, "", "");
+
   }
 
   function closeEmpModal(E) {
@@ -269,9 +304,8 @@
           }
           if (action === "del") {
             if (!emp) return;
-            if (!confirm(`Eliminare '${emp.name}'?`)) return;
-            await employeeDelete(id);
-            await refreshEmployeesUI(E);
+            openDeleteModal(E, emp.id, emp.name);
+            return;
           }
         } catch (err) {
           console.error(err);
@@ -284,7 +318,11 @@
   async function refreshEmployeesUI(E) {
     showBanner(E, "", "");
     const rows = await employeesList();
-    const list = (rows || []).map(r => ({ ...r, label: r.name }));
+
+    const list = (rows || [])
+      .map(r => ({ ...r, label: r.name }))
+      .sort((a, b) => Number(b.id) - Number(a.id));
+
     window.employees = list;
     renderEmployeesTable(E, list);
   }
@@ -313,9 +351,27 @@
       closeEmpModal(E);
       await refreshEmployeesUI(E);
     } catch (err) {
-      console.error(err);
-      alert(String(err?.message || err));
-    }
+        console.error(err);
+        const msg = String(err?.message || err);
+
+        if (msg.toLowerCase().includes("esiste già un dipendente")) {
+          showModalBanner(
+            E,
+            `<b>Nome già esistente.</b><br>
+             Esiste già un dipendente con questo nome.<br>
+             <span style="opacity:.75">Scegli un nome diverso.</span>`,
+            "error"
+          );
+
+          E.inpName.focus();
+          E.inpName.style.borderColor = "rgba(239,68,68,.55)";
+          setTimeout(() => (E.inpName.style.borderColor = ""), 1200);
+          return;
+        }
+
+        // altri errori: mostrali nel popup
+        showModalBanner(E, `<b>Errore</b>: ${escapeHtml(msg)}`, "error");
+      }
   }
 
   // ---- init (sempre bind anche se refresh fallisce) ----
@@ -323,20 +379,13 @@
     const E = els();
 
     // Se la view non è quella giusta, non fare nulla (ma spiegalo chiaramente)
-    if (!E.btnNew || !E.btnRefresh || !E.tbody || !E.backdrop) {
-      console.warn("[employees] elementi mancanti. Attesi ID: btnEmpNew, btnEmpRefresh, empTbody, empModalBackdrop");
+    if (!E.btnNew || !E.tbody || !E.backdrop){
+      console.warn("[employees] elementi mancanti. Attesi ID: btnEmpNew, empTbody, empModalBackdrop");
       return;
     }
 
     // 1) Bind bottoni SEMPRE
     E.btnNew.onclick = () => openEmpModal(E, "new", {});
-    E.btnRefresh.onclick = async () => {
-      try { await refreshEmployeesUI(E); }
-      catch (err) {
-        console.error(err);
-        showBanner(E, `<b>Impossibile caricare i dipendenti.</b><br><span style="opacity:.75">${escapeHtml(err?.message || String(err))}</span>`, "error");
-      }
-    };
 
     E.btnClose.onclick = () => closeEmpModal(E);
     E.btnCancel.onclick = () => closeEmpModal(E);
@@ -357,8 +406,39 @@
       await refreshEmployeesUI(E);
     } catch (err) {
       console.error(err);
-      showBanner(E, `<b>Non riesco a leggere dal DB.</b> Premi “Aggiorna”.<br><span style="opacity:.75">${escapeHtml(err?.message || String(err))}</span>`, "error");
+      showBanner(
+        E,
+        `<b>Non riesco a leggere dal DB.</b><br><span style="opacity:.75">${escapeHtml(err?.message || String(err))}</span>`,
+        "error"
+      );
     }
+  }
+  function openDeleteModal(E, id, name) {
+    const modal = document.getElementById("empDeleteModal");
+    const text = document.getElementById("empDeleteText");
+    const confirmBtn = document.getElementById("empDeleteConfirm");
+
+    text.textContent = `Eliminare '${name}'?`;
+    modal.classList.remove("hidden");
+
+    const close = () => {
+      modal.classList.add("hidden");
+      confirmBtn.onclick = null;
+    };
+
+    document.getElementById("empDeleteCancel").onclick = close;
+    document.getElementById("empDeleteClose").onclick = close;
+
+    confirmBtn.onclick = async () => {
+      try {
+        await employeeDelete(id);
+        await refreshEmployeesUI(E);
+      } catch (err) {
+        console.error(err);
+        showBanner(E, `<b>Errore</b>: ${escapeHtml(err?.message || String(err))}`, "error");
+      }
+      close();
+    };
   }
 
   window.initEmployees = initEmployees;
@@ -496,3 +576,4 @@ function openPermanentModal(){
   document.body.appendChild(overlay);
   activeModalEl = overlay;
 }
+

@@ -197,18 +197,28 @@ class Db:
         skills: Dict[str, int] = payload.get("skills") or {}
         slot_morning = 1 if payload.get("slot_morning", 1) else 0
         slot_evening = 1 if payload.get("slot_evening", 1) else 0
-        with self._connect() as conn:
-            cur = conn.execute(
-                "INSERT INTO employees(name,is_permanent,preferred_role,slot_morning,slot_evening) VALUES (?,?,?,?,?)",
-                (name, is_perm, pref, slot_morning, slot_evening),
-            )
-            emp_id = int(cur.lastrowid)
-            for role, rank in skills.items():
-                conn.execute(
-                    "INSERT INTO employee_skills(employee_id,role,rank) VALUES (?,?,?)",
-                    (emp_id, str(role), int(rank)),
+
+        try:
+            with self._connect() as conn:
+                cur = conn.execute(
+                    "INSERT INTO employees(name,is_permanent,preferred_role,slot_morning,slot_evening) VALUES (?,?,?,?,?)",
+                    (name, is_perm, pref, slot_morning, slot_evening),
                 )
-            return emp_id
+                emp_id = int(cur.lastrowid)
+
+                for role, rank in skills.items():
+                    conn.execute(
+                        "INSERT INTO employee_skills(employee_id,role,rank) VALUES (?,?,?)",
+                        (emp_id, str(role), int(rank)),
+                    )
+
+                return emp_id
+
+        except sqlite3.IntegrityError as e:
+            # intercettiamo duplicato nome
+            if "UNIQUE constraint failed: employees.name" in str(e):
+                raise ValueError("Esiste già un dipendente con questo nome.")
+            raise
 
     def employee_update(self, payload: Dict[str, Any]) -> None:
         emp_id = int(payload["id"])
