@@ -4,7 +4,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 from cn_turni.services.import_service import ImportService
 from cn_turni.db import Db, default_db_path, week_id_from_ui_weekkey
-
+from cn_turni.services.export_service import build_week_export
+from cn_turni.services.pdf_export import build_pdf_from_export
+import base64
 
 class Api:
     def __init__(self, db_path: Optional[str] = None):
@@ -107,3 +109,40 @@ class Api:
     def squads_template_delete(self, name: str) -> Dict[str, Any]:
         self.db.squads_template_delete(name)
         return {"ok": True}
+    def export_week(self, week_key: str):
+        return build_week_export(self.db, week_key)
+
+    def export_week_pdf_base64(self, week_key: str):
+        export = build_week_export(self.db, week_key)
+        pdf_bytes = build_pdf_from_export(export)
+        import base64
+        return base64.b64encode(pdf_bytes).decode("ascii")
+
+    def export_week_pdf_save_dialog(self, week_key: str) -> dict:
+        from tkinter import Tk, filedialog
+        from cn_turni.services.export_service import build_week_export
+        from cn_turni.services.pdf_export import build_pdf_from_export
+
+        export = build_week_export(self.db, week_key)
+        pdf_bytes = build_pdf_from_export(export)
+
+        # popup Windows
+        root = Tk()
+        root.withdraw()
+
+        path = filedialog.asksaveasfilename(
+            title="Salva PDF settimana",
+            defaultextension=".pdf",
+            filetypes=[("PDF files", "*.pdf")],
+            initialfile=f"Export_{week_key}.pdf"
+        )
+
+        root.destroy()
+
+        if not path:
+            return {"saved": False}
+
+        with open(path, "wb") as f:
+            f.write(pdf_bytes)
+
+        return {"saved": True, "path": path}

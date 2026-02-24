@@ -16,6 +16,10 @@ async function loadView(route) {
   if (route === "home") initHome();
   if (route === "employees") initEmployees();
   if (route === "squads") initSquadsPage();
+  if (route === "export") {
+    console.log("[export] view loaded");
+    window.initExportView?.();
+  }
 }
 
 /* ---------- ACCORDION UI ---------- */
@@ -731,13 +735,35 @@ async function initHome(){
   renderEmployees();
   renderWeekLabel();
   renderCalendar();
+  // ✅ EXPORT: bottone "Elabora settimana" (bind pulito per evitare doppi listener)
+  {
+    const btn = document.getElementById("btnElaboraWeek");
+    if (btn) {
+      const clone = btn.cloneNode(true);
+      btn.parentNode.replaceChild(clone, btn);
+
+      clone.addEventListener("click", async () => {
+        const wk2 = weekKeyOf(currentWeekStart);
+        window.lastWeekKey = wk2;
+
+        // se sei in PyWebView ok, altrimenti evita crash
+        if (!window.pywebview?.api?.export_week) {
+          alert("API non pronta: pywebview.api.export_week non disponibile.");
+          return;
+        }
+
+        window.lastExportData = await window.pywebview.api.export_week(wk2);
+        await loadView("export");
+      });
+    }
+  }
   window.bindImportAvailability?.();
   window.bindAvailabilityViewer?.();
   document.getElementById("btnPrevWeek")?.addEventListener("click", async () => {
     currentWeekStart.setDate(currentWeekStart.getDate() - 7);
     expandedRanges = new Set();
     const wk2 = weekKeyOf(currentWeekStart);
-
+    window.currentWeekKey = wk2;
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
@@ -747,7 +773,7 @@ async function initHome(){
     currentWeekStart.setDate(currentWeekStart.getDate() + 7);
     expandedRanges = new Set();
     const wk2 = weekKeyOf(currentWeekStart);
-
+    window.currentWeekKey = wk2;
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
@@ -757,7 +783,7 @@ async function initHome(){
     currentWeekStart = getMondayOfCurrentWeek(new Date());
     expandedRanges = new Set();
     const wk2 = weekKeyOf(currentWeekStart);
-
+    window.currentWeekKey = wk2;
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
@@ -767,7 +793,7 @@ async function initHome(){
     currentWeekStart = getMondayOfCurrentWeek(new Date());
     expandedRanges = new Set();
     const wk2 = weekKeyOf(currentWeekStart);
-
+    window.currentWeekKey = wk2;
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
@@ -784,7 +810,6 @@ async function initHome(){
     recalcSegmentsFromAssignments(wk2);
     renderCalendar();
   });
-
   document.getElementById("btnPermManage")?.addEventListener("click", () => openPermanentModal());
 
   // mouseup globale: se stavi selezionando -> picker su quelle mezz'ore

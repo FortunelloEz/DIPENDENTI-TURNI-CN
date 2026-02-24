@@ -5,21 +5,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="07257b00-7490-4583-b715-83f38d4dd07b" name="Changes" comment="update">
-      <change afterPath="$PROJECT_DIR$/ui/assets/availability_viewer.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/assets/custom_slot_resolver.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/customization/availability_viewer.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/customization/popup_select_fix.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/cn_turni/services/export_service.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/cn_turni/services/pdf_export.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/assets/export.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/customization/export.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/views/export.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cn_turni/api.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cn_turni/services/csv_availability.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/csv_availability.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cn_turni/services/import_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/import_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/assets/employees.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/employees.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/assets/import_availability.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/import_availability.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/customization/calendar.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/calendar.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/views/employees.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/employees.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/views/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/home.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -60,28 +54,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.main (1).executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;F:/Desktop/Top Files/Intellij Prog/DIPENDENTI-TURNI-CN/cn_turni&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.main (1).executor": "Run",
+    "Python.main.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "F:/Desktop/Top Files/Intellij Prog/DIPENDENTI-TURNI-CN/cn_turni/services",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\cn_turni" />
-      <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\ui\assets" />
+      <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\cn_turni\services" />
       <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\ui\views" />
+      <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\ui\assets" />
+      <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\cn_turni" />
       <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\ui" />
-      <recent name="F:\Desktop\Top Files\Intellij Prog\Turni-CN\app\utils" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\ui\customization" />
@@ -223,7 +217,15 @@
       <option name="project" value="LOCAL" />
       <updated>1771926991515</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="update">
+      <option name="closed" value="true" />
+      <created>1771946553747</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1771946553747</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">

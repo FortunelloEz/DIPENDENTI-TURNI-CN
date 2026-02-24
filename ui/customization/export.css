@@ -1,0 +1,96 @@
+/* ===== Export page ===== */
+
+.export-card {
+  padding: 10px;
+}
+
+.export-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* wrapper scroll: orizz + vert */
+.export-table-wrap {
+  width: 100%;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: 10px;
+  background: #fff;
+}
+
+/* tabella */
+.export-table {
+  width: max-content;           /* così lo scroll orizz funziona bene */
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+
+/* celle */
+.export-table th,
+.export-table td {
+  padding: 10px 12px;
+  border-right: 1px solid rgba(0,0,0,.10);
+  border-bottom: 1px solid rgba(0,0,0,.10);
+  white-space: nowrap;
+}
+
+/* header sticky (2 righe) */
+.export-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #f1f3f5;
+  font-weight: 700;
+  text-align: center;
+}
+
+.export-table thead tr:nth-child(2) th {
+  top: 40px;  /* seconda riga sticky sotto la prima */
+  z-index: 3;
+  background: #e9ecef;
+  font-weight: 700;
+}
+
+/* prima colonna sticky (nomi) */
+.export-table th:first-child,
+.export-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: #ffffff;
+  font-weight: 700;
+  border-right: 2px solid rgba(0,0,0,.14);
+}
+
+/* header prima colonna sopra a tutto */
+.export-table thead th:first-child {
+  z-index: 5;
+  background: #f1f3f5;
+}
+
+/* zebra rows */
+.export-table tbody tr:nth-child(even) td {
+  background: #fafbfc;
+}
+
+/* evidenzia slot pieni */
+.export-table td.filled {
+  background: #e6fcf5;
+  font-weight: 700;
+}
+
+/* separatore tra giorni (ogni 2 colonne) */
+.export-table td.day-split,
+.export-table th.day-split {
+  border-right: 2px solid rgba(0,0,0,.18);
+}
+
+/* celle vuote */
+.export-table td:empty::after {
+  content: "—";
+  opacity: .35;
+}
