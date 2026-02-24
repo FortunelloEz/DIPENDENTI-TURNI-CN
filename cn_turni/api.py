@@ -17,9 +17,17 @@ class Api:
 
     def ping(self) -> Dict[str, Any]:
         return {"ok": True}
-    def import_availability_and_autofill(self, week_key: str, csv_text: str, resolutions: Optional[List[Dict[str, Any]]] = None):
+    def import_availability_and_autofill(
+            self,
+            week_key: str,
+            csv_text: str,
+            resolutions: Optional[List[Dict[str, Any]]] = None,
+            custom_resolutions: Optional[List[Dict[str, Any]]] = None,
+    ):
         week_id = week_id_from_ui_weekkey(week_key)
-        return self.import_service.import_availability_and_autofill(week_key, week_id, csv_text, resolutions)
+        return self.import_service.import_availability_and_autofill(
+            week_key, csv_text, resolutions, custom_resolutions
+        )
 
 
 

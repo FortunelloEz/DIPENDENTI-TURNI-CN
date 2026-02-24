@@ -44,6 +44,7 @@
       chkEvening: $("empSlotEvening"),
       selPreferred: $("empPreferredRole"),
       skillsGrid: $("empSkillsGrid"),
+      inpAlias: $("empAlias"),
     };
   }
   function ensureModalBanner(E) {
@@ -235,7 +236,7 @@
     E.chkMorning.checked = (emp?.slot_morning ?? 1) ? true : false;
     E.chkEvening.checked = (emp?.slot_evening ?? 1) ? true : false;
     E.selPreferred.value = emp?.preferred_role || "";
-
+    E.inpAlias.value = emp?.aliases ? String(emp.aliases) : "";
     renderSkillsGrid(E, emp?.skills || {});
     showModalBanner(E, "", "");
 
@@ -378,6 +379,7 @@
 
     const payload = {
       name,
+      aliases: (E.inpAlias.value || "").trim(),
       is_permanent: !!E.chkPermanent.checked,
       preferred_role: E.selPreferred.value || null,
       slot_morning: E.chkMorning.checked ? 1 : 0,

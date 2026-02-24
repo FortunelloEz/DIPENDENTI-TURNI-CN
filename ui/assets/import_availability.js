@@ -21,36 +21,60 @@ window.bindImportAvailability = function bindImportAvailability() {
 
     input.onchange = async () => {
       try {
-        const file = input.files?.[0];
-        if (!file) return;
-
+        const file = input.files && input.files.length ? input.files[0] : null;
+        if (!file) {
+          alert("Seleziona un file CSV.");
+          return;
+        }
         const csvText = await file.text();
         const weekKey = weekKeyOf(currentWeekStart);
 
-        // 1) prima chiamata: se ci sono nomi sconosciuti, backend risponde needs_resolution
-        let res = await window.pywebview.api.import_availability_and_autofill(weekKey, csvText, null);
+        let resolutions = null;
+        let customResolutions = null;
 
+        // 1) prima chiamata
+        let res = await window.pywebview.api.import_availability_and_autofill(weekKey, csvText, null, null);
+
+        // 2) se ci sono nomi sconosciuti → risolvi alias
         if (res && res.needs_resolution) {
           if (typeof window.resolveUnknownUsersModal !== "function") {
             throw new Error("resolveUnknownUsersModal non disponibile (import_resolver.js non caricato).");
           }
+          resolutions = await window.resolveUnknownUsersModal(res.unknown || [], res.employees || []);
+          if (!resolutions) return;
 
-          const resolutions = await window.resolveUnknownUsersModal(res.unknown || [], res.employees || []);
-          if (!resolutions) return; // annullato dall'utente
+          res = await window.pywebview.api.import_availability_and_autofill(weekKey, csvText, resolutions, null);
+        }
 
-          // 2) seconda chiamata: con le risoluzioni applica import + autofill
-          res = await window.pywebview.api.import_availability_and_autofill(weekKey, csvText, resolutions);
+        // 3) se ci sono celle custom → risolvi slot custom
+        if (res && res.needs_custom_slot_resolution) {
+          if (typeof window.resolveCustomSlotsModal !== "function") {
+            throw new Error("resolveCustomSlotsModal non disponibile (custom_slot_resolver.js non caricato).");
+          }
+          customResolutions = await window.resolveCustomSlotsModal(res.custom_cells || []);
+          if (!customResolutions) return;
+
+          res = await window.pywebview.api.import_availability_and_autofill(weekKey, csvText, resolutions, customResolutions);
         }
 
         if (!res || !res.ok) {
           throw new Error(res?.error || "Import fallito");
         }
 
-        // ✅ refresh immediato (senza cambiare scheda)
-        await loadWeekFromDb(weekKey);
+        // salva preview disponibilità per il viewer
+        if (res.availability_preview) {
+          window._lastAvailabilityPreview = res.availability_preview;
+        }
+
+        // refresh UI
+        const wk = res.week_key_used || weekKey;
+        await loadWeekFromDb(wk);
         renderEmployees();
         renderWeekLabel();
         renderCalendar();
+
+        // (ri)render bottoni viewer
+        window.bindAvailabilityViewer?.();
 
         alert("Import completato ✅");
       } catch (e) {

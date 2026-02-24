@@ -1,0 +1,26 @@
+/* ui/customization/popup_select_fix.css */
+/* Fix dropdown (select/option) nei popup: testo leggibile e menu non “bianco su bianco” */
+
+.cn-modal select,
+.cn-modal option,
+.av-modal select,
+.av-modal option {
+  color: #111 !important;
+  background: #fff !important;
+}
+
+/* Se hai classi tipo cn-select usate nei popup */
+.cn-select {
+  color: #111 !important;
+  background: #fff !important;
+  border: 1px solid rgba(15, 23, 42, .18);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+/* Migliora leggibilità quando evidenzi un’opzione */
+.cn-modal option:checked,
+.av-modal option:checked {
+  background: #e5e7eb !important;
+  color: #111 !important;
+}

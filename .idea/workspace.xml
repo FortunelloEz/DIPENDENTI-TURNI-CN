@@ -5,19 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="07257b00-7490-4583-b715-83f38d4dd07b" name="Changes" comment="update">
-      <change afterPath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cn_turni/services/csv_availability.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cn_turni/services/import_service.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/assets/import_availability.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/assets/import_resolver.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/customization/import_resolver.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/assets/availability_viewer.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/assets/custom_slot_resolver.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/customization/availability_viewer.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/customization/popup_select_fix.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cn_turni/api.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cn_turni/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/services/csv_availability.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/csv_availability.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/services/import_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/import_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/employees.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/employees.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/customization/app.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/app.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/import_availability.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/import_availability.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/customization/calendar.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/calendar.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/views/employees.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/employees.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/views/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/home.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -213,7 +215,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770985137256</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="update">
+      <option name="closed" value="true" />
+      <created>1771926991515</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1771926991515</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -221,5 +231,16 @@
     <MESSAGE value="add squadra sulla barra di navigazione" />
     <MESSAGE value="update" />
     <option name="LAST_COMMIT_MESSAGE" value="update" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/cn_turni/services/csv_availability.py</url>
+          <line>105</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

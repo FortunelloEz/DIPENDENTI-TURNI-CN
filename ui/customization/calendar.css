@@ -868,3 +868,47 @@
   background: var(--panel2) !important;
   color: var(--text) !important;
 }
+/* ===== GIORNO COLLASSATO: COLONNA MICRO ===== */
+.cell.day-collapsed.micro{
+  padding: 0 !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center;
+}
+
+.cell.header.micro-hdr{
+  padding: 0 !important;
+}
+
+/* puntino / trattino minimal */
+.micro-dot{
+  font-size: 18px;
+  line-height: 1;
+  opacity: .75;
+}
+.micro-dash{
+  font-size: 14px;
+  line-height: 1;
+  opacity: .35;
+}
+
+/* Evita che contenuti “lunghi” forzino larghezze */
+.cell.day-collapsed.micro *{
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+/* header giorno quando è collassato: 2 righe, centrato */
+.day-collapsed-hdr{
+  font-size: 12px;
+  line-height: 1.05;
+  padding: 6px 4px !important;
+  text-align: center;
+  white-space: pre-line; /* permette \n */
+}
+.micro-count{
+  font-weight: 700;
+  font-size: 14px;
+  opacity: .8;
+}

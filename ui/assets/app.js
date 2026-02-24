@@ -358,7 +358,10 @@ function renderCalendar(){
   const weekKey = weekKeyOf(currentWeekStart);
   const cols = buildDayColumns();
 
-  grid.style.gridTemplateColumns = ["160px", ...cols.map(() => "minmax(140px, 1fr)")].join(" ");
+  grid.style.gridTemplateColumns = [
+    "160px",
+    ...cols.map(c => c.collapsed ? "70px" : "minmax(140px, 1fr)")
+  ].join(" ");
   grid.innerHTML = "";
 
   /* ===== HEADER 1: GIORNI ===== */
@@ -369,7 +372,10 @@ function renderCalendar(){
     date.setDate(date.getDate() + dayIndex);
 
     const span = expandedDays.has(dayIndex) ? ROLES.length : 1;
-    const cell = makeCell(`${day}\n${formatDate(date)}`, "cell header day-toggle day-" + dayIndex + " day-end");
+    const isCollapsed = !expandedDays.has(dayIndex);
+    const cell = makeCell(`${day}\n${formatDate(date)}`,
+      "cell header day-toggle day-" + dayIndex + " day-end" + (isCollapsed ? " day-collapsed-hdr" : "")
+    );
     cell.style.gridColumn = `span ${span}`;
     cell.addEventListener("click", () => {
       if (expandedDays.has(dayIndex)) expandedDays.delete(dayIndex);
@@ -389,8 +395,8 @@ function renderCalendar(){
         grid.appendChild(c);
       });
     } else {
-      const c = makeCell("", "cell header day-" + dayIndex + " day-end");
-      c.innerHTML = `<span class="role-pill">Tutti i ruoli</span>`;
+      const c = makeCell("", "cell header day-" + dayIndex + " day-end micro-hdr");
+      c.innerHTML = ``; // niente testo
       grid.appendChild(c);
     }
   });
@@ -426,22 +432,44 @@ function renderCalendar(){
     cols.forEach(col => {
       if (col.collapsed){
         const cell = document.createElement("div");
-        cell.className = "cell slot day-collapsed empty day-" + col.dayIndex + (col.isDayEnd ? " day-end" : "");
+        cell.className = "cell slot day-collapsed micro day-" + col.dayIndex + (col.isDayEnd ? " day-end" : "");
         cell.dataset.dayIndex = col.dayIndex;
 
+        // click per ri-espandere il giorno
         cell.addEventListener("click", () => {
           expandedDays.add(col.dayIndex);
           renderCalendar();
         });
 
-        const summary = buildCollapsedSummary(weekKey, col.dayIndex, row);
-        if (summary.hasSomething){
-          cell.classList.remove("empty");
-          cell.classList.add("filled");
-          cell.innerHTML = summary.html;
-        } else {
-          cell.innerHTML = `<span style="opacity:.4">—</span>`;
+        // ✅ niente riepilogo: sempre colonna micro
+        // Se vuoi un hint minimo quando c'è qualcosa, mettiamo solo un pallino
+        const timeLabels = (row.kind === 'range' || row.kind === 'rangeHeader')
+          ? segmentToSlots(row.seg)
+          : (row.kind === "slot" ? [row.timeLabel] : []);
+
+        // c'è qualsiasi assegnazione in QUALSIASI ruolo in quel giorno su quelle label?
+        let hasAny = false;
+        if (timeLabels.length){
+          for (const role of ROLES){
+            const ids = unionAssignedOverLabels(weekKey, col.dayIndex, role, timeLabels);
+            if (ids.length){ hasAny = true; break; }
+          }
         }
+
+        cell.classList.toggle("filled", hasAny);
+        cell.classList.toggle("empty", !hasAny);
+
+        // icona minimal: • se pieno, — se vuoto
+        let total = 0;
+        if (timeLabels.length){
+          const set = new Set();
+          for (const role of ROLES){
+            unionAssignedOverLabels(weekKey, col.dayIndex, role, timeLabels).forEach(id => set.add(id));
+          }
+          total = set.size;
+        }
+        cell.innerHTML = total ? `<span class="micro-count">${total}</span>` : `<span class="micro-dash">—</span>`;
+
         grid.appendChild(cell);
         return;
       }
@@ -704,6 +732,7 @@ async function initHome(){
   renderWeekLabel();
   renderCalendar();
   window.bindImportAvailability?.();
+  window.bindAvailabilityViewer?.();
   document.getElementById("btnPrevWeek")?.addEventListener("click", async () => {
     currentWeekStart.setDate(currentWeekStart.getDate() - 7);
     expandedRanges = new Set();
