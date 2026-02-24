@@ -99,7 +99,7 @@ class Db:
                     slot_evening    INTEGER NOT NULL DEFAULT 1,
                     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
                 );
-    
+                
                 CREATE TABLE IF NOT EXISTS employee_skills (
                     employee_id INTEGER NOT NULL,
                     role        TEXT NOT NULL,
@@ -148,9 +148,12 @@ class Db:
                 CREATE INDEX IF NOT EXISTS idx_perm_week ON permanent_week(week_id);
                 """
             )
+            self._ensure_column(conn, "employees", "aliases", "aliases TEXT NULL")
 
             self._ensure_column(conn, "employees", "slot_morning", "slot_morning INTEGER NOT NULL DEFAULT 1")
             self._ensure_column(conn, "employees", "slot_evening", "slot_evening INTEGER NOT NULL DEFAULT 1")
+
+
     # ---------- Retention ----------
     def purge_old_weeks(self, months: int = 6) -> int:
         cutoff = date.today() - timedelta(days=int(30.5 * months))
@@ -183,6 +186,8 @@ class Db:
                         slot_morning=int(r["slot_morning"]) if r["slot_morning"] is not None else 1,
                         slot_evening=int(r["slot_evening"]) if r["slot_evening"] is not None else 1,
                         skills={s["role"]: int(s["rank"]) for s in skills},
+                        aliases=r["aliases"] or "",
+
                     )
                 )
             return out
@@ -200,9 +205,11 @@ class Db:
 
         try:
             with self._connect() as conn:
+                aliases = (payload.get("aliases") or payload.get("alias") or "").strip()
+
                 cur = conn.execute(
-                    "INSERT INTO employees(name,is_permanent,preferred_role,slot_morning,slot_evening) VALUES (?,?,?,?,?)",
-                    (name, is_perm, pref, slot_morning, slot_evening),
+                    "INSERT INTO employees(name,is_permanent,preferred_role,slot_morning,slot_evening,aliases) VALUES (?,?,?,?,?,?)",
+                    (name, is_perm, pref, slot_morning, slot_evening, aliases),
                 )
                 emp_id = int(cur.lastrowid)
 
@@ -232,9 +239,10 @@ class Db:
         slot_morning = 1 if payload.get("slot_morning", 1) else 0
         slot_evening = 1 if payload.get("slot_evening", 1) else 0
         with self._connect() as conn:
+            aliases = (payload.get("aliases") or payload.get("alias") or "").strip()
             conn.execute(
-                "UPDATE employees SET name=?, is_permanent=?, preferred_role=?, slot_morning=?, slot_evening=? WHERE id=?",
-                (name, is_perm, pref, slot_morning, slot_evening, emp_id),
+                "UPDATE employees SET name=?, is_permanent=?, preferred_role=?, slot_morning=?, slot_evening=?, aliases=? WHERE id=?",
+                (name, is_perm, pref, slot_morning, slot_evening, aliases, emp_id),
             )
             conn.execute("DELETE FROM employee_skills WHERE employee_id=?", (emp_id,))
             for role, rank in skills.items():

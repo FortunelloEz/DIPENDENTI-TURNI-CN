@@ -5,10 +5,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="07257b00-7490-4583-b715-83f38d4dd07b" name="Changes" comment="update">
+      <change afterPath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/cn_turni/services/csv_availability.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/cn_turni/services/import_service.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/assets/import_availability.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/assets/import_resolver.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/customization/import_resolver.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/api.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/api.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/employees.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/employees.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/customization/calendar.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/calendar.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/views/employees.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/employees.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/customization/app.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/app.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/views/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/home.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -58,7 +67,7 @@
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;F:/Desktop/Top Files/Intellij Prog/DIPENDENTI-TURNI-CN/ui/assets&quot;,
+    &quot;last_opened_file_path&quot;: &quot;F:/Desktop/Top Files/Intellij Prog/DIPENDENTI-TURNI-CN/cn_turni&quot;,
     &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
     &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;
@@ -66,11 +75,11 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\cn_turni" />
       <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\ui\assets" />
       <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\ui\views" />
       <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\ui" />
       <recent name="F:\Desktop\Top Files\Intellij Prog\Turni-CN\app\utils" />
-      <recent name="F:\Desktop\Top Files\Intellij Prog\Turni-CN\app\services" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\ui\customization" />
@@ -196,7 +205,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770980547330</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="update">
+      <option name="closed" value="true" />
+      <created>1770985137256</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1770985137256</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">

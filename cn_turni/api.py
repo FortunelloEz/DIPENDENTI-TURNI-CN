@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
-
+from cn_turni.services.import_service import ImportService
 from cn_turni.db import Db, default_db_path, week_id_from_ui_weekkey
 
 
@@ -12,9 +12,16 @@ class Api:
         self.db = Db(db_path or default_db_path())
         # retention safety (anche se la fai in main non rompe)
         self.db.purge_old_weeks(months=6)
+        self.import_service = ImportService(self.db)
+
 
     def ping(self) -> Dict[str, Any]:
         return {"ok": True}
+    def import_availability_and_autofill(self, week_key: str, csv_text: str, resolutions: Optional[List[Dict[str, Any]]] = None):
+        week_id = week_id_from_ui_weekkey(week_key)
+        return self.import_service.import_availability_and_autofill(week_key, week_id, csv_text, resolutions)
+
+
 
     # =========================
     # Employees

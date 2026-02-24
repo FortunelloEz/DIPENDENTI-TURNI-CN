@@ -703,7 +703,7 @@ async function initHome(){
   renderEmployees();
   renderWeekLabel();
   renderCalendar();
-
+  window.bindImportAvailability?.();
   document.getElementById("btnPrevWeek")?.addEventListener("click", async () => {
     currentWeekStart.setDate(currentWeekStart.getDate() - 7);
     expandedRanges = new Set();

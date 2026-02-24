@@ -489,6 +489,50 @@
       close();
     };
   }
+  // ---------------------------------------------------------
+  // Bridge per import CSV: apri modal "Nuovo dipendente" e precompila nome.
+  // Ritorna una Promise che si risolve quando il dipendente viene salvato.
+  // ---------------------------------------------------------
+  window.openEmployeeCreateModal = async function openEmployeeCreateModal(prefillName) {
+    // assicurati che la view employees sia caricata, altrimenti initEmployees non trova i DOM id
+    // NB: il modal esiste dentro employees.html, quindi deve essere nel DOM.
+    const E = els();
+    if (!E.backdrop || !E.inpName || !E.btnSave) {
+      throw new Error("Modal dipendente non presente nel DOM. Apri la view 'Dipendenti' almeno una volta o includi il modal nella home.");
+    }
+
+    // Apri modal nuovo e precompila nome
+    openEmpModal(E, "new", {});
+    E.inpName.value = String(prefillName || "");
+
+    // Ritorno promise risolta quando salvi con successo
+    return new Promise((resolve, reject) => {
+      const oldOnclick = E.btnSave.onclick;
+
+      E.btnSave.onclick = async () => {
+        try {
+          await onSave(E);   // usa la tua logica esistente
+          // se onSave va a buon fine chiude modal e refresha
+          // ripristina handler
+          E.btnSave.onclick = oldOnclick;
+          resolve(true);
+        } catch (err) {
+          // onSave già mostra banner; qui non interrompiamo il flusso
+          console.error(err);
+          // non reject per non rompere l’esperienza; resti nel modal
+        }
+      };
+
+      // se chiude il modal senza salvare, consideriamo annullato
+      const oldClose = E.btnClose.onclick;
+      E.btnClose.onclick = () => {
+        E.btnClose.onclick = oldClose;
+        E.btnSave.onclick = oldOnclick;
+        closeEmpModal(E);
+        reject(new Error("Creazione utente annullata."));
+      };
+    });
+  };
 
   window.initEmployees = initEmployees;
 })();

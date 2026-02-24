@@ -279,3 +279,18 @@ body{
 .chip.chip-ok{ border-color: rgba(0,180,60,.55); background: rgba(0,180,60,.12); }
 .chip.chip-warn{ border-color: rgba(255,170,0,.55); background: rgba(255,170,0,.12); }
 .chip.chip-bad{ border-color: rgba(255,60,60,.55); background: rgba(255,60,60,.12); }
+
+/* ===== IMPORT AUTO-SCHEDULE: deficit (mancano persone) ===== */
+.cell.slot.deficit{
+  background: rgba(239,68,68,.18) !important;
+  outline: 2px solid rgba(239,68,68,.35) !important;
+  outline-offset: -2px;
+}
+
+/* ===== RANGE "MERGED" più scuro dei 30min (se usi .block per i range) ===== */
+.calendar-grid .cell.slot.block{
+  background: rgba(15,23,42,.08) !important;
+}
+.calendar-grid .cell.slot.block.filled{
+  background: rgba(15,23,42,.12) !important;
+}
