@@ -5,16 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="07257b00-7490-4583-b715-83f38d4dd07b" name="Changes" comment="update">
-      <change afterPath="$PROJECT_DIR$/cn_turni/services/export_service.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cn_turni/services/pdf_export.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/assets/export.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/customization/export.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/views/export.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cn_turni/api.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/assets/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/views/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/home.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/views/export.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/export.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,21 +47,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.main (1).executor": "Run",
-    "Python.main.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "F:/Desktop/Top Files/Intellij Prog/DIPENDENTI-TURNI-CN/cn_turni/services",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.2"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.main (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;F:/Desktop/Top Files/Intellij Prog/DIPENDENTI-TURNI-CN/cn_turni/services&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="F:\Desktop\Top Files\Intellij Prog\DIPENDENTI-TURNI-CN\cn_turni\services" />
@@ -225,7 +218,15 @@
       <option name="project" value="LOCAL" />
       <updated>1771946553747</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="update">
+      <option name="closed" value="true" />
+      <created>1771949087295</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1771949087295</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">

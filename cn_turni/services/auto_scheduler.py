@@ -216,8 +216,6 @@ def build_plan(
                 for emp in permanents:
                     if emp.id in used:
                         continue
-                    if _is_indifferent_day(availability, emp.name, iso) and indiff_used_day.get((emp.id, d)):
-                        continue
                     if perm_dayoff.get(emp.id) == d:
                         continue
                     if perm_used_day.get((emp.id, d)):
@@ -284,6 +282,8 @@ def build_plan(
                 candidates = []
                 for emp in temps:
                     if emp.id in used:
+                        continue
+                    if _is_indifferent_day(availability, emp.name, iso) and indiff_used_day.get((emp.id, d)):
                         continue
                     if not _allowed_by_profile(emp, slot):
                         continue
