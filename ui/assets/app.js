@@ -347,10 +347,27 @@ function applySelectionUI(){
   const role = sel.role;
   const want = new Set(sel.labels);
 
-  document.querySelectorAll(`.cell.slot[data-day-index="${dayIndex}"][data-role="${CSS.escape(role)}"]`).forEach(el => {
-    const t = el.dataset.timeLabel;
-    if (t && want.has(t)) el.classList.add("selected");
-  });
+  document
+    .querySelectorAll(`.cell.slot[data-day-index="${dayIndex}"][data-role="${CSS.escape(role)}"]`)
+    .forEach(el => {
+      const kind = el.dataset.kind;
+
+      // mezz’ora: match diretto
+      if (kind === "slot") {
+        const t = el.dataset.timeLabel;
+        if (t && want.has(t)) el.classList.add("selected");
+        return;
+      }
+
+      // fascia (range/rangeHeader): se interseca almeno una mezz’ora selezionata -> evidenzia
+      const labels = (el.dataset.timeLabels || "").split(",").filter(Boolean);
+      for (const t of labels) {
+        if (want.has(t)) {
+          el.classList.add("selected");
+          break;
+        }
+      }
+    });
 }
 
 function renderCalendar(){
@@ -482,12 +499,26 @@ function renderCalendar(){
       cell.className = "cell slot empty day-" + col.dayIndex + (col.isDayEnd ? " day-end" : "");
       cell.dataset.dayIndex = col.dayIndex;
       cell.dataset.role = col.role;
-      if (row.kind === "slot") cell.dataset.timeLabel = row.timeLabel;
-      if (row.kind === "range" || row.kind === "rangeHeader") cell.dataset.rangeId = row.rangeId;
+
+      // ✅ serve a applySelectionUI per capire che tipo di cella è
+      cell.dataset.kind = row.kind;
+
+      if (row.kind === "slot") {
+        cell.dataset.timeLabel = row.timeLabel; // singola mezz’ora
+      } else if (row.kind === "range" || row.kind === "rangeHeader") {
+        cell.dataset.rangeId = row.rangeId;
+      }
 
       const timeLabels = (row.kind === 'range' || row.kind === 'rangeHeader')
         ? segmentToSlots(row.seg)
         : [row.timeLabel];
+
+      // ✅ PER IL COLORE SELEZIONE: sulle fasce salvo tutte le mezz’ore coperte
+      if (row.kind === "range" || row.kind === "rangeHeader") {
+        cell.dataset.timeLabels = timeLabels.join(",");
+      } else {
+        delete cell.dataset.timeLabels;
+      }
 
       const ids = unionAssignedOverLabels(weekKey, col.dayIndex, col.role, timeLabels);
       const sig = ids.slice().sort().join('|');
@@ -510,10 +541,15 @@ function renderCalendar(){
       }
       prevSigByCol.set(sigKey, sig);
 
-      // selezione su mezz'ore
-      if (row.kind === "slot"){
+      // ✅ selezione con drag: funziona sia su mezz'ore (slot) sia su fasce (range/rangeHeader)
+      if (row.kind === "slot" || row.kind === "range" || row.kind === "rangeHeader") {
         cell.addEventListener("mousedown", (e) => {
           e.preventDefault();
+          e.stopPropagation();
+
+          // se inizi a trascinare, sopprimiamo il click “assegna fascia”
+          window._suppressNextRangeClick = true;
+
           isSelecting = true;
           sel.dayIndex = col.dayIndex;
           sel.role = col.role;
@@ -522,10 +558,12 @@ function renderCalendar(){
           sel.labels = labelsForRowSpan(sel.rowStart, sel.rowEnd);
           applySelectionUI();
         });
+
         cell.addEventListener("mouseenter", () => {
           if (!isSelecting) return;
           if (sel.dayIndex !== col.dayIndex) return;
           if (sel.role !== col.role) return;
+
           sel.rowEnd = rIdx;
           sel.labels = labelsForRowSpan(sel.rowStart, sel.rowEnd);
           applySelectionUI();
@@ -536,6 +574,13 @@ function renderCalendar(){
         cell.style.cursor = "pointer";
         cell.addEventListener("click", (e) => {
           e.stopPropagation();
+
+          // ✅ se arriviamo da drag-select, non aprire anche il picker “a click”
+          if (window._suppressNextRangeClick) {
+            window._suppressNextRangeClick = false;
+            return;
+          }
+          window._suppressNextRangeClick = false;
           openEmployeePicker({ weekKey, dayIndex: col.dayIndex, role: col.role, timeLabels });
         });
       }
@@ -722,7 +767,7 @@ async function initHome(){
   expandedRanges = new Set();  // fasce compresse
 
   const wk = weekKeyOf(currentWeekStart);
-
+  window.currentWeekKey = wk;
   await retryUntil(
     async () => { await loadEmployeesFromDb(); },
     () => Array.isArray(employees) && employees.length > 0,

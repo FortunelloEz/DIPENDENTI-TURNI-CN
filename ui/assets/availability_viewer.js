@@ -12,6 +12,9 @@ function avEscape(s){
     .replaceAll("'","&#039;");
 }
 
+function avNormName(s){
+  return String(s ?? "").trim().toUpperCase().replace(/\s+/g, " ");
+}
 function avCloseOverlay(){
   document.getElementById("avOverlay")?.remove();
 }
@@ -30,7 +33,38 @@ function avOpenDay(dayIndex){
   }
 
   const items = Array.isArray(day.items) ? day.items : [];
+  // ===== calcolo "chi è stato inserito in calendario" per quel giorno =====
+  const wk =
+    (typeof window.currentWeekKey !== "undefined" && window.currentWeekKey)
+      ? window.currentWeekKey
+      : (typeof weekKeyOf === "function" ? weekKeyOf(currentWeekStart) : null);
 
+  const scheduledIds = new Set();
+
+  // mappa "NOME" -> employeeId (match per label)
+  const nameToId = new Map();
+  if (Array.isArray(employees)) {
+    employees.forEach(e => {
+      const k = avNormName(e?.label);
+      if (k) nameToId.set(k, e.id);
+    });
+  }
+
+  // unione di TUTTE le assegnazioni del giorno, su tutti i ruoli e tutte le mezz'ore
+  if (wk && Array.isArray(HALF_HOURS) && Array.isArray(ROLES) && typeof getAssignedIdsFor === "function") {
+    HALF_HOURS.forEach(t => {
+      ROLES.forEach(role => {
+        const ids = getAssignedIdsFor(wk, dayIndex, role, t) || [];
+        ids.forEach(id => scheduledIds.add(String(id)));
+      });
+    });
+  }
+
+  function isNotScheduled(itName){
+    const id = nameToId.get(avNormName(itName));
+    if (id === undefined || id === null) return false; // se non matcho il nome, non lo marco rosa
+    return !scheduledIds.has(String(id));
+  }
   const overlay = document.createElement("div");
   overlay.id = "avOverlay";
   overlay.className = "av-overlay";
@@ -47,12 +81,18 @@ function avOpenDay(dayIndex){
     <div class="av-body-list">
       ${
         items.length
-          ? items.map(it => `
-              <div class="av-row">
-                <div class="av-name">${avEscape(it.name)}</div>
-                <div class="av-range">${avEscape(it.range)}</div>
-              </div>
-            `).join("")
+          ? items.map(it => {
+              const missing = isNotScheduled(it.name);
+              return `
+                <div class="av-row ${missing ? "av-missing" : ""}">
+                  <div class="av-name">
+                    ${avEscape(it.name)}
+                    ${missing ? `<span class="av-badge-missing">non inserito</span>` : ``}
+                  </div>
+                  <div class="av-range">${avEscape(it.range)}</div>
+                </div>
+              `;
+            }).join("")
           : `<div class="av-empty">Nessuno</div>`
       }
     </div>
@@ -60,7 +100,8 @@ function avOpenDay(dayIndex){
 
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
-
+  // ===== draggable modal =====
+  makeAvDraggable(modal, modal.querySelector(".av-head"));
   document.getElementById("avCloseBtn")?.addEventListener("click", avCloseOverlay);
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) avCloseOverlay();
@@ -91,7 +132,63 @@ function avRenderButtons(){
     btns.appendChild(b);
   });
 }
+function makeAvDraggable(modal, handle){
+  if (!modal || !handle) return;
 
+  modal.style.position = "absolute";
+
+  // centra iniziale
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const r = modal.getBoundingClientRect();
+  modal.style.left = `${Math.max(10, (vw - r.width) / 2)}px`;
+  modal.style.top  = `${Math.max(10, (vh - r.height) / 2)}px`;
+
+  let dragging = false;
+  let startX = 0, startY = 0;
+  let startLeft = 0, startTop = 0;
+
+  handle.style.cursor = "move";
+  handle.style.userSelect = "none";
+  let isResizing = false;
+
+  // se l'utente sta ridimensionando (drag del resize handle), non trascinare
+  modal.addEventListener("mousedown", (e) => {
+    const rr = modal.getBoundingClientRect();
+    const nearRight = (rr.right - e.clientX) < 18;
+    const nearBottom = (rr.bottom - e.clientY) < 18;
+    isResizing = nearRight && nearBottom; // angolo resize
+  });
+
+  window.addEventListener("mouseup", () => { isResizing = false; });
+  handle.addEventListener("mousedown", (e) => {
+    if (isResizing) return;
+    if (e.target && e.target.closest && e.target.closest(".av-x")) return;
+
+    dragging = true;
+    const rr = modal.getBoundingClientRect();
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = rr.left;
+    startTop = rr.top;
+    e.preventDefault();
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    const rr = modal.getBoundingClientRect();
+    const newLeft = Math.min(window.innerWidth - rr.width - 10, Math.max(10, startLeft + dx));
+    const newTop  = Math.min(window.innerHeight - rr.height - 10, Math.max(10, startTop + dy));
+
+    modal.style.left = `${newLeft}px`;
+    modal.style.top  = `${newTop}px`;
+  });
+
+  window.addEventListener("mouseup", () => { dragging = false; });
+}
 window.bindAvailabilityViewer = function bindAvailabilityViewer(){
   avRenderButtons();
 };

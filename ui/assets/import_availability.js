@@ -34,7 +34,6 @@ window.bindImportAvailability = function bindImportAvailability() {
 
         // 1) prima chiamata
         let res = await window.pywebview.api.import_availability_and_autofill(weekKey, csvText, null, null);
-
         // 2) se ci sono nomi sconosciuti → risolvi alias
         if (res && res.needs_resolution) {
           if (typeof window.resolveUnknownUsersModal !== "function") {

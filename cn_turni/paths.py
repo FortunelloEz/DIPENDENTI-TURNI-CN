@@ -13,7 +13,7 @@ class Paths:
         self.data_dir = self._resolve_data_dir()
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        self.db_path = self.data_dir / "app.db"
+        self.db_path = self.data_dir / "turni_cn.db"
 
         self.imports_dir = self.data_dir / "imports"
         self.exports_dir = self.data_dir / "exports"
@@ -31,3 +31,6 @@ class Paths:
             # exe: %APPDATA%/TurniCascina
             return Path.home() / "AppData" / "Roaming" / "TurniCascina"
         return self.root / "data"
+
+
+paths = Paths()

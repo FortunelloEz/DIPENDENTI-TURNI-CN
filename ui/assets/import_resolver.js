@@ -68,7 +68,7 @@ window.resolveUnknownUsersModal = function resolveUnknownUsersModal(unknownNames
       modal.innerHTML = `
         <h3>Utente non trovato</h3>
         <p>
-          Nel CSV c’è <b>${escapeHtml(csvName)}</b> ma non esiste nel DB.<br>
+          Nel file importato ho trovato <b>${escapeHtml(csvName)}</b> che non risulta esistere nella lista dei dipendenti.<br>
           Scegli cosa fare:
         </p>
 
@@ -120,8 +120,8 @@ window.resolveUnknownUsersModal = function resolveUnknownUsersModal(unknownNames
       modal.innerHTML = `
         <h3>Aggiungi utente</h3>
         <p>
-          Ho aperto il form di inserimento dipendente.<br>
-          Crea l’utente (almeno il nome) e salva.
+          Stai per creare un nuovo utente. Seleziona Continua per procedere<br>
+          Per personalizzare il nuovo utente usare le scheda Dipendenti.
         </p>
 
         <div class="cn-note">
@@ -130,7 +130,7 @@ window.resolveUnknownUsersModal = function resolveUnknownUsersModal(unknownNames
 
         <div class="cn-actions">
           <button class="cn-btn" id="btnBack">Indietro</button>
-          <button class="cn-btn primary" id="btnContinue">Ho salvato, continua</button>
+          <button class="cn-btn primary" id="btnContinue">Continua</button>
           <button class="cn-btn danger" id="btnCancel">Annulla import</button>
         </div>
       `;

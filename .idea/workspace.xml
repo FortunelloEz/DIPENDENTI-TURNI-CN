@@ -6,8 +6,19 @@
   <component name="ChangeListManager">
     <list default="true" id="07257b00-7490-4583-b715-83f38d4dd07b" name="Changes" comment="update">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/paths.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/paths.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/views/export.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/export.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/services/csv_availability.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/csv_availability.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/app.db" beforeDir="false" afterPath="$PROJECT_DIR$/data/app.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/availability_viewer.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/availability_viewer.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/employees.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/employees.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/import_availability.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/import_availability.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/import_resolver.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/import_resolver.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/customization/availability_viewer.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/availability_viewer.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/views/employees.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/employees.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -226,7 +237,15 @@
       <option name="project" value="LOCAL" />
       <updated>1771949087295</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="update">
+      <option name="closed" value="true" />
+      <created>1772193393109</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1772193393109</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -240,8 +259,28 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/cn_turni/services/csv_availability.py</url>
-          <line>105</line>
+          <line>123</line>
           <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/cn_turni/db.py</url>
+          <line>29</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/cn_turni/services/auto_scheduler.py</url>
+          <line>308</line>
+          <option name="timeStamp" value="4" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/cn_turni/services/auto_scheduler.py</url>
+          <line>187</line>
+          <option name="timeStamp" value="7" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/cn_turni/services/csv_availability.py</url>
+          <line>87</line>
+          <option name="timeStamp" value="8" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

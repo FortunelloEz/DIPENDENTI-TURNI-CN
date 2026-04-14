@@ -6,10 +6,11 @@ import sqlite3
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from cn_turni.paths import paths
 
 # Singleton DB (semplice e robusto per MVP)
 _DB: Optional["Db"] = None
-
+GLOBAL_SQUADS_WEEK_ID = "__GLOBAL__"
 def week_id_from_ui_weekkey(week_key: str) -> str:
     """
     week_id blindato = martedì.
@@ -18,16 +19,23 @@ def week_id_from_ui_weekkey(week_key: str) -> str:
     d = date.fromisoformat(week_key)
     return (d + timedelta(days=1)).isoformat()
 
-
 def default_db_path() -> str:
     """
-    DB locale: /data/turni_cn.db (accanto al progetto, come MVP).
-    Se poi vuoi AppData per exe, lo cambiamo in paths.py senza toccare UI.
+    Path DB centralizzato.
+    In dev usa ./data/app.db
+    In exe usa %APPDATA%/TurniCascina/app.db
     """
-    base_dir = Path(__file__).resolve().parent  # .../cn_turni
-    data_dir = (base_dir / ".." / "data").resolve()
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return str(data_dir / "turni_cn.db")
+    return str(paths.db_path)
+
+##def default_db_path() -> str:
+##  """
+##  DB locale: /data/turni_cn.db (accanto al progetto, come MVP).
+##  Se poi vuoi AppData per exe, lo cambiamo in paths.py senza toccare UI.
+##  """
+##  base_dir = Path(__file__).resolve().parent  # .../cn_turni
+##  data_dir = (base_dir / ".." / "data").resolve()
+##  data_dir.mkdir(parents=True, exist_ok=True)
+##  return str(data_dir / "turni_cn.db")
 
 
 def get_db() -> "Db":
@@ -346,6 +354,14 @@ class Db:
                 "SELECT day_index, shift, role, required FROM squads_required WHERE week_id=?",
                 (week_id,),
             ).fetchall()
+
+            # ✅ fallback: se la settimana non ha squadre salvate, usa il profilo globale
+            if (not rows) and week_id != GLOBAL_SQUADS_WEEK_ID:
+                rows = conn.execute(
+                    "SELECT day_index, shift, role, required FROM squads_required WHERE week_id=?",
+                    (GLOBAL_SQUADS_WEEK_ID,),
+                ).fetchall()
+
             for r in rows:
                 d = int(r["day_index"])
                 shift = r["shift"]
@@ -359,21 +375,27 @@ class Db:
     def squads_week_set(self, week_id: str, data: Dict[str, Any]) -> None:
         """data come squads_week_get."""
         with self._connect() as conn:
-            conn.execute("DELETE FROM squads_required WHERE week_id=?", (week_id,))
+            # ✅ salva sempre anche la versione globale
+            target_week_ids = {week_id, GLOBAL_SQUADS_WEEK_ID}
+
+            for wid in target_week_ids:
+                conn.execute("DELETE FROM squads_required WHERE week_id=?", (wid,))
+
             for day_index_str, bands in (data or {}).items():
                 d = int(day_index_str)
                 for shift_key, roles_map in (bands or {}).items():
-                    # accetta 'morning/evening' o 'mattina/pomeriggio'
                     shift = shift_key
                     if shift_key == "mattina":
                         shift = "morning"
                     if shift_key == "pomeriggio":
                         shift = "evening"
+
                     for role, req in (roles_map or {}).items():
-                        conn.execute(
-                            "INSERT INTO squads_required(week_id, day_index, shift, role, required) VALUES (?,?,?,?,?)",
-                            (week_id, d, shift, str(role), int(req or 0)),
-                        )
+                        for wid in target_week_ids:
+                            conn.execute(
+                                "INSERT INTO squads_required(week_id, day_index, shift, role, required) VALUES (?,?,?,?,?)",
+                                (wid, d, shift, str(role), int(req or 0)),
+                            )
     def squads_template_delete(self, name: str) -> None:
         with self._connect() as conn:
             conn.execute("DELETE FROM squads_templates WHERE name=?", (name,))

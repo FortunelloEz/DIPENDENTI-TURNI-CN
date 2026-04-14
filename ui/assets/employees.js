@@ -203,11 +203,16 @@
     ROLES.forEach(role => {
       const row = document.createElement("div");
       row.className = "skill-row";
-      const current = Number(map[role] ?? 3);
+
+      // default corretto: 0 = ruolo non copribile
+      const current = Number(map[role] ?? 0);
+
       row.innerHTML = `
         <div class="skill-role">${escapeHtml(role)}</div>
         <select class="skill-rank" data-role="${escapeHtml(role)}">
-          ${[1,2,3,4,5].map(n => `<option value="${n}" ${n===current?"selected":""}>${n}</option>`).join("")}
+          ${[0,1,2,3,4,5].map(n =>
+            `<option value="${n}" ${n===current?"selected":""}>${n}</option>`
+          ).join("")}
         </select>
       `;
       E.skillsGrid.appendChild(row);

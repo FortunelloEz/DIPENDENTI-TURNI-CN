@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import csv
 import io
 import re
+import unicodedata
 from datetime import date
 from typing import Dict, Tuple, Optional, Set
 
@@ -30,6 +31,16 @@ def _half_hours(start_h: int, end_h: int) -> list[str]:
         out.append(f"{h:02d}:30")
     return out
 
+def _strip_accents(s: str) -> str:
+    s = unicodedata.normalize("NFKD", s or "")
+    return "".join(ch for ch in s if not unicodedata.combining(ch))
+
+def _normalize_header(s: str) -> str:
+    s = _strip_accents(s).lower()
+    s = re.sub(r"[_\-–—:/,;|()\[\]]+", " ", s)
+    s = " ".join(s.split())
+    return s
+
 ALL_DAY = set(_half_hours(8, 24))
 MORNING = set(_half_hours(8, 16))
 EVENING = set(_half_hours(16, 24))
@@ -43,16 +54,29 @@ def norm_name(s: str) -> str:
 
 
 def _extract_month_day(header: str) -> Optional[Tuple[int, int]]:
-    h = (header or "").lower()
+    h = _normalize_header(header)
+
+    # caso classico: "venerdi 17 aprile" / "17 aprile"
     m = re.search(
         r"\b(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\b",
         h
     )
-    if not m:
-        return None
-    day = int(m.group(1))
-    month = _MONTHS[m.group(2)]
-    return month, day
+    if m:
+        day = int(m.group(1))
+        month = _MONTHS[m.group(2)]
+        return month, day
+
+    # fallback: "aprile 17"
+    m = re.search(
+        r"\b(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(\d{1,2})\b",
+        h
+    )
+    if m:
+        month = _MONTHS[m.group(1)]
+        day = int(m.group(2))
+        return month, day
+
+    return None
 
 def _labels_between(start_h: int, end_h: int) -> Set[str]:
     start_h = max(8, min(24, start_h))
@@ -62,37 +86,31 @@ def _labels_between(start_h: int, end_h: int) -> Set[str]:
     return set(_half_hours(start_h, end_h))
 
 def _parse_cell(value: str) -> DayAvailability:
-    s = (value or "").strip().upper()
+    raw = value or ""
+    s = _strip_accents(raw).strip().upper()
 
-    # vuoto -> consideriamo "NON DISPONIBILE" (come prima)
-    if not s or "NON DISPONIBILE" in s:
+    if not s or "NON DISPONIBILE" in s or s in {"NO", "N", "X", "-"}:
         return DayAvailability(set())
 
-    if "INDIFFERENTE" in s:
-        # Indifferente fascia oraria: disponibile potenzialmente tutto il giorno,
-        # ma verrà assegnato SOLO a una delle due metà giornata (mattina o sera) dallo scheduler.
+    if any(tok in s for tok in {"INDIFFERENTE", "FULL", "TUTTO IL GIORNO", "INTERA GIORNATA"}):
         return DayAvailability((MORNING | EVENING), raw=value, needs_resolution=False, mode="indifferent")
 
-    # parole
-    if "MATTINA" in s:
+    if any(tok in s for tok in {"MATTINA", "MATT"}):
         return DayAvailability(set(MORNING))
-    if "POMERIGGIO" in s or "SERA" in s:
+
+    if any(tok in s for tok in {"POMERIGGIO", "POME", "SERA", "PM"}):
         return DayAvailability(set(EVENING))
 
-    # numeri orari (es. 18-22, 18 22)
     nums = [int(x) for x in re.findall(r"\b(\d{1,2})\b", s)]
 
-    # "18 CHIUSURA" => 18-24
     if "CHIUSURA" in s and len(nums) >= 1:
         start = nums[0]
         return DayAvailability(_labels_between(start, 24))
 
-    # "18-22"
     if len(nums) >= 2:
         start, end = nums[0], nums[1]
         return DayAvailability(_labels_between(start, end))
 
-    # fallback: testo non interpretabile -> richiede risoluzione manuale
     return DayAvailability(set(), raw=value, needs_resolution=True)
 
 def parse_availability_csv(csv_text: str, *, year: Optional[int] = None) -> AvailabilityMap:
@@ -111,17 +129,21 @@ def parse_availability_csv(csv_text: str, *, year: Optional[int] = None) -> Avai
 
     headers = rows[0]
 
-    def _hnorm(x: str) -> str:
-        return " ".join((x or "").strip().lower().split())
+    hn = [_normalize_header(h) for h in headers]
 
-    hn = [_hnorm(h) for h in headers]
-
-    # colonna nome: prima che contiene "nome"
-    if "nome" in hn:
-        name_idx = hn.index("nome")
-    else:
-        name_idx = next((i for i, h in enumerate(hn) if ("nome" in h and "utente" not in h)), 2)
-
+    name_idx = next(
+        (
+            i
+            for i, h in enumerate(hn)
+            if (
+                ("nome" in h and "utente" not in h)
+                or "dipendente" in h
+                or "persona" in h
+                or "collaboratore" in h
+        )
+        ),
+        2,
+    )
     date_cols = []
     for i, h in enumerate(headers):
         md = _extract_month_day(h)
