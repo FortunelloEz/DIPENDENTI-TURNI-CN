@@ -45,6 +45,41 @@
             </div>
         </div>
     </section>
+    <!-- SEZIONE: Tipi giornata -->
+    <section class="calendar-card day-types-card">
+        <div class="calendar-head">
+            <div class="calendar-left">
+                <div class="calendar-meta">Tipi giornata — applica un preset ai giorni</div>
+            </div>
+            <button class="btn btn-ghost btn-small" id="btnEditDayTypes">✏️ Modifica preset</button>
+        </div>
+
+        <div class="day-types-body" id="dayTypesBody">
+            <!-- generato da JS -->
+        </div>
+    </section>
+
+    <!-- MODAL: Modifica preset tipi giornata -->
+    <div class="modal-backdrop hidden" id="dayTypeEditModal">
+        <div class="modal-card modal-card-wide" role="dialog" aria-modal="true">
+            <div class="modal-head">
+                <div class="modal-title">Modifica preset tipi giornata</div>
+                <button class="modal-close" id="dayTypeEditClose">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="day-type-tabs" id="dayTypeEditTabs">
+                    <!-- tab Leggera / Normale / Pesante -->
+                </div>
+                <div class="day-type-edit-content" id="dayTypeEditContent">
+                    <!-- tabella ruoli per il tipo selezionato -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" id="dayTypeEditCancel">Annulla</button>
+                <button class="btn" id="dayTypeEditSave">Salva preset</button>
+            </div>
+        </div>
+    </div>
     <!-- MODAL: Conferma eliminazione template -->
     <div class="modal-backdrop hidden" id="tplDeleteModal">
         <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tplDeleteTitle">

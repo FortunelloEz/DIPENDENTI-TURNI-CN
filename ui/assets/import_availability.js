@@ -67,6 +67,13 @@ window.bindImportAvailability = function bindImportAvailability() {
 
         // refresh UI
         const wk = res.week_key_used || weekKey;
+
+        // se il CSV appartiene a una settimana diversa, sposta la GUI su quella settimana
+        if (typeof mondayDateFromWeekKey === "function") {
+          currentWeekStart = mondayDateFromWeekKey(wk);
+        }
+        window.currentWeekKey = wk;
+
         await loadWeekFromDb(wk);
         renderEmployees();
         renderWeekLabel();

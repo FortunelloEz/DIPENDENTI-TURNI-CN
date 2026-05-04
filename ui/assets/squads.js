@@ -7,7 +7,212 @@
 let _squadsAutoSaveTimer = null;
 let _undoSnapshot = null;
 let _squadsDeleteUiBound = false;
+// =========================
+// TIPI GIORNATA (day-type presets)
+// Storage: localStorage (preferenze UI, non dati operativi)
+// =========================
 
+const DAY_TYPE_NAMES = ["Leggera", "Normale", "Pesante"];
+const DAY_TYPE_ICONS = { "Leggera": "🟢", "Normale": "🟡", "Pesante": "🔴" };
+const DAY_TYPES_LS_KEY = "squads_day_types_v1";
+
+function dayTypesDefault() {
+  // Per ogni tipo: { morning: {role: qty}, evening: {role: qty} }
+  const empty = () => Object.fromEntries(ROLES.map(r => [r, 0]));
+  return {
+    "Leggera":  { morning: empty(), evening: empty() },
+    "Normale":  { morning: empty(), evening: empty() },
+    "Pesante":  { morning: empty(), evening: empty() },
+  };
+}
+
+function dayTypesLoad() {
+  try {
+    const raw = localStorage.getItem(DAY_TYPES_LS_KEY);
+    if (!raw) return dayTypesDefault();
+    const parsed = JSON.parse(raw);
+    // sanity: assicura che tutti i tipi e ruoli esistano
+    const defaults = dayTypesDefault();
+    DAY_TYPE_NAMES.forEach(tn => {
+      if (!parsed[tn]) parsed[tn] = defaults[tn];
+      ["morning","evening"].forEach(band => {
+        if (!parsed[tn][band]) parsed[tn][band] = defaults[tn][band];
+        ROLES.forEach(r => {
+          if (parsed[tn][band][r] === undefined) parsed[tn][band][r] = 0;
+        });
+      });
+    });
+    return parsed;
+  } catch(e) {
+    return dayTypesDefault();
+  }
+}
+
+function dayTypesSave(data) {
+  localStorage.setItem(DAY_TYPES_LS_KEY, JSON.stringify(data));
+}
+
+// Applica un tipo giornata a un giorno specifico nella tabella corrente
+function applyDayType(weekKey, dayIndex, typeName) {
+  const types = dayTypesLoad();
+  const preset = types[typeName];
+  if (!preset) return;
+
+  const wkData = getWeekSquad(weekKey);
+  ["morning","evening"].forEach(band => {
+    ROLES.forEach(role => {
+      wkData[dayIndex][band][role] = preset[band][role] ?? 0;
+    });
+  });
+  squads.set(weekKey, wkData);
+  buildSquadsTable(weekKey, wkData);
+  scheduleSquadsAutosave(weekKey);
+}
+
+// Render della sezione "Tipi giornata" (riga per giorno, 3 bottoni preset + badge tipo attivo)
+function renderDayTypesSection(weekKey) {
+  const container = document.getElementById("dayTypesBody");
+  if (!container) return;
+
+  const types = dayTypesLoad();
+  const wkData = getWeekSquad(weekKey);
+
+  const rows = DAYS.map((day, dayIndex) => {
+    const btns = DAY_TYPE_NAMES.map(tn => {
+      const icon = DAY_TYPE_ICONS[tn] || "";
+      return `<button class="btn btn-small dt-preset-btn" data-day="${dayIndex}" data-type="${tn}">${icon} ${tn}</button>`;
+    }).join("");
+
+    return `
+      <div class="dt-row">
+        <div class="dt-day-label"><b>${day}</b></div>
+        <div class="dt-btns">${btns}</div>
+      </div>
+    `;
+  }).join("");
+
+  container.innerHTML = rows;
+
+  container.querySelectorAll(".dt-preset-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const dayIndex = Number(btn.dataset.day);
+      const typeName = btn.dataset.type;
+      _undoSnapshot = deepClone(getWeekSquad(weekKey));
+      setUndoEnabled(true);
+      applyDayType(weekKey, dayIndex, typeName);
+    });
+  });
+}
+
+// Modal modifica preset
+let _dayTypeEditCurrentType = DAY_TYPE_NAMES[0];
+
+function openDayTypeEditModal() {
+  const m = document.getElementById("dayTypeEditModal");
+  if (!m) return;
+  _dayTypeEditCurrentType = DAY_TYPE_NAMES[0];
+  renderDayTypeEditTabs();
+  renderDayTypeEditContent();
+  m.classList.remove("hidden");
+}
+
+function closeDayTypeEditModal() {
+  document.getElementById("dayTypeEditModal")?.classList.add("hidden");
+}
+
+function renderDayTypeEditTabs() {
+  const tabs = document.getElementById("dayTypeEditTabs");
+  if (!tabs) return;
+  tabs.innerHTML = DAY_TYPE_NAMES.map(tn => {
+    const active = tn === _dayTypeEditCurrentType ? "active" : "";
+    const icon = DAY_TYPE_ICONS[tn] || "";
+    return `<button class="dt-tab ${active}" data-type="${tn}">${icon} ${tn}</button>`;
+  }).join("");
+
+  tabs.querySelectorAll(".dt-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      _dayTypeEditCurrentType = btn.dataset.type;
+      renderDayTypeEditTabs();
+      renderDayTypeEditContent();
+    });
+  });
+}
+
+function renderDayTypeEditContent() {
+  const content = document.getElementById("dayTypeEditContent");
+  if (!content) return;
+
+  const types = dayTypesLoad();
+  const preset = types[_dayTypeEditCurrentType];
+
+  const bands = [
+    { key: "morning", label: "Mattina (08–16)" },
+    { key: "evening", label: "Pomeriggio (16–24)" },
+  ];
+
+  const rows = bands.map(({ key, label }) => {
+    const cells = ROLES.map(role => {
+      const v = preset[key][role] ?? 0;
+      return `
+        <div class="dt-edit-cell">
+          <div class="dt-edit-role">${role}</div>
+          <div class="dt-edit-controls">
+            <button class="dt-stepper" data-band="${key}" data-role="${role}" data-delta="-1">−</button>
+            <span class="dt-edit-val" id="dte_${key}_${role}">${v}</span>
+            <button class="dt-stepper" data-band="${key}" data-role="${role}" data-delta="1">+</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+    return `
+      <div class="dt-edit-band">
+        <div class="dt-edit-band-label">${label}</div>
+        <div class="dt-edit-cells">${cells}</div>
+      </div>
+    `;
+  }).join("");
+
+  content.innerHTML = rows;
+
+  // stepper +/-
+  content.querySelectorAll(".dt-stepper").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const band = btn.dataset.band;
+      const role = btn.dataset.role;
+      const delta = Number(btn.dataset.delta);
+      const el = document.getElementById(`dte_${band}_${role}`);
+      if (!el) return;
+      const newVal = Math.max(0, Number(el.textContent) + delta);
+      el.textContent = newVal;
+    });
+  });
+}
+
+function saveDayTypeEditModal() {
+  const types = dayTypesLoad();
+  const preset = types[_dayTypeEditCurrentType];
+
+  ["morning","evening"].forEach(band => {
+    ROLES.forEach(role => {
+      const el = document.getElementById(`dte_${band}_${role}`);
+      if (el) preset[band][role] = Math.max(0, Number(el.textContent) || 0);
+    });
+  });
+
+  dayTypesSave(types);
+  closeDayTypeEditModal();
+  setSquadsStatus(`Preset "${_dayTypeEditCurrentType}" salvato`, "chip-ok");
+}
+
+function bindDayTypeEditModal() {
+  document.getElementById("btnEditDayTypes")?.addEventListener("click", openDayTypeEditModal);
+  document.getElementById("dayTypeEditClose")?.addEventListener("click", closeDayTypeEditModal);
+  document.getElementById("dayTypeEditCancel")?.addEventListener("click", closeDayTypeEditModal);
+  document.getElementById("dayTypeEditSave")?.addEventListener("click", saveDayTypeEditModal);
+  document.getElementById("dayTypeEditModal")?.addEventListener("click", (e) => {
+    if (e.target?.id === "dayTypeEditModal") closeDayTypeEditModal();
+  });
+}
 // Tabella squadre unica (non per settimana)
 const SQUADS_GLOBAL_KEY = weekKeyOf(getMondayOfCurrentWeek(new Date()));
 function openSquadsModal(){
@@ -163,23 +368,18 @@ function buildSquadsTable(weekKey, data){
       const bandLabelTxt = band === "morning" ? "Mattina" : "Pomeriggio";
       const dayCell = bi === 0 ? `<td class="col-day" rowspan="2"><b>${day}</b></td>` : "";
       const tds = ROLES.map(role => {
-        const v = (data?.[dayIndex]?.[band]?.[role] ?? 0);
-        return `
-          <td class="col-role">
-            <input
-              class="squad-input"
-              type="number"
-              min="0"
-              step="1"
-              value="${Number(v)}"
-              data-week="${weekKey}"
-              data-day="${dayIndex}"
-              data-band="${band}"
-              data-role="${role}"
-            >
-          </td>
-        `;
-      }).join("");
+              const v = (data?.[dayIndex]?.[band]?.[role] ?? 0);
+              const cellId = `sq_${dayIndex}_${band}_${role}`;
+              return `
+                <td class="col-role">
+                  <div class="sq-stepper" data-week="${weekKey}" data-day="${dayIndex}" data-band="${band}" data-role="${role}">
+                    <button class="sq-step sq-minus" tabindex="-1">−</button>
+                    <span class="sq-val" id="${cellId}">${Number(v)}</span>
+                    <button class="sq-step sq-plus" tabindex="-1">+</button>
+                  </div>
+                </td>
+              `;
+            }).join("");
 
       const dayClass = (dayIndex % 2 === 0) ? "day-a" : "day-b";
       const bandClass = (band === "morning") ? "band-morning" : "band-evening";
@@ -196,20 +396,34 @@ function buildSquadsTable(weekKey, data){
 
   table.innerHTML = `${thead}<tbody>${rows.join("")}</tbody>`;
 
-  table.querySelectorAll("input.squad-input").forEach(inp => {
-    inp.addEventListener("input", () => {
-      const d = Number(inp.dataset.day);
-      const band = inp.dataset.band;
-      const role = inp.dataset.role;
-      const val = Number(inp.value || 0);
+  table.querySelectorAll(".sq-stepper").forEach(stepper => {
+      const d    = Number(stepper.dataset.day);
+      const band = stepper.dataset.band;
+      const role = stepper.dataset.role;
+      const cellId = `sq_${d}_${band}_${role}`;
 
-      const wkData = getWeekSquad(weekKey);
-      wkData[d][band][role] = val;
-      squads.set(weekKey, wkData);
+      stepper.querySelector(".sq-minus").addEventListener("click", () => {
+        const el = document.getElementById(cellId);
+        if (!el) return;
+        const newVal = Math.max(0, Number(el.textContent) - 1);
+        el.textContent = newVal;
+        const wkData = getWeekSquad(weekKey);
+        wkData[d][band][role] = newVal;
+        squads.set(weekKey, wkData);
+        scheduleSquadsAutosave(weekKey);
+      });
 
-      scheduleSquadsAutosave(weekKey);
+      stepper.querySelector(".sq-plus").addEventListener("click", () => {
+        const el = document.getElementById(cellId);
+        if (!el) return;
+        const newVal = Number(el.textContent) + 1;
+        el.textContent = newVal;
+        const wkData = getWeekSquad(weekKey);
+        wkData[d][band][role] = newVal;
+        squads.set(weekKey, wkData);
+        scheduleSquadsAutosave(weekKey);
+      });
     });
-  });
 }
 
 function scheduleSquadsAutosave(weekKey){
@@ -386,21 +600,25 @@ async function initSquadsPage(){
   });
 
   document.getElementById("btnSquadsUndo")?.addEventListener("click", async () => {
-    if (!_undoSnapshot) return;
+      if (!_undoSnapshot) return;
 
-    try{
-      squads.set(weekKey, deepClone(_undoSnapshot));
-      buildSquadsTable(weekKey, getWeekSquad(weekKey));
+      try{
+        squads.set(weekKey, deepClone(_undoSnapshot));
+        buildSquadsTable(weekKey, getWeekSquad(weekKey));
 
-      setSquadsStatus("Ripristino…", "chip-warn");
-      await saveSquadsToDb(weekKey, getWeekSquad(weekKey));
+        setSquadsStatus("Ripristino…", "chip-warn");
+        await saveSquadsToDb(weekKey, getWeekSquad(weekKey));
 
-      _undoSnapshot = null;
-      setUndoEnabled(false);
-      setSquadsStatus("Annullato", "chip-ok");
-    }catch(e){
-      console.error(e);
-      setSquadsStatus("Errore annulla", "chip-bad");
-    }
-  });
-}
+        _undoSnapshot = null;
+        setUndoEnabled(false);
+        setSquadsStatus("Annullato", "chip-ok");
+      }catch(e){
+        console.error(e);
+        setSquadsStatus("Errore annulla", "chip-bad");
+      }
+    });
+
+    // Day-type presets
+    renderDayTypesSection(weekKey);
+    bindDayTypeEditModal();
+  }

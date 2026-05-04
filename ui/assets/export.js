@@ -77,26 +77,8 @@ async function downloadExportPdf() {
   }
 }
 function initExportView() {
-  console.log("[export] initExportView");
   renderExportTable(window.lastExportData);
 
-  const btn = document.getElementById("btnExportPdf");
-  console.log("[export] btnExportPdf found?", !!btn);
-
-  if (btn) {
-    const clone = btn.cloneNode(true);
-    btn.parentNode.replaceChild(clone, btn);
-
-    clone.addEventListener("click", async () => {
-      console.log("[export] click pdf");
-      await downloadExportPdf();
-    });
-  }
-}
-function initExportView() {
-  renderExportTable(window.lastExportData);
-
-  // bind “pulito” (evita doppi listener se rientri nella view)
   const btn = document.getElementById("btnExportPdf");
   if (btn) {
     const clone = btn.cloneNode(true);

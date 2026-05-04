@@ -294,3 +294,124 @@ body{
 .calendar-grid .cell.slot.block.filled{
   background: rgba(15,23,42,.12) !important;
 }
+/* =========================
+   DAY SUMMARY — barra compatta sotto calendario
+   ========================= */
+.day-summary-card--bar {
+  flex-shrink: 0;
+}
+
+.day-summary-card--bar .day-summary-body {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  padding: 0;
+  overflow-x: auto;
+}
+
+.ds-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-right: 1px solid var(--line);
+  min-width: 0;
+  transition: background .12s ease;
+}
+
+.ds-item:last-child {
+  border-right: none;
+}
+
+.ds-item--set {
+  background: rgba(255,255,255,.04);
+}
+
+.ds-item-head {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.ds-item-day {
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.ds-item-date {
+  font-size: 10px;
+  opacity: .55;
+}
+
+.ds-item-type {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: .80;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ds-item-opts {
+  display: flex;
+  gap: 3px;
+  margin-top: 2px;
+  flex-wrap: nowrap;
+}
+
+.ds-opt {
+  font-size: 11px;
+  padding: 2px 5px;
+  border-radius: 6px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: transparent;
+  cursor: pointer;
+  line-height: 1.3;
+  opacity: .65;
+  transition: opacity .1s ease, background .1s ease;
+}
+
+.ds-opt:hover {
+  opacity: 1;
+  background: rgba(255,255,255,.15);
+}
+
+.ds-opt-active {
+  opacity: 1;
+  background: rgba(255,255,255,.18);
+  border-color: rgba(15,23,42,.25);
+  font-weight: 700;
+}
+
+.ds-opt-clear {
+  opacity: .35;
+  font-size: 9px;
+  padding: 2px 4px;
+  margin-left: 2px;
+}
+
+.ds-opt-clear:hover {
+  opacity: .7;
+  background: rgba(239,68,68,.12);
+  border-color: rgba(239,68,68,.25);
+}
+
+/* Home: calendario sopra, riepilogo sotto — colonna verticale */
+.home-layout-full {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: unset !important;
+  height: 100%;
+  gap: 10px;
+}
+
+.home-layout-full .calendar-card:first-child {
+  flex: 1;
+  min-height: 0;
+}
+
+.home-layout-full .day-summary-card {
+  flex-shrink: 0;
+  height: auto;
+}

@@ -146,13 +146,21 @@ function getMondayOfCurrentWeek(date){
   d.setHours(0,0,0,0);
   return d;
 }
+function getNextWeekMonday(date){
+  const monday = getMondayOfCurrentWeek(date);
+  monday.setDate(monday.getDate() + 7);
+  return monday;
+}
 function weekKeyOf(weekStartDate){
   const y = weekStartDate.getFullYear();
   const m = String(weekStartDate.getMonth()+1).padStart(2,"0");
   const d = String(weekStartDate.getDate()).padStart(2,"0");
   return `${y}-${m}-${d}`;
 }
-
+function mondayDateFromWeekKey(weekKey){
+  const [y, m, d] = String(weekKey).split("-").map(Number);
+  return new Date(y, (m - 1), d, 0, 0, 0, 0);
+}
 /* ---------- STATO UI ---------- */
 let currentWeekStart = null;
 let expandedDays = new Set();       // dayIndex espansi (mostrano ruoli)
@@ -282,7 +290,78 @@ function renderWeekLabel(){
   end.setDate(end.getDate() + 6);
   label.textContent = `Settimana: ${formatDate(currentWeekStart)} → ${formatDate(end)}`;
 }
+function renderDaySummary() {
+  const container = document.getElementById("daySummaryBody");
+  if (!container) return;
 
+  const DAY_TYPE_NAMES = ["Leggera", "Normale", "Pesante"];
+  const DAY_TYPE_ICONS = { "Leggera": "🟢", "Normale": "🟡", "Pesante": "🔴" };
+
+  let assignments = {};
+  try {
+    const raw = localStorage.getItem("day_type_assignments_v1");
+    if (raw) assignments = JSON.parse(raw);
+  } catch(e) {}
+
+  const weekKey = weekKeyOf(currentWeekStart);
+  const weekAssign = assignments[weekKey] || {};
+
+  const cells = DAYS.map((day, dayIndex) => {
+    const date = new Date(currentWeekStart);
+    date.setDate(date.getDate() + dayIndex);
+    const dateStr = formatDate(date);
+    const typeName = weekAssign[dayIndex] || null;
+    const icon = typeName ? DAY_TYPE_ICONS[typeName] : "—";
+
+    const opts = DAY_TYPE_NAMES.map(tn => {
+      const active = typeName === tn ? " ds-opt-active" : "";
+      return `<button class="ds-opt${active}" data-type="${tn}" data-day="${dayIndex}" title="${tn}">${DAY_TYPE_ICONS[tn]}</button>`;
+    }).join("");
+
+    const clearBtn = typeName
+      ? `<button class="ds-opt ds-opt-clear" data-day="${dayIndex}" title="Rimuovi">✕</button>`
+      : "";
+
+    return `
+      <div class="ds-item ${typeName ? "ds-item--set" : ""}" data-day="${dayIndex}">
+        <div class="ds-item-head">
+          <span class="ds-item-day">${day}</span>
+          <span class="ds-item-date">${dateStr}</span>
+        </div>
+        <div class="ds-item-type">${icon} ${typeName || "—"}</div>
+        <div class="ds-item-opts">${opts}${clearBtn}</div>
+      </div>
+    `;
+  }).join("");
+
+  container.innerHTML = cells;
+
+  container.querySelectorAll(".ds-opt[data-type]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const dayIndex = Number(btn.dataset.day);
+      const typeName = btn.dataset.type;
+      const wk = weekKeyOf(currentWeekStart);
+      let stored = {};
+      try { stored = JSON.parse(localStorage.getItem("day_type_assignments_v1") || "{}"); } catch(e) {}
+      if (!stored[wk]) stored[wk] = {};
+      stored[wk][dayIndex] = typeName;
+      localStorage.setItem("day_type_assignments_v1", JSON.stringify(stored));
+      renderDaySummary();
+    });
+  });
+
+  container.querySelectorAll(".ds-opt-clear").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const dayIndex = Number(btn.dataset.day);
+      const wk = weekKeyOf(currentWeekStart);
+      let stored = {};
+      try { stored = JSON.parse(localStorage.getItem("day_type_assignments_v1") || "{}"); } catch(e) {}
+      if (stored[wk]) delete stored[wk][dayIndex];
+      localStorage.setItem("day_type_assignments_v1", JSON.stringify(stored));
+      renderDaySummary();
+    });
+  });
+}
 /* ---------- CALENDARIO ---------- */
 function buildDayColumns(){
   const cols = [];
@@ -762,7 +841,7 @@ let _homeMouseupInited = false;
 async function initHome(){
   initAccordions();
 
-  currentWeekStart = getMondayOfCurrentWeek(new Date());
+  currentWeekStart = getNextWeekMonday(new Date());
   expandedDays = new Set();    // tutto chiuso
   expandedRanges = new Set();  // fasce compresse
 
@@ -780,7 +859,8 @@ async function initHome(){
   renderEmployees();
   renderWeekLabel();
   renderCalendar();
-  // ✅ EXPORT: bottone "Elabora settimana" (bind pulito per evitare doppi listener)
+  renderDaySummary();
+  // ✅ EXPORT: bottone "Elabora settimana"
   {
     const btn = document.getElementById("btnElaboraWeek");
     if (btn) {
@@ -812,6 +892,7 @@ async function initHome(){
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
+    renderDaySummary();
   });
 
   document.getElementById("btnNextWeek")?.addEventListener("click", async () => {
@@ -822,26 +903,29 @@ async function initHome(){
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
+    renderDaySummary();
   });
 
   document.getElementById("btnToday")?.addEventListener("click", async () => {
-    currentWeekStart = getMondayOfCurrentWeek(new Date());
+    currentWeekStart = getNextWeekMonday(new Date());
     expandedRanges = new Set();
     const wk2 = weekKeyOf(currentWeekStart);
     window.currentWeekKey = wk2;
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
+    renderDaySummary();
   });
 
   document.getElementById("btnTodayTop")?.addEventListener("click", async () => {
-    currentWeekStart = getMondayOfCurrentWeek(new Date());
+    currentWeekStart = getNextWeekMonday(new Date());
     expandedRanges = new Set();
     const wk2 = weekKeyOf(currentWeekStart);
     window.currentWeekKey = wk2;
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
+    renderDaySummary();
   });
 
   document.getElementById("btnClear")?.addEventListener("click", async () => {
@@ -854,6 +938,7 @@ async function initHome(){
 
     recalcSegmentsFromAssignments(wk2);
     renderCalendar();
+    renderDaySummary();
   });
   document.getElementById("btnPermManage")?.addEventListener("click", () => openPermanentModal());
 

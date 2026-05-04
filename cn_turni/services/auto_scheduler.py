@@ -19,6 +19,8 @@ class Employee:
     slot_morning: int
     slot_evening: int
     skills: Dict[str, int]
+    work_days: str = ""
+    max_daily_hours: Optional[float] = None
 
 
 @dataclass
@@ -69,15 +71,16 @@ def _best_skill_value(emp: Employee) -> int:
     vals = [_raw_skill(emp, r) for r in ROLES]
     return max(vals) if vals else 0
 
+"""
 def _candidate_priority(emp: Employee, role: str) -> tuple:
-    """
+    
     Ordinamento migliore:
     1) skill sul ruolo DESC
     2) preferred role prima
     3) meno alternative prima (specialista prima del jolly)
     4) distacco tra ruolo corrente e seconda scelta DESC
     5) nome per stabilità
-    """
+    
     role_skill = _raw_skill(emp, role)
     preferred = 1 if emp.preferred_role == role else 0
 
@@ -93,8 +96,46 @@ def _candidate_priority(emp: Employee, role: str) -> tuple:
         gap,                      # specializzazione vera
         -(emp.id or 0),           # stabilità deterministica
     )
+"""
+#MODIFICA LOGICA CON SOMMA
 
 
+def _best_other_open_role_skill(emp: Employee, role: str, open_roles: List[str]) -> int:
+    vals = [_raw_skill(emp, r) for r in open_roles if r != role]
+    return max(vals) if vals else 0
+
+
+def _candidate_priority(emp: Employee, role: str, open_roles: List[str]) -> tuple:
+    """
+    Preferisci chi:
+    1) è bravo sul ruolo corrente
+    2) è meno "critico" sugli altri ruoli ancora aperti
+    3) ha preferred_role uguale
+    4) ha meno alternative positive
+    5) è più specializzato
+    6) stabilità deterministica
+    """
+    role_skill = _raw_skill(emp, role)
+    preferred = 1 if emp.preferred_role == role else 0
+
+    other_best = _best_other_open_role_skill(emp, role, open_roles)
+
+    positive = sorted((_raw_skill(emp, r) for r in ROLES if _raw_skill(emp, r) > 0), reverse=True)
+    best = positive[0] if positive else 0
+    second = positive[1] if len(positive) > 1 else 0
+    gap = role_skill - second if role_skill == best else 0
+
+    preservation_margin = role_skill - other_best
+
+    return (
+        preservation_margin,
+        role_skill,
+        preferred,
+        -_role_options_count(emp),
+        gap,
+        -(emp.id or 0),
+    )
+#MODIFICA LOGICA CON SOMMA
 def _day_labels(availability: dict, emp_name: str, iso_day: str) -> Optional[Set[str]]:
     """
     Ritorna il set di labels disponibili per quel giorno (mezz'ore),
@@ -126,7 +167,21 @@ def _allowed_by_profile(emp: Employee, slot: str) -> bool:
         return bool(emp.slot_morning)
     return bool(emp.slot_evening)
 
-
+def _allowed_by_work_days(emp: Employee, day_index: int) -> bool:
+    """
+    Se work_days è configurato (es. "0,2,4" = Lun/Mer/Ven),
+    il dipendente è considerato SOLO in quei giorni.
+    Se work_days è vuoto/None -> nessun filtro (comportamento invariato).
+    day_index: 0=Lun … 6=Dom (come nel calendario)
+    """
+    raw = (getattr(emp, "work_days", None) or "").strip()
+    if not raw:
+        return True  # non configurato: nessun filtro
+    try:
+        allowed = {int(x.strip()) for x in raw.split(",") if x.strip().isdigit()}
+        return day_index in allowed
+    except Exception:
+        return True
 def _is_available_slot(
         availability: dict,
         emp: Employee,
@@ -216,6 +271,8 @@ def build_plan(
     perm_used_day: Dict[Tuple[int, int], bool] = {}
     # Per i giorni 'INDIFFERENTE' impediamo doppio turno (mattina+sera)
     indiff_used_day: Dict[Tuple[int, int], bool] = {}
+    # Stesso per determinati: traccia se usati in un qualsiasi slot del giorno
+    temp_used_day: Dict[Tuple[int, int], bool] = {}
 
     for e in permanents:
         p = perm_map.get(e.id, PermanentSettings(e.id, None, 40))
@@ -284,6 +341,8 @@ def build_plan(
                         continue
                     if not _allowed_by_profile(emp, slot):
                         continue
+                    if not _allowed_by_work_days(emp, d):
+                        continue
                     if not _is_available_slot(availability, emp, iso, slot, perm_ids):
                         continue
 
@@ -296,7 +355,15 @@ def build_plan(
 
                     candidates.append(emp)
 
-                candidates.sort(key=lambda emp: _candidate_priority(emp, role), reverse=True)
+                open_roles = [
+                    r for r in role_order
+                    if int(need.get(r, 0) or 0) > len(plan[d][slot].get(r, []))
+                ]
+
+                candidates.sort(
+                    key=lambda emp: _candidate_priority(emp, role, open_roles),
+                    reverse=True
+                )
 
                 for emp in candidates[:missing]:
                     current.append(emp.id)
@@ -360,26 +427,37 @@ def build_plan(
                 for emp in temps:
                     if emp.id in used:
                         continue
+                    if temp_used_day.get((emp.id, d)):
+                        continue
                     if _is_indifferent_day(availability, emp.name, iso) and indiff_used_day.get((emp.id, d)):
                         continue
                     if not _allowed_by_profile(emp, slot):
                         continue
+                    if not _allowed_by_work_days(emp, d):
+                        continue
                     if not _is_available_slot(availability, emp, iso, slot, perm_ids):
                         continue
-
-                    # 0 = NON può coprire quel ruolo
                     if not _can_cover_role(emp, role):
                         continue
-
                     candidates.append(emp)
 
-                candidates.sort(key=lambda emp: _candidate_priority(emp, role), reverse=True)
+                open_roles = [
+                    r for r in role_order
+                    if int(need.get(r, 0) or 0) > len(plan[d][slot].get(r, []))
+                ]
+
+                candidates.sort(
+                    key=lambda emp: _candidate_priority(emp, role, open_roles),
+                    reverse=True
+                )
 
                 for emp in candidates[:missing]:
                     current.append(emp.id)
                     used.add(emp.id)
+                    temp_used_day[(emp.id, d)] = True
                     if _is_indifferent_day(availability, emp.name, iso):
                         indiff_used_day[(emp.id, d)] = True
+
                 if len(current) < required:
                     deficits.append(NeedDeficit(d, slot, role, required - len(current)))
 

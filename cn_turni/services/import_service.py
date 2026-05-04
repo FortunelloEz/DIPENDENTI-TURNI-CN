@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import date, timedelta
-from typing import Any
+from typing import Any, Optional
 
 import re
 
@@ -309,6 +309,8 @@ class ImportService:
                 slot_morning=int(r.get("slot_morning", 1) or 0),
                 slot_evening=int(r.get("slot_evening", 1) or 0),
                 skills=r.get("skills") or {},
+                work_days=str(r.get("work_days") or ""),
+                max_daily_hours=r.get("max_daily_hours"),
             )
             for r in emp_rows
         ]
@@ -356,6 +358,30 @@ class ImportService:
                     # stabilizza ordine e rimuove duplicati preservando ordine
                     emp_ids = list(dict.fromkeys(emp_ids or []))
 
+                    # pre-calcola quante mezz'ore max per dipendente in questo giorno/slot
+                    # max_daily_hours -> numero di mezz'ore = max_daily_hours * 2
+                    # le mezz'ore partono sempre dall'inizio dello slot
+                    emp_max_halfhours: dict[int, int] = {}
+                    for eid in emp_ids:
+                        emp = emp_by_id.get(int(eid))
+                        if emp and emp.max_daily_hours is not None:
+                            emp_max_halfhours[emp.id] = round(emp.max_daily_hours * 2)
+
+                    # trova la prima mezz'ora disponibile nel CSV per ogni dipendente
+                    # (da lì parte il conteggio del limite)
+                    emp_first_available: dict[int, Optional[str]] = {}
+                    for eid in emp_ids:
+                        emp = emp_by_id.get(int(eid))
+                        if not emp or emp.id not in emp_max_halfhours:
+                            continue
+                        for t in labels:
+                            if self._is_available_label(availability_for_sched, emp.name, iso_day, t, emp.is_permanent):
+                                emp_first_available[emp.id] = t
+                                break
+
+                    # contatore mezz'ore assegnate per dipendente da quando è iniziato il suo turno
+                    emp_halfhour_count: dict[int, int] = {}
+
                     items = []
                     for t in labels:
                         filtered: list[int] = []
@@ -363,12 +389,24 @@ class ImportService:
                             emp = emp_by_id.get(int(eid))
                             if not emp:
                                 continue
-                            # 🔥 FIX: niente mapping "id_to_csvkey" (bug). Usiamo sempre emp.name.
+                            # check limite ore: conta solo da quando il dipendente
+                            # è disponibile per la prima volta in questo slot
+                            if emp.id in emp_max_halfhours:
+                                first = emp_first_available.get(emp.id)
+                                if first is None:
+                                    continue  # non disponibile in nessuna mezz'ora: salta
+                                # prima della sua prima mezz'ora disponibile: non assegnare
+                                if labels.index(t) < labels.index(first):
+                                    continue
+                                used = emp_halfhour_count.get(emp.id, 0)
+                                if used >= emp_max_halfhours[emp.id]:
+                                    continue
                             if self._is_available_label(availability_for_sched, emp.name, iso_day, t, emp.is_permanent):
                                 filtered.append(emp.id)
+                                if emp.id in emp_max_halfhours:
+                                    emp_halfhour_count[emp.id] = emp_halfhour_count.get(emp.id, 0) + 1
 
                         items.append({"time_label": t, "employee_ids": filtered})
-
                     self.db.overrides_set_many(
                         week_id=week_id,
                         day_index=int(day_index),

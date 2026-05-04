@@ -59,7 +59,8 @@ class Db:
     def squads_template_save(self, name: str, payload: dict) -> None:
         with self._connect() as conn:
             conn.execute(
-                "INSERT INTO squads_templates(name, payload_json) VALUES (?, ?)",
+                "INSERT INTO squads_templates(name, payload_json) VALUES (?, ?) "
+                "ON CONFLICT(name) DO UPDATE SET payload_json=excluded.payload_json",
                 (name, json.dumps(payload, ensure_ascii=False)),
             )
 
@@ -157,11 +158,10 @@ class Db:
                 """
             )
             self._ensure_column(conn, "employees", "aliases", "aliases TEXT NULL")
-
             self._ensure_column(conn, "employees", "slot_morning", "slot_morning INTEGER NOT NULL DEFAULT 1")
             self._ensure_column(conn, "employees", "slot_evening", "slot_evening INTEGER NOT NULL DEFAULT 1")
-
-
+            self._ensure_column(conn, "employees", "work_days", "work_days TEXT NULL")
+            self._ensure_column(conn, "employees", "max_daily_hours", "max_daily_hours INTEGER NULL")
     # ---------- Retention ----------
     def purge_old_weeks(self, months: int = 6) -> int:
         cutoff = date.today() - timedelta(days=int(30.5 * months))
@@ -195,7 +195,8 @@ class Db:
                         slot_evening=int(r["slot_evening"]) if r["slot_evening"] is not None else 1,
                         skills={s["role"]: int(s["rank"]) for s in skills},
                         aliases=r["aliases"] or "",
-
+                        work_days=r["work_days"] or "",
+                        max_daily_hours=float(r["max_daily_hours"]) if r["max_daily_hours"] is not None else None,
                     )
                 )
             return out
@@ -215,9 +216,12 @@ class Db:
             with self._connect() as conn:
                 aliases = (payload.get("aliases") or payload.get("alias") or "").strip()
 
+                work_days = (payload.get("work_days") or "").strip()
+                max_daily_hours = payload.get("max_daily_hours")
+                max_daily_hours = float(max_daily_hours) if max_daily_hours not in (None, "", "null") else None
                 cur = conn.execute(
-                    "INSERT INTO employees(name,is_permanent,preferred_role,slot_morning,slot_evening,aliases) VALUES (?,?,?,?,?,?)",
-                    (name, is_perm, pref, slot_morning, slot_evening, aliases),
+                    "INSERT INTO employees(name,is_permanent,preferred_role,slot_morning,slot_evening,aliases,work_days,max_daily_hours) VALUES (?,?,?,?,?,?,?,?)",
+                    (name, is_perm, pref, slot_morning, slot_evening, aliases, work_days, max_daily_hours),
                 )
                 emp_id = int(cur.lastrowid)
 
@@ -248,9 +252,12 @@ class Db:
         slot_evening = 1 if payload.get("slot_evening", 1) else 0
         with self._connect() as conn:
             aliases = (payload.get("aliases") or payload.get("alias") or "").strip()
+            work_days = (payload.get("work_days") or "").strip()
+            max_daily_hours = payload.get("max_daily_hours")
+            max_daily_hours = int(max_daily_hours) if max_daily_hours not in (None, "", "null") else None
             conn.execute(
-                "UPDATE employees SET name=?, is_permanent=?, preferred_role=?, slot_morning=?, slot_evening=?, aliases=? WHERE id=?",
-                (name, is_perm, pref, slot_morning, slot_evening, aliases, emp_id),
+                "UPDATE employees SET name=?, is_permanent=?, preferred_role=?, slot_morning=?, slot_evening=?, aliases=?, work_days=?, max_daily_hours=? WHERE id=?",
+                (name, is_perm, pref, slot_morning, slot_evening, aliases, work_days, max_daily_hours, emp_id),
             )
             conn.execute("DELETE FROM employee_skills WHERE employee_id=?", (emp_id,))
             for role, rank in skills.items():
@@ -258,6 +265,30 @@ class Db:
                     "INSERT INTO employee_skills(employee_id,role,rank) VALUES (?,?,?)",
                     (emp_id, str(role), int(rank)),
                 )
+
+    def employees_bulk_set_skill(self, role: str, value: int) -> int:
+        allowed_roles = {"Cassa", "Runner", "Bar", "Comande", "Accoglienza", "Jolly"}
+        if role not in allowed_roles:
+            raise ValueError(f"Ruolo non valido: {role}")
+
+        value = int(value)
+        if value < 0 or value > 10:
+            raise ValueError("Il valore skill deve essere compreso tra 0 e 10.")
+        with self._connect() as conn:
+            emp_rows = conn.execute("SELECT id FROM employees").fetchall()
+
+            for r in emp_rows:
+                emp_id = int(r["id"])
+                conn.execute(
+                    """
+                    INSERT INTO employee_skills(employee_id, role, rank)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(employee_id, role) DO UPDATE SET rank=excluded.rank
+                    """,
+                    (emp_id, role, value),
+                )
+
+            return len(emp_rows)
 
     def employee_delete(self, emp_id: int) -> None:
         with self._connect() as conn:

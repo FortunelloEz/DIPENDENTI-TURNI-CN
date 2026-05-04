@@ -48,6 +48,9 @@ class Api:
     def employee_delete(self, emp_id: int) -> None:
         self.db.employee_delete(int(emp_id))
 
+    def employees_bulk_set_skill(self, role: str, value: int) -> Dict[str, Any]:
+        count = self.db.employees_bulk_set_skill(role, value)
+        return {"ok": True, "updated": count}
     # =========================
     # Overrides (Calendario)
     # =========================

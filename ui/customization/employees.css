@@ -324,3 +324,74 @@
 .employees-page .panel{
   display: block !important;
 }
+/* =========================================================
+   EMPLOYEES - BULK UPDATE SKILLS
+   ========================================================= */
+
+.employees-page .emp-bulk-panel{
+  margin-bottom: 14px;
+}
+
+.employees-page .bulk-title{
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.employees-page .emp-bulk-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 8px;
+}
+
+.employees-page .bulk-action-field{
+  min-width: 160px;
+}
+
+.employees-page .bulk-action-field .btn{
+  width: 100%;
+  height: 42px;
+}
+
+.employees-page .bulk-hint{
+  font-size: 12px;
+  opacity: .75;
+}
+
+@media (max-width: 760px){
+  .employees-page .emp-bulk-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .employees-page .bulk-action-field{
+    min-width: 0;
+  }
+}
+/* =========================================================
+   GIORNI LAVORATIVI CONFIGURATI
+   ========================================================= */
+.work-days-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.work-day-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.75);
+  font-size: 12.5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.work-day-check input {
+  accent-color: var(--accent);
+}

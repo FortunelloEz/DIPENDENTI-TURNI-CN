@@ -45,6 +45,12 @@
       selPreferred: $("empPreferredRole"),
       skillsGrid: $("empSkillsGrid"),
       inpAlias: $("empAlias"),
+      workDaysGrid: $("empWorkDaysGrid"),
+      inpMaxDailyHours: $("empMaxDailyHours"),
+
+      bulkRole: $("empBulkRole"),
+      bulkValue: $("empBulkValue"),
+      btnBulkApply: $("btnEmpBulkApply"),
     };
   }
   function ensureModalBanner(E) {
@@ -195,7 +201,14 @@
     // Api.employee_delete(emp_id:int) => PASSARE INT
     return await window.pywebview.api.employee_delete(Number(empId));
   }
-
+  async function employeesBulkSetSkill(role, value) {
+    const api = await waitFor(
+      () => window.pywebview && window.pywebview.api && window.pywebview.api.employees_bulk_set_skill,
+      12000
+    );
+    if (!api) throw new Error("pywebview.api.employees_bulk_set_skill non disponibile.");
+    return await window.pywebview.api.employees_bulk_set_skill(String(role), Number(value));
+  }
   // ---- Skills grid ----
   function renderSkillsGrid(E, skills) {
     const map = skills || {};
@@ -210,9 +223,9 @@
       row.innerHTML = `
         <div class="skill-role">${escapeHtml(role)}</div>
         <select class="skill-rank" data-role="${escapeHtml(role)}">
-          ${[0,1,2,3,4,5].map(n =>
-            `<option value="${n}" ${n===current?"selected":""}>${n}</option>`
-          ).join("")}
+          ${[0,1,2,3,4,5,6,7,8,9,10].map(n =>
+                      `<option value="${n}" ${n===current?"selected":""}>${n}</option>`
+                    ).join("")}
         </select>
       `;
       E.skillsGrid.appendChild(row);
@@ -227,6 +240,24 @@
     });
     return out;
   }
+  function renderWorkDays(E, workDaysStr) {
+      if (!E.workDaysGrid) return;
+      const active = new Set(
+        (workDaysStr || "").split(",").map(s => s.trim()).filter(Boolean)
+      );
+      E.workDaysGrid.querySelectorAll("input[type=checkbox]").forEach(cb => {
+        cb.checked = active.has(cb.value);
+      });
+    }
+
+    function readWorkDays(E) {
+      if (!E.workDaysGrid) return "";
+      const checked = [];
+      E.workDaysGrid.querySelectorAll("input[type=checkbox]").forEach(cb => {
+        if (cb.checked) checked.push(cb.value);
+      });
+      return checked.join(",");
+    }
 
   // ---- Modal CRUD ----
   let _editingId = null;
@@ -243,6 +274,10 @@
     E.selPreferred.value = emp?.preferred_role || "";
     E.inpAlias.value = emp?.aliases ? String(emp.aliases) : "";
     renderSkillsGrid(E, emp?.skills || {});
+    renderWorkDays(E, emp?.work_days || "");
+    if (E.inpMaxDailyHours) {
+      E.inpMaxDailyHours.value = (emp?.max_daily_hours != null) ? String(emp.max_daily_hours) : "";
+    }
     showModalBanner(E, "", "");
 
   }
@@ -383,14 +418,16 @@
     if (!name) return alert("Inserisci il nome del dipendente.");
 
     const payload = {
-      name,
-      aliases: (E.inpAlias.value || "").trim(),
-      is_permanent: !!E.chkPermanent.checked,
-      preferred_role: E.selPreferred.value || null,
-      slot_morning: E.chkMorning.checked ? 1 : 0,
-      slot_evening: E.chkEvening.checked ? 1 : 0,
-      skills: readSkillsFromGrid(E),
-    };
+          name,
+          aliases: (E.inpAlias.value || "").trim(),
+          is_permanent: !!E.chkPermanent.checked,
+          preferred_role: E.selPreferred.value || null,
+          slot_morning: E.chkMorning.checked ? 1 : 0,
+          slot_evening: E.chkEvening.checked ? 1 : 0,
+          skills: readSkillsFromGrid(E),
+          work_days: readWorkDays(E),
+            max_daily_hours: E.inpMaxDailyHours?.value !== "" ? Number(E.inpMaxDailyHours.value) : null,
+          };
 
     if (!payload.slot_morning && !payload.slot_evening) {
       return alert("Seleziona almeno uno slot: Mattina o Pomeriggio.");
@@ -425,7 +462,36 @@
         showModalBanner(E, `<b>Errore</b>: ${escapeHtml(msg)}`, "error");
       }
   }
+  async function onBulkApply(E) {
+    const role = E.bulkRole?.value || "";
+    const value = Number(E.bulkValue?.value ?? 0);
 
+    if (!role) {
+      alert("Seleziona un ruolo.");
+      return;
+    }
+
+    if (Number.isNaN(value) || value < 0 || value > 10) {
+          alert("Seleziona un valore valido tra 0 e 10.");
+          return;
+        }
+
+        const ok = confirm(`Impostare ${value} su tutti i dipendenti per il ruolo ${role}?`);
+        if (!ok) return;
+
+        try {
+          const res = await employeesBulkSetSkill(role, value);
+          await refreshEmployeesUI(E);
+          showBanner(
+            E,
+            `<b>Aggiornamento completato.</b><br><span style="opacity:.75">Ruolo: ${escapeHtml(role)} · Valore: ${value} · Dipendenti aggiornati: ${Number(res?.updated || 0)}</span>`,
+            "info"
+          );
+        } catch (err) {
+          console.error(err);
+          showBanner(E, `<b>Errore</b>: ${escapeHtml(err?.message || String(err))}`, "error");
+        }
+      }
   // ---- init (sempre bind anche se refresh fallisce) ----
   async function initEmployees() {
     const E = els();
@@ -441,6 +507,10 @@
     const btnPermManage = document.getElementById("btnPermManage");
     if (btnPermManage) {
       btnPermManage.onclick = () => openPermanentModal();
+    }
+
+    if (E.btnBulkApply) {
+      E.btnBulkApply.onclick = async () => { await onBulkApply(E); };
     }
 
     E.btnClose.onclick = () => closeEmpModal(E);
