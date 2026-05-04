@@ -7,6 +7,7 @@
 let _squadsAutoSaveTimer = null;
 let _undoSnapshot = null;
 let _squadsDeleteUiBound = false;
+let _dayTypesCache = null;
 // =========================
 // TIPI GIORNATA (day-type presets)
 // Storage: localStorage (preferenze UI, non dati operativi)
@@ -14,7 +15,6 @@ let _squadsDeleteUiBound = false;
 
 const DAY_TYPE_NAMES = ["Leggera", "Normale", "Pesante"];
 const DAY_TYPE_ICONS = { "Leggera": "🟢", "Normale": "🟡", "Pesante": "🔴" };
-const DAY_TYPES_LS_KEY = "squads_day_types_v1";
 
 function dayTypesDefault() {
   // Per ogni tipo: { morning: {role: qty}, evening: {role: qty} }
@@ -25,35 +25,46 @@ function dayTypesDefault() {
     "Pesante":  { morning: empty(), evening: empty() },
   };
 }
-
-function dayTypesLoad() {
+async function dayTypesLoadFromDb() {
   try {
-    const raw = localStorage.getItem(DAY_TYPES_LS_KEY);
-    if (!raw) return dayTypesDefault();
-    const parsed = JSON.parse(raw);
-    // sanity: assicura che tutti i tipi e ruoli esistano
+    const saved = await apiCall("day_type_presets_get");
     const defaults = dayTypesDefault();
+
     DAY_TYPE_NAMES.forEach(tn => {
-      if (!parsed[tn]) parsed[tn] = defaults[tn];
-      ["morning","evening"].forEach(band => {
-        if (!parsed[tn][band]) parsed[tn][band] = defaults[tn][band];
-        ROLES.forEach(r => {
-          if (parsed[tn][band][r] === undefined) parsed[tn][band][r] = 0;
+      if (!saved[tn]) saved[tn] = defaults[tn];
+
+      ["morning", "evening"].forEach(band => {
+        if (!saved[tn][band]) saved[tn][band] = defaults[tn][band];
+
+        ROLES.forEach(role => {
+          if (saved[tn][band][role] === undefined) {
+            saved[tn][band][role] = 0;
+          }
         });
       });
     });
-    return parsed;
-  } catch(e) {
+
+    return saved;
+  } catch (e) {
+    console.error("Errore caricamento day type presets:", e);
     return dayTypesDefault();
   }
 }
 
 function dayTypesSave(data) {
-  localStorage.setItem(DAY_TYPES_LS_KEY, JSON.stringify(data));
+  _dayTypesCache = data;
+  return dayTypesSaveToDb(data);
+}
+function dayTypesLoad() {
+  return _dayTypesCache || dayTypesDefault();
+}
+
+async function dayTypesSaveToDb(data) {
+  await apiCall("day_type_presets_set", data);
 }
 
 // Applica un tipo giornata a un giorno specifico nella tabella corrente
-function applyDayType(weekKey, dayIndex, typeName) {
+async function applyDayType(weekKey, dayIndex, typeName) {
   const types = dayTypesLoad();
   const preset = types[typeName];
   if (!preset) return;
@@ -67,29 +78,48 @@ function applyDayType(weekKey, dayIndex, typeName) {
   squads.set(weekKey, wkData);
   buildSquadsTable(weekKey, wkData);
   scheduleSquadsAutosave(weekKey);
+
+  // salva assegnazione giorno→tipo a DB
+  await apiCall("day_type_assignments_set", dayIndex, typeName);
+  await renderDayTypesSection(weekKey);
 }
 
 // Render della sezione "Tipi giornata" (riga per giorno, 3 bottoni preset + badge tipo attivo)
-function renderDayTypesSection(weekKey) {
+async function renderDayTypesSection(weekKey) {
   const container = document.getElementById("dayTypesBody");
   if (!container) return;
 
   const types = dayTypesLoad();
   const wkData = getWeekSquad(weekKey);
 
-  const rows = DAYS.map((day, dayIndex) => {
-    const btns = DAY_TYPE_NAMES.map(tn => {
-      const icon = DAY_TYPE_ICONS[tn] || "";
-      return `<button class="btn btn-small dt-preset-btn" data-day="${dayIndex}" data-type="${tn}">${icon} ${tn}</button>`;
-    }).join("");
+  // legge assegnazioni correnti da DB
+  let currentAssignments = {};
+  try {
+    currentAssignments = await apiCall("day_type_assignments_get") || {};
+  } catch(e) {}
 
-    return `
-      <div class="dt-row">
-        <div class="dt-day-label"><b>${day}</b></div>
-        <div class="dt-btns">${btns}</div>
-      </div>
-    `;
-  }).join("");
+    const rows = DAYS.map((day, dayIndex) => {
+      const currentType = currentAssignments[dayIndex] || currentAssignments[String(dayIndex)] || null;
+
+      const btns = DAY_TYPE_NAMES.map(tn => {
+        const icon = DAY_TYPE_ICONS[tn] || "";
+        const activeClass = currentType === tn ? " dt-preset-btn--active" : "";
+        return `<button class="btn btn-small dt-preset-btn${activeClass}" data-day="${dayIndex}" data-type="${tn}">${icon} ${tn}</button>`;
+      }).join("");
+
+      const badge = currentType
+        ? `<span class="dt-current-badge">${DAY_TYPE_ICONS[currentType]} ${currentType}</span>`
+        : `<span class="dt-current-badge dt-current-badge--empty">—</span>`;
+
+      return `
+        <div class="dt-day-box">
+          <div class="dt-row">
+            <div class="dt-day-label"><b>${day}</b>${badge}</div>
+            <div class="dt-btns">${btns}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
 
   container.innerHTML = rows;
 
@@ -199,9 +229,15 @@ function saveDayTypeEditModal() {
     });
   });
 
-  dayTypesSave(types);
-  closeDayTypeEditModal();
-  setSquadsStatus(`Preset "${_dayTypeEditCurrentType}" salvato`, "chip-ok");
+  dayTypesSave(types)
+    .then(() => {
+      closeDayTypeEditModal();
+      setSquadsStatus(`Preset "${_dayTypeEditCurrentType}" salvato`, "chip-ok");
+    })
+    .catch((e) => {
+      console.error(e);
+      setSquadsStatus("Errore salvataggio preset", "chip-bad");
+    });
 }
 
 function bindDayTypeEditModal() {
@@ -619,6 +655,8 @@ async function initSquadsPage(){
     });
 
     // Day-type presets
-    renderDayTypesSection(weekKey);
+    _dayTypesCache = await dayTypesLoadFromDb();
+    // Day-type presets
+    await renderDayTypesSection(weekKey);
     bindDayTypeEditModal();
   }

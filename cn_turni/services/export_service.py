@@ -78,13 +78,15 @@ def build_week_export(db: Any, week_key: str) -> dict:
     emp_rows = db.employees_list()
     id_to_name = {int(r["id"]): str(r["name"]).strip() for r in emp_rows}
 
-    grid: Dict[int, Dict[int, Dict[str, set[str]]]] = {}
+    # grid[eid][day_index][slot] = {"labels": set(), "role": str}
+    grid: Dict[int, Dict[int, Dict[str, Any]]] = {}
 
     overrides = _iter_overrides_rows(db, week_id)
     for r in overrides:
         day_index = int(r["day_index"])
         time_label = str(r["time_label"])
         slot = _slot_of_time(time_label)
+        role = str(r.get("role") or "")
 
         eids = r.get("employee_ids")
         if isinstance(eids, str):
@@ -99,8 +101,12 @@ def build_week_export(db: Any, week_key: str) -> dict:
 
         for eid in (eids or []):
             eid = int(eid)
-            grid.setdefault(eid, {}).setdefault(day_index, {}).setdefault(slot, set()).add(time_label)
-
+            day_data = grid.setdefault(eid, {}).setdefault(day_index, {})
+            slot_data = day_data.setdefault(slot, {"labels": set(), "role": role})
+            slot_data["labels"].add(time_label)
+            # ruolo: teniamo il più frequente (in caso di conflitto, il primo vince)
+            if not slot_data["role"]:
+                slot_data["role"] = role
     # Martedì->Domenica come nel tuo esempio
     day_indices = [1, 2, 3, 4, 5, 6]
     headers = []
@@ -112,17 +118,21 @@ def build_week_export(db: Any, week_key: str) -> dict:
     for eid, by_day in grid.items():
         name = id_to_name.get(eid, f"ID {eid}")
         cells: List[str] = []
+        roles: List[str] = []   # parallelo a cells: ruolo per ogni cella
         any_cell = False
         for di in day_indices:
             day_slots = by_day.get(di, {})
             for slot in ("morning", "evening"):
-                labels = sorted(day_slots.get(slot, set()))
+                slot_data = day_slots.get(slot, {})
+                labels = sorted(slot_data.get("labels", set()) if isinstance(slot_data, dict) else slot_data)
+                role = slot_data.get("role", "") if isinstance(slot_data, dict) else ""
                 rng = _labels_to_range(labels)
                 cells.append(rng or "")
+                roles.append(role if rng else "")
                 if rng:
                     any_cell = True
         if any_cell:
-            rows.append({"name": name, "cells": cells})
+            rows.append({"name": name, "cells": cells, "roles": roles})
 
     rows.sort(key=lambda r: r["name"].lower())
     return {"week_key": week_key, "week_id": week_id, "headers": headers, "rows": rows}

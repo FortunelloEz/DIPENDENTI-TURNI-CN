@@ -151,12 +151,29 @@ class Db:
                     payload_json TEXT NOT NULL,
                     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
                 );
-    
+                CREATE TABLE IF NOT EXISTS day_type_presets (
+                    name         TEXT PRIMARY KEY,
+                    payload_json TEXT NOT NULL,
+                    updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+                );
                 CREATE INDEX IF NOT EXISTS idx_override_week ON schedule_override(week_id);
                 CREATE INDEX IF NOT EXISTS idx_squads_week ON squads_required(week_id);
                 CREATE INDEX IF NOT EXISTS idx_perm_week ON permanent_week(week_id);
                 """
             )
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS day_type_presets(
+                    name TEXT PRIMARY KEY,
+                    payload_json TEXT NOT NULL,
+                    updated_at TEXT
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS day_type_assignments(
+                    day_index INTEGER PRIMARY KEY,
+                    type_name TEXT NOT NULL
+                )
+            """)
             self._ensure_column(conn, "employees", "aliases", "aliases TEXT NULL")
             self._ensure_column(conn, "employees", "slot_morning", "slot_morning INTEGER NOT NULL DEFAULT 1")
             self._ensure_column(conn, "employees", "slot_evening", "slot_evening INTEGER NOT NULL DEFAULT 1")
@@ -435,3 +452,54 @@ class Db:
             except sqlite3.OperationalError:
                 # tabella non presente nello schema (vecchie versioni)
                 pass
+
+
+
+
+
+
+    def day_type_presets_get(self) -> dict:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT name, payload_json FROM day_type_presets"
+            ).fetchall()
+
+            out = {}
+            for r in rows:
+                out[r["name"]] = json.loads(r["payload_json"])
+
+            return out
+
+
+    def day_type_presets_set(self, payload: dict) -> None:
+        with self._connect() as conn:
+            for name, data in (payload or {}).items():
+                conn.execute(
+                    """
+                    INSERT INTO day_type_presets(name, payload_json, updated_at)
+                    VALUES (?, ?, datetime('now'))
+                    ON CONFLICT(name) DO UPDATE SET
+                        payload_json = excluded.payload_json,
+                        updated_at = datetime('now')
+                    """,
+                    (name, json.dumps(data, ensure_ascii=False)),
+                )
+    def day_type_assignments_get(self) -> dict:
+        """Ritorna {day_index: type_name} per tutti i giorni configurati."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT day_index, type_name FROM day_type_assignments"
+            ).fetchall()
+            return {int(r["day_index"]): r["type_name"] for r in rows}
+
+    def day_type_assignments_set(self, day_index: int, type_name: str) -> None:
+        """Salva o aggiorna l'assegnazione per un giorno."""
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO day_type_assignments(day_index, type_name)
+                VALUES (?, ?)
+                ON CONFLICT(day_index) DO UPDATE SET type_name = excluded.type_name
+                """,
+                (int(day_index), str(type_name)),
+            )

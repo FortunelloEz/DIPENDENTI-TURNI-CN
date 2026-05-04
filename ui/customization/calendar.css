@@ -912,3 +912,37 @@
   font-size: 14px;
   opacity: .8;
 }
+/* ===== STICKY HEADERS CALENDARIO ===== */
+
+/* Prima colonna (orari): sticky a sinistra */
+.calendar-grid .cell.time {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #f8f9fc;
+}
+
+/* Prima cella header (angolo): sticky in alto a sinistra */
+.calendar-grid .cell.header:first-child {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  background: #eef2ff;
+}
+
+/* Header giorni (prima riga): sticky in alto */
+.calendar-grid .cell.header.day-toggle {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #eef2ff;
+}
+
+/* Header ruoli (seconda riga): sticky sotto i giorni */
+.calendar-grid .cell.header:not(.day-toggle):not(:first-child) {
+  position: sticky;
+  top: 38px;   /* altezza della prima riga header */
+  z-index: 3;
+  background: #e8ecf8;
+}

@@ -15,7 +15,22 @@ class Api:
         # retention safety (anche se la fai in main non rompe)
         self.db.purge_old_weeks(months=6)
         self.import_service = ImportService(self.db)
+    # =========================
+    # Day Type Presets
+    # =========================
+    def day_type_presets_get(self):
+        return self.db.day_type_presets_get()
 
+    def day_type_presets_set(self, payload: dict):
+        self.db.day_type_presets_set(payload)
+        return {"ok": True}
+
+    def day_type_assignments_get(self):
+        return self.db.day_type_assignments_get()
+
+    def day_type_assignments_set(self, day_index: int, type_name: str):
+        self.db.day_type_assignments_set(day_index, type_name)
+        return {"ok": True}
 
     def ping(self) -> Dict[str, Any]:
         return {"ok": True}

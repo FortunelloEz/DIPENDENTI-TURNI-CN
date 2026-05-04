@@ -395,3 +395,263 @@
 .work-day-check input {
   accent-color: var(--accent);
 }
+/* =========================================================
+   EMPLOYEES TABLE — UI migliorata
+   ========================================================= */
+
+.emp-td-name {
+  min-width: 180px;
+}
+
+.emp-row-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.emp-avatar-sm {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: .3px;
+}
+
+.emp-name-main {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.emp-name-sub {
+  font-size: 11px;
+  opacity: .6;
+  margin-top: 2px;
+}
+
+.emp-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.emp-badge--perm {
+  background: rgba(16,185,129,.12);
+  border: 1px solid rgba(16,185,129,.30);
+  color: #065f46;
+}
+
+.emp-badge--temp {
+  background: rgba(37,99,235,.10);
+  border: 1px solid rgba(37,99,235,.22);
+  color: #1e40af;
+}
+
+.emp-perm-info {
+  font-size: 11px;
+  opacity: .60;
+  margin-top: 4px;
+}
+
+.emp-skills-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.emp-skill-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  border: 1px solid rgba(15,23,42,.12);
+  background: rgba(255,255,255,.7);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.emp-skill-badge b {
+  font-weight: 800;
+  opacity: .75;
+}
+
+.emp-td-actions {
+  white-space: nowrap;
+}
+
+.emp-btn-edit {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  margin-right: 4px;
+  background: rgba(37,99,235,.12);
+  border-color: rgba(37,99,235,.25);
+}
+
+.emp-btn-edit:hover {
+  background: rgba(37,99,235,.20);
+}
+
+.emp-btn-del {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(239,68,68,.10);
+  border-color: rgba(239,68,68,.22);
+  color: #991b1b;
+}
+
+.emp-btn-del:hover {
+  background: rgba(239,68,68,.18);
+}
+
+/* alternanza righe */
+.employees-page tbody tr:nth-child(even) td {
+  background: rgba(15,23,42,.02);
+}
+
+.employees-page tbody tr:hover td {
+  background: rgba(37,99,235,.04);
+  transition: background .12s ease;
+}
+/* =========================================================
+   MODAL DIPENDENTE — layout a sezioni
+   ========================================================= */
+#empModalBackdrop .modal-body {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.emp-modal-section {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(15,23,42,.07);
+}
+
+.emp-modal-section:last-of-type {
+  border-bottom: none;
+}
+
+.emp-modal-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.emp-hint-inline {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: .7;
+  font-size: 10px;
+}
+
+.emp-modal-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.emp-modal-row3 {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.emp-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.emp-toggle-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.emp-max-hours-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.emp-max-hours-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.emp-max-hours-input {
+  width: 180px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 13px;
+}
+
+.emp-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid rgba(15,23,42,.07);
+  background: #fafbfc;
+}
+
+.emp-btn-save-primary {
+  background: rgba(37,99,235,.18);
+  border-color: rgba(37,99,235,.40);
+  font-weight: 700;
+  padding: 8px 20px;
+}
+
+.emp-btn-save-primary:hover {
+  background: rgba(37,99,235,.26);
+}
+
+/* override: nel nuovo layout il form-field non ha il padding del vecchio grid */
+#empModalBackdrop .emp-modal-section .form-field label {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: .75;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+#empModalBackdrop .emp-modal-section input[type="text"],
+#empModalBackdrop .emp-modal-section input[type="number"],
+#empModalBackdrop .emp-modal-section select {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  font-size: 13px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+#empModalBackdrop details.emp-adv {
+  margin: 0;
+  border: none;
+  border-top: 1px solid rgba(15,23,42,.07);
+  border-radius: 0;
+  background: transparent;
+  padding: 12px 18px;
+}

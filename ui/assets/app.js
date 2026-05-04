@@ -290,76 +290,134 @@ function renderWeekLabel(){
   end.setDate(end.getDate() + 6);
   label.textContent = `Settimana: ${formatDate(currentWeekStart)} → ${formatDate(end)}`;
 }
-function renderDaySummary() {
+async function renderDaySummary() {
   const container = document.getElementById("daySummaryBody");
   if (!container) return;
 
-  const DAY_TYPE_NAMES = ["Leggera", "Normale", "Pesante"];
   const DAY_TYPE_ICONS = { "Leggera": "🟢", "Normale": "🟡", "Pesante": "🔴" };
 
   let assignments = {};
   try {
-    const raw = localStorage.getItem("day_type_assignments_v1");
-    if (raw) assignments = JSON.parse(raw);
+    assignments = await apiCall("day_type_assignments_get") || {};
   } catch(e) {}
-
-  const weekKey = weekKeyOf(currentWeekStart);
-  const weekAssign = assignments[weekKey] || {};
 
   const cells = DAYS.map((day, dayIndex) => {
     const date = new Date(currentWeekStart);
     date.setDate(date.getDate() + dayIndex);
     const dateStr = formatDate(date);
-    const typeName = weekAssign[dayIndex] || null;
-    const icon = typeName ? DAY_TYPE_ICONS[typeName] : "—";
+    const typeName = assignments[String(dayIndex)] || assignments[dayIndex] || null;
+    const icon = typeName ? (DAY_TYPE_ICONS[typeName] || "") : "—";
+    const typeLabel = typeName || "Non assegnata";
 
-    const opts = DAY_TYPE_NAMES.map(tn => {
-      const active = typeName === tn ? " ds-opt-active" : "";
-      return `<button class="ds-opt${active}" data-type="${tn}" data-day="${dayIndex}" title="${tn}">${DAY_TYPE_ICONS[tn]}</button>`;
-    }).join("");
-
-    const clearBtn = typeName
-      ? `<button class="ds-opt ds-opt-clear" data-day="${dayIndex}" title="Rimuovi">✕</button>`
-      : "";
+    const typeColors = {
+      "Leggera": "rgba(16,185,129,.10)",
+      "Normale": "rgba(245,158,11,.10)",
+      "Pesante": "rgba(239,68,68,.10)",
+    };
+    const typeBorders = {
+      "Leggera": "rgba(16,185,129,.30)",
+      "Normale": "rgba(245,158,11,.30)",
+      "Pesante": "rgba(239,68,68,.30)",
+    };
+    const bg = typeName ? typeColors[typeName] : "transparent";
+    const border = typeName ? typeBorders[typeName] : "rgba(15,23,42,.08)";
 
     return `
-      <div class="ds-item ${typeName ? "ds-item--set" : ""}" data-day="${dayIndex}">
+      <div class="ds-item ${typeName ? "ds-item--set" : ""}" style="background:${bg};border-color:${border};">
         <div class="ds-item-head">
           <span class="ds-item-day">${day}</span>
           <span class="ds-item-date">${dateStr}</span>
         </div>
-        <div class="ds-item-type">${icon} ${typeName || "—"}</div>
-        <div class="ds-item-opts">${opts}${clearBtn}</div>
+        <div class="ds-item-type">${icon} ${typeLabel}</div>
       </div>
     `;
   }).join("");
 
   container.innerHTML = cells;
+}
+function initQuickAdd() {
+  const bar = document.getElementById("quickAddBar");
+  if (!bar) return;
 
-  container.querySelectorAll(".ds-opt[data-type]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const dayIndex = Number(btn.dataset.day);
-      const typeName = btn.dataset.type;
-      const wk = weekKeyOf(currentWeekStart);
-      let stored = {};
-      try { stored = JSON.parse(localStorage.getItem("day_type_assignments_v1") || "{}"); } catch(e) {}
-      if (!stored[wk]) stored[wk] = {};
-      stored[wk][dayIndex] = typeName;
-      localStorage.setItem("day_type_assignments_v1", JSON.stringify(stored));
-      renderDaySummary();
-    });
-  });
+  // Popola dipendenti
+  const selEmp = document.getElementById("qaEmployee");
+  selEmp.innerHTML = `<option value="">— Dipendente —</option>` +
+    employees.slice().sort((a,b) => a.label.localeCompare(b.label, "it"))
+      .map(e => `<option value="${e.id}">${e.label}</option>`).join("");
 
-  container.querySelectorAll(".ds-opt-clear").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const dayIndex = Number(btn.dataset.day);
-      const wk = weekKeyOf(currentWeekStart);
-      let stored = {};
-      try { stored = JSON.parse(localStorage.getItem("day_type_assignments_v1") || "{}"); } catch(e) {}
-      if (stored[wk]) delete stored[wk][dayIndex];
-      localStorage.setItem("day_type_assignments_v1", JSON.stringify(stored));
-      renderDaySummary();
-    });
+  // Popola giorni
+  const selDay = document.getElementById("qaDay");
+  selDay.innerHTML = `<option value="">— Giorno —</option>` +
+    DAYS.map((d, i) => {
+      const date = new Date(currentWeekStart);
+      date.setDate(date.getDate() + i);
+      return `<option value="${i}">${d} ${formatDate(date)}</option>`;
+    }).join("");
+
+  // Popola ruoli
+  const selRole = document.getElementById("qaRole");
+  selRole.innerHTML = `<option value="">— Mansione —</option>` +
+    ROLES.map(r => `<option value="${r}">${r}</option>`).join("");
+
+  // Popola orari
+  const hours = [];
+  for (let h = 8; h <= 24; h++) hours.push(`${String(h).padStart(2,"0")}:00`);
+  const selFrom = document.getElementById("qaFrom");
+  const selTo   = document.getElementById("qaTo");
+  selFrom.innerHTML = `<option value="">— Dalle —</option>` + hours.map(h => `<option value="${h}">${h}</option>`).join("");
+  selTo.innerHTML   = `<option value="">— Alle —</option>`  + hours.map(h => `<option value="${h}">${h}</option>`).join("");
+
+  // Confirm
+  const btnConfirm = document.getElementById("qaConfirm");
+  if (btnConfirm.dataset.bound === "1") return;
+  btnConfirm.dataset.bound = "1";
+
+  btnConfirm.addEventListener("click", async () => {
+    const empId  = Number(selEmp.value);
+    const dayIdx = Number(selDay.value);
+    const role   = selRole.value;
+    const from   = selFrom.value;
+    const to     = selTo.value;
+
+    if (!empId || selDay.value === "" || !role || !from || !to) {
+      alert("Compila tutti i campi prima di aggiungere.");
+      return;
+    }
+
+    const fromH = parseInt(from);
+    const toH   = parseInt(to);
+    if (toH <= fromH) {
+      alert("L'orario di fine deve essere successivo a quello di inizio.");
+      return;
+    }
+
+    const weekKey = weekKeyOf(currentWeekStart);
+
+    // genera le mezz'ore nell'intervallo
+    const halfHoursToAdd = [];
+    for (let h = fromH; h < toH; h++) {
+      halfHoursToAdd.push(`${String(h).padStart(2,"0")}:00`);
+      halfHoursToAdd.push(`${String(h).padStart(2,"0")}:30`);
+    }
+
+    // aggiunge il dipendente alle mezz'ore, senza sovrascrivere gli altri
+    for (const t of halfHoursToAdd) {
+      const current = getAssignedIdsFor(weekKey, dayIdx, role, t) || [];
+      if (!current.includes(empId)) {
+        const updated = [...current, empId];
+        setAssignedIdsFor(weekKey, dayIdx, role, t, updated);
+        await saveSlotOverrideToDb(weekKey, dayIdx, role, t, updated);
+      }
+    }
+
+    recalcSegmentsFromAssignments(weekKey);
+    renderCalendar();
+
+    // reset selezioni (mantieni dipendente per aggiunta rapida multipla)
+    selDay.value  = "";
+    selRole.value = "";
+    selFrom.value = "";
+    selTo.value   = "";
   });
 }
 /* ---------- CALENDARIO ---------- */
@@ -411,9 +469,36 @@ function labelsForRow(row){
 function labelsForRowSpan(rowStartIdx, rowEndIdx){
   const a = Math.min(rowStartIdx, rowEndIdx);
   const b = Math.max(rowStartIdx, rowEndIdx);
+  const goingDown = rowEndIdx >= rowStartIdx;
   const out = [];
   for (let i=a; i<=b; i++){
-    out.push(...labelsForRow(_visibleRowsCache[i]));
+    const row = _visibleRowsCache[i];
+    if (!row) continue;
+    if (row.kind === 'slot') {
+      out.push(row.timeLabel);
+    } else if (row.kind === 'range' || row.kind === 'rangeHeader') {
+      // fascia intermedia: prendi tutte le sue mezz'ore
+      // fascia di bordo (primo o ultimo elemento dello span):
+      // se è la riga di arrivo del drag, prendi solo
+      // la prima mezz'ora (drag verso giù) o l'ultima (drag verso su)
+      const slots = segmentToSlots(row.seg);
+      if (i === a && i !== b) {
+        // bordo superiore: drag verso giù → prendi tutto dalla prima in poi
+        out.push(...slots);
+      } else if (i === b && i !== a) {
+        // bordo inferiore: drag verso su → prendi solo fino all'ultima
+        if (goingDown) {
+          // arrivati qui scendendo: solo la prima mezz'ora della fascia
+          out.push(slots[0]);
+        } else {
+          // arrivati qui salendo: solo l'ultima mezz'ora della fascia
+          out.push(slots[slots.length - 1]);
+        }
+      } else {
+        // fascia interna allo span: prendi tutto
+        out.push(...slots);
+      }
+    }
   }
   const set = new Set(out);
   return HALF_HOURS.filter(t => set.has(t));
@@ -892,7 +977,8 @@ async function initHome(){
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
-    renderDaySummary();
+    await renderDaySummary();
+    initQuickAdd();
   });
 
   document.getElementById("btnNextWeek")?.addEventListener("click", async () => {
@@ -903,7 +989,8 @@ async function initHome(){
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
-    renderDaySummary();
+    await renderDaySummary();
+    initQuickAdd();
   });
 
   document.getElementById("btnToday")?.addEventListener("click", async () => {
@@ -914,7 +1001,8 @@ async function initHome(){
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
-    renderDaySummary();
+    await renderDaySummary();
+    initQuickAdd();
   });
 
   document.getElementById("btnTodayTop")?.addEventListener("click", async () => {
@@ -925,7 +1013,8 @@ async function initHome(){
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
-    renderDaySummary();
+    await renderDaySummary();
+    initQuickAdd();
   });
 
   document.getElementById("btnClear")?.addEventListener("click", async () => {
@@ -938,13 +1027,27 @@ async function initHome(){
 
     recalcSegmentsFromAssignments(wk2);
     renderCalendar();
-    renderDaySummary();
+    await renderDaySummary();
+    initQuickAdd();
   });
   document.getElementById("btnPermManage")?.addEventListener("click", () => openPermanentModal());
 
   // mouseup globale: se stavi selezionando -> picker su quelle mezz'ore
   if (!_homeMouseupInited) {
     _homeMouseupInited = true;
+    window.addEventListener("mousemove", (e) => {
+      if (!isSelecting) return;
+      const wrap = document.querySelector(".calendar-wrap");
+      if (!wrap) return;
+      const rect = wrap.getBoundingClientRect();
+      const threshold = 60;
+      const speed = 14;
+      if (e.clientY > rect.bottom - threshold) wrap.scrollTop += speed;
+      else if (e.clientY < rect.top + threshold) wrap.scrollTop -= speed;
+      if (e.clientX > rect.right - threshold) wrap.scrollLeft += speed;
+      else if (e.clientX < rect.left + threshold) wrap.scrollLeft -= speed;
+    });
+
     window.addEventListener("mouseup", () => {
       if (!isSelecting) return;
       if (sel.dayIndex === null || !sel.role || !sel.labels.length) { clearSelection(); return; }

@@ -415,3 +415,96 @@ body{
   flex-shrink: 0;
   height: auto;
 }
+/* ===== HOME: bottoni riorganizzati ===== */
+.home-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.home-actions-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.home-actions-sep {
+  width: 1px;
+  height: 28px;
+  background: var(--line);
+  margin: 0 4px;
+}
+/* ===== QUICK ADD BAR ===== */
+.quick-add-bar {
+  padding: 14px 18px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.03);
+  box-shadow: var(--shadow);
+  flex-shrink: 0;
+}
+
+.qa-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.qa-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 2fr) minmax(120px, 1.5fr) minmax(120px, 1.5fr) 100px 100px auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.qa-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.qa-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.quick-add-select {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 13px;
+  color: var(--text);
+  min-width: 0;
+}
+
+.quick-add-select:focus {
+  outline: none;
+  border-color: rgba(37,99,235,.45);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.10);
+}
+
+.qa-btn {
+  height: 38px;
+  padding: 0 20px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(37,99,235,.16);
+  border-color: rgba(37,99,235,.35);
+  border-radius: 10px;
+  width: 100%;
+}
+
+.qa-btn:hover {
+  background: rgba(37,99,235,.24);
+}

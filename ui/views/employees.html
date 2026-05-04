@@ -3,7 +3,6 @@
         <h2>Dipendenti</h2>
         <div class="row gap">
             <button id="btnEmpNew" class="btn primary">+ Aggiungi</button>
-            <button class="btn" id="btnPermManage">Gestisci indeterminati</button>
         </div>
     </div>
 
@@ -79,63 +78,68 @@
         </div>
 
         <div class="modal-body">
-            <div class="form-grid">
-                <div class="form-field">
-                    <label>Nome</label>
-                    <input id="empName" type="text" />
-                </div>
-                <div class="form-field">
-                    <label>Alias</label>
-                    <input id="empAlias" type="text" />
-                </div>
 
-                <div class="form-field">
-                    <label>Tempo indeterminato</label>
-                    <label class="switch">
-                        <input id="empPermanent" type="checkbox" />
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="form-field">
-                    <label>Slot-orario</label>
-                    <div class="check-row">
-                        <label class="check">
-                            <input id="empSlotMorning" type="checkbox" checked />
-                            <span>Mattina</span>
-                        </label>
-                        <label class="check">
-                            <input id="empSlotEvening" type="checkbox" checked />
-                            <span>Pomeriggio</span>
-                        </label>
+            <!-- SEZIONE: Anagrafica -->
+            <div class="emp-modal-section">
+                <div class="emp-modal-section-title">Anagrafica</div>
+                <div class="emp-modal-row2">
+                    <div class="form-field">
+                        <label>Nome</label>
+                        <input id="empName" type="text" placeholder="Nome e cognome" />
                     </div>
-                </div>
-
-                <div class="form-field">
-                    <label>Mansione preferita (opzionale)</label>
-                    <select id="empPreferredRole">
-                        <option value="">(vuota)</option>
-                        <option value="Cassa">Cassa</option>
-                        <option value="Runner">Runner</option>
-                        <option value="Bar">Bar</option>
-                        <option value="Comande">Comande</option>
-                        <option value="Accoglienza">Accoglienza</option>
-                        <option value="Jolly">Jolly</option>
-                    </select>
+                    <div class="form-field">
+                        <label>Alias CSV <span class="emp-hint-inline">(opzionale)</span></label>
+                        <input id="empAlias" type="text" placeholder="Come appare nel CSV" />
+                    </div>
                 </div>
             </div>
 
-            <details class="emp-adv" style="margin-top:12px">
-                <summary class="emp-adv-summary">Avanzate (skill)</summary>
-                <div class="subhead" style="margin-top:10px">Skill per mansione (0–10)</div>
-                <div class="skills-grid" id="empSkillsGrid"></div>
-            </details>
+            <!-- SEZIONE: Configurazione -->
+            <div class="emp-modal-section">
+                <div class="emp-modal-section-title">Configurazione</div>
+                <div class="emp-modal-row3">
+                    <div class="form-field">
+                        <label>Tipo contratto</label>
+                        <div class="emp-toggle-row">
+                            <label class="switch">
+                                <input id="empPermanent" type="checkbox" />
+                                <span class="slider"></span>
+                            </label>
+                            <span class="emp-toggle-label">Tempo indeterminato</span>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label>Fasce orarie</label>
+                        <div class="check-row">
+                            <label class="check">
+                                <input id="empSlotMorning" type="checkbox" checked />
+                                <span>Mattina</span>
+                            </label>
+                            <label class="check">
+                                <input id="empSlotEvening" type="checkbox" checked />
+                                <span>Pomeriggio</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label>Mansione preferita</label>
+                        <select id="empPreferredRole">
+                            <option value="">(nessuna)</option>
+                            <option value="Cassa">Cassa</option>
+                            <option value="Runner">Runner</option>
+                            <option value="Bar">Bar</option>
+                            <option value="Comande">Comande</option>
+                            <option value="Accoglienza">Accoglienza</option>
+                            <option value="Jolly">Jolly</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
 
-            <details class="emp-adv" style="margin-top:8px">
-                <summary class="emp-adv-summary">Giorni lavorativi configurati</summary>
-                <div style="margin-top:10px;font-size:12px;opacity:.75;margin-bottom:8px">
-                    Seleziona i giorni in cui questo dipendente può essere inserito dall'algoritmo.
-                    Se nessuno selezionato, non viene applicato nessun filtro.
+            <!-- SEZIONE: Giorni lavorativi -->
+            <div class="emp-modal-section">
+                <div class="emp-modal-section-title">Giorni lavorativi
+                    <span class="emp-hint-inline">— lascia tutto deselezionato per nessun filtro</span>
                 </div>
                 <div class="work-days-grid" id="empWorkDaysGrid">
                     <label class="work-day-check"><input type="checkbox" value="0"> Lun</label>
@@ -146,25 +150,30 @@
                     <label class="work-day-check"><input type="checkbox" value="5"> Sab</label>
                     <label class="work-day-check"><input type="checkbox" value="6"> Dom</label>
                 </div>
-                <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
-                    <label style="font-size:12px;font-weight:600;opacity:.78;white-space:nowrap;">
-                        Ore max al giorno
-                    </label>
+                <div class="emp-max-hours-row">
+                    <label class="emp-max-hours-label">Ore max al giorno</label>
                     <input
                             id="empMaxDailyHours"
                             type="number"
                             min="1"
                             max="16"
                             step="0.5"
-                            placeholder="Es. 6 (vuoto = nessun limite)"
-                            style="width:200px"
+                            placeholder="Vuoto = nessun limite"
+                            class="emp-max-hours-input"
                     />
                 </div>
+            </div>
+
+            <!-- SEZIONE: Skill (collassabile) -->
+            <details class="emp-adv">
+                <summary class="emp-adv-summary">Skill per mansione (0–10)</summary>
+                <div class="skills-grid" id="empSkillsGrid" style="margin-top:10px"></div>
             </details>
 
-            <div class="row gap end" style="margin-top:14px">
-                <button class="btn" id="empModalCancel">Annulla</button>
-                <button class="btn primary" id="empModalSave">Salva</button>
+            <!-- FOOTER -->
+            <div class="emp-modal-footer">
+                <button class="btn btn-ghost" id="empModalCancel">Annulla</button>
+                <button class="btn emp-btn-save-primary" id="empModalSave">Salva dipendente</button>
             </div>
         </div>
     </div>

@@ -267,14 +267,22 @@
     E.backdrop.style.display = "flex";
     E.title.textContent = (mode === "edit") ? "Modifica dipendente" : "Nuovo dipendente";
 
+    const isNew = (mode === "new");
     E.inpName.value = emp?.name ? String(emp.name) : "";
     E.chkPermanent.checked = !!emp?.is_permanent;
     E.chkMorning.checked = (emp?.slot_morning ?? 1) ? true : false;
     E.chkEvening.checked = (emp?.slot_evening ?? 1) ? true : false;
     E.selPreferred.value = emp?.preferred_role || "";
     E.inpAlias.value = emp?.aliases ? String(emp.aliases) : "";
-    renderSkillsGrid(E, emp?.skills || {});
-    renderWorkDays(E, emp?.work_days || "");
+
+    // Default nuovo dipendente: skill 5 su tutti i ruoli, giorni Mar-Dom
+    const defaultSkills = isNew
+      ? Object.fromEntries(ROLES.map(r => [r, 5]))
+      : (emp?.skills || {});
+    const defaultWorkDays = isNew ? "1,2,3,4,5,6" : (emp?.work_days || "");
+
+    renderSkillsGrid(E, defaultSkills);
+    renderWorkDays(E, defaultWorkDays);
     if (E.inpMaxDailyHours) {
       E.inpMaxDailyHours.value = (emp?.max_daily_hours != null) ? String(emp.max_daily_hours) : "";
     }
@@ -317,28 +325,47 @@
       return;
     }
 
-    list.forEach(emp => {
+    list.forEach((emp, idx) => {
       const tr = document.createElement("tr");
+
+      // avatar iniziali + colore deterministico
+      const initials = emp.name.split(" ").slice(0,2).map(w => w[0]?.toUpperCase() || "").join("");
+      let h = 0;
+      for (let i = 0; i < emp.name.length; i++) h = (h * 31 + emp.name.charCodeAt(i)) & 0xffff;
+      const hues = [210, 160, 280, 20, 340, 140, 50, 190];
+      const avatarColor = `hsl(${hues[h % hues.length]}, 55%, 48%)`;
+
+      // badge skill: solo ruoli con skill > 0
+      const skills = emp.skills || {};
+      const skillBadges = ROLES
+        .filter(r => (skills[r] ?? 0) > 0)
+        .map(r => `<span class="emp-skill-badge">${escapeHtml(r)} <b>${skills[r]}</b></span>`)
+        .join("");
+
+      // badge permanente
+      const permBadge = emp.is_permanent
+        ? `<span class="emp-badge emp-badge--perm">Indeterminato</span>`
+        : `<span class="emp-badge emp-badge--temp">Turnista</span>`;
+
+      // slot badge
+      const slotText = formatSlots(emp);
+
       tr.innerHTML = `
-        <td>
-          <b>${escapeHtml(emp.name)}</b>
-          <div style="opacity:.70;font-size:12px;margin-top:2px">${escapeHtml(formatSlots(emp))}</div>
-        </td>
-        <td>
-          ${emp.is_permanent ? "Sì" : "No"}
-          ${emp.is_permanent ? `
-            <div style="opacity:.70;font-size:12px;margin-top:2px">
-              ${formatPermInfo(emp)}
+        <td class="emp-td-name">
+          <div class="emp-row-identity">
+            <div class="emp-avatar-sm" style="background:${avatarColor}">${escapeHtml(initials)}</div>
+            <div>
+              <div class="emp-name-main">${escapeHtml(emp.name)}</div>
+              <div class="emp-name-sub">${escapeHtml(slotText)}</div>
             </div>
-          ` : ""}
-        </td>
-        <td>${escapeHtml(emp.preferred_role || "—")}</td>
-        <td>${escapeHtml(formatSkills(emp))}</td>
-        <td>
-          <div class="row gap">
-            <button class="btn btn-ghost" data-action="edit" data-id="${emp.id}" title="Modifica">✎</button>
-            <button class="btn btn-ghost" data-action="del" data-id="${emp.id}" title="Elimina">🗑</button>
           </div>
+        </td>
+        <td>${permBadge}${emp.is_permanent ? `<div class="emp-perm-info">${escapeHtml(formatPermInfo(emp))}</div>` : ""}</td>
+        <td>${escapeHtml(emp.preferred_role || "—")}</td>
+        <td><div class="emp-skills-wrap">${skillBadges || '<span style="opacity:.4">—</span>'}</div></td>
+        <td class="emp-td-actions">
+          <button class="btn emp-btn-edit" data-action="edit" data-id="${emp.id}" title="Modifica">✎ Modifica</button>
+          <button class="btn emp-btn-del" data-action="del" data-id="${emp.id}" title="Elimina">Elimina</button>
         </td>
       `;
       E.tbody.appendChild(tr);
@@ -476,7 +503,9 @@
           return;
         }
 
-        const ok = confirm(`Impostare ${value} su tutti i dipendenti per il ruolo ${role}?`);
+        const ok = window.confirm(
+          `Impostare ${value} su tutti i dipendenti per il ruolo "${role}"?\n\nQuesta operazione sovrascrive i valori esistenti.`
+        );
         if (!ok) return;
 
         try {

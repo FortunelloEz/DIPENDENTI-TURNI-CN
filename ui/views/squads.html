@@ -3,30 +3,29 @@
     <header class="page-header">
         <div class="page-title">
             <h1>Squadre</h1>
+            <p>Configura il fabbisogno di personale per ogni giorno e fascia oraria</p>
         </div>
 
-        <div class="page-actions squads-actions">
+        <div class="squads-header-actions">
 
-            <div class="squads-row-top">
-                <button class="btn btn-ghost" id="btnSquadsSaveTemplate">
-                    Salva template
-                </button>
-
-                <span class="chip" id="squadsSaveStatus">Pronto</span>
-                <button class="btn btn-danger" id="btnSquadsDeleteTemplate">Elimina template</button>
-
+            <div class="squads-action-group">
+                <div class="squads-group-label">Template settimana</div>
+                <div class="squads-group-row">
+                    <select id="squadsTemplateSelect" class="squads-select"></select>
+                    <button class="btn squads-btn-apply" id="btnSquadsApplyTemplate">Applica</button>
+                    <button class="btn btn-ghost squads-btn-undo" id="btnSquadsUndo" disabled>↩ Annulla</button>
+                </div>
             </div>
 
-            <div class="squads-row-bottom">
-                <select id="squadsTemplateSelect" class="select"></select>
+            <div class="squads-action-sep"></div>
 
-                <button class="btn" id="btnSquadsApplyTemplate">
-                    Applica
-                </button>
-
-                <button class="btn btn-ghost" id="btnSquadsUndo" disabled>
-                    Annulla
-                </button>
+            <div class="squads-action-group">
+                <div class="squads-group-label">Gestione template</div>
+                <div class="squads-group-row">
+                    <button class="btn squads-btn-save" id="btnSquadsSaveTemplate">+ Salva template</button>
+                    <button class="btn squads-btn-del" id="btnSquadsDeleteTemplate">Elimina</button>
+                    <span class="chip" id="squadsSaveStatus">Pronto</span>
+                </div>
             </div>
 
         </div>
@@ -54,8 +53,12 @@
             <button class="btn btn-ghost btn-small" id="btnEditDayTypes">✏️ Modifica preset</button>
         </div>
 
-        <div class="day-types-body" id="dayTypesBody">
-            <!-- generato da JS -->
+        <div class="calendar-wrap">
+            <div class="calendar-grid day-types-grid">
+                <div class="day-types-body" id="dayTypesBody">
+                    <!-- generato da JS -->
+                </div>
+            </div>
         </div>
     </section>
 
