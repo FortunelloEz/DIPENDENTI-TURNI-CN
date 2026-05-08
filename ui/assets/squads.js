@@ -231,7 +231,9 @@ function saveDayTypeEditModal() {
 
   dayTypesSave(types)
     .then(() => {
-      closeDayTypeEditModal();
+      // ❌ NON chiudere il modal
+      // closeDayTypeEditModal();
+
       setSquadsStatus(`Preset "${_dayTypeEditCurrentType}" salvato`, "chip-ok");
     })
     .catch((e) => {
