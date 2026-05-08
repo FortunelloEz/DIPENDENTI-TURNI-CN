@@ -1,14 +1,15 @@
-<div class="page">
-    <header class="page-header">
+<div class="page home-page">
+    <header class="page-header home-header">
         <div class="page-title">
             <h1>Homepage</h1>
-            <p>Applicazione gestionale dei turni di lavoro in CASCINA NASCOSTA</p>
+            <p>Gestione turni — Cascina Nascosta</p>
         </div>
 
-        <div class="page-actions home-actions">
+        <div class="home-actions">
             <div class="home-actions-group">
                 <button class="btn" id="btnImportAvailability">📥 Importa CSV</button>
-                <button class="btn" id="btnElaboraWeek">⚙️ Elabora settimana</button>
+                <button class="btn" id="btnElaboraSelectedFile" disabled title="Seleziona un file dalla lista per elaborarlo">⚙️ Elabora file selezionato</button>
+                <button class="btn primary" id="btnElaboraWeek">📊 Elabora tabella Export</button>
             </div>
             <div class="home-actions-sep"></div>
             <div class="home-actions-group">
@@ -20,76 +21,73 @@
         <div id="availabilityActions"></div>
     </header>
 
-    <div id="quickAddBar" class="quick-add-bar">
-        <div class="qa-title">Inserimento rapido</div>
-        <div class="qa-row">
-            <div class="qa-field">
-                <label class="qa-label">Dipendente</label>
-                <select id="qaEmployee" class="quick-add-select">
-                    <option value="">Seleziona dipendente...</option>
-                </select>
-            </div>
-            <div class="qa-field">
-                <label class="qa-label">Giorno</label>
-                <select id="qaDay" class="quick-add-select">
-                    <option value="">Seleziona giorno...</option>
-                </select>
-            </div>
-            <div class="qa-field">
-                <label class="qa-label">Mansione</label>
-                <select id="qaRole" class="quick-add-select">
-                    <option value="">Seleziona mansione...</option>
-                </select>
-            </div>
-            <div class="qa-field">
-                <label class="qa-label">Dalle</label>
-                <select id="qaFrom" class="quick-add-select">
-                    <option value="">--</option>
-                </select>
-            </div>
-            <div class="qa-field">
-                <label class="qa-label">Alle</label>
-                <select id="qaTo" class="quick-add-select">
-                    <option value="">--</option>
-                </select>
-            </div>
-            <div class="qa-field qa-field--action">
-                <label class="qa-label">&nbsp;</label>
-                <button class="btn qa-btn" id="qaConfirm">+ Aggiungi</button>
-            </div>
-        </div>
-    </div>
+    <div class="home-main-layout">
 
-    <div class="home-layout home-layout-full">
-        <!-- CALENDARIO -->
-        <section class="calendar-card full-width">
-            <div class="calendar-head">
-                <div class="calendar-left">
-                    <div class="calendar-meta" id="weekLabel">Settimana:</div>
-                    <div class="week-nav">
-                        <button class="btn btn-small btn-ghost" id="btnPrevWeek">←</button>
-                        <button class="btn btn-small btn-ghost" id="btnNextWeek">→</button>
-                        <button class="btn btn-small" id="btnToday">Oggi</button>
+        <!-- PANNELLO LATERALE FILE CSV -->
+        <aside class="csv-panel">
+            <div class="csv-panel-head">
+                <span class="csv-panel-title">File CSV caricati</span>
+                <button class="btn btn-ghost btn-small" id="btnClearAllFiles" title="Elimina tutti i file dalla lista">🗑 Elimina tutti</button>
+            </div>
+            <div class="csv-file-list" id="csvFileList">
+                <div class="csv-empty-hint">Nessun file caricato</div>
+            </div>
+        </aside>
+
+        <!-- AREA DESTRA -->
+        <div class="home-right-area">
+
+            <section class="calendar-card">
+                <div class="calendar-head">
+                    <div class="calendar-left">
+                        <div class="calendar-meta" id="weekLabel">Settimana:</div>
+                        <div class="week-nav">
+                            <button class="btn btn-small btn-ghost" id="btnPrevWeek">←</button>
+                            <button class="btn btn-small btn-ghost" id="btnNextWeek">→</button>
+                            <button class="btn btn-small" id="btnToday">Oggi</button>
+                        </div>
                     </div>
                 </div>
-                <div class="legend">
-                    <span class="dot dot-empty"></span><span>Vuoto</span>
-                    <span class="dot dot-filled"></span><span>Assegnato</span>
-                </div>
-            </div>
-            <div class="calendar-wrap">
-                <div class="calendar-grid" id="calendarGrid"></div>
-            </div>
-        </section>
 
-        <!-- RIEPILOGO TIPOLOGIA GIORNATA -->
-        <section class="calendar-card day-summary-card day-summary-card--bar">
-            <div class="calendar-head">
-                <div class="calendar-meta">Tipologia giornata settimana</div>
-            </div>
-            <div class="day-summary-body" id="daySummaryBody">
-                <!-- generato da JS -->
-            </div>
-        </section>
+                <!-- LEGENDA RUOLI -->
+                <div class="role-legend" id="roleLegend">
+                    <span class="role-legend-item"><span class="tl-role-pill tl-role-cassa">C</span> Cassa</span>
+                    <span class="role-legend-item"><span class="tl-role-pill tl-role-runner">R</span> Runner</span>
+                    <span class="role-legend-item"><span class="tl-role-pill tl-role-bar">B</span> Bar</span>
+                    <span class="role-legend-item"><span class="tl-role-pill tl-role-comande">Co</span> Comande</span>
+                    <span class="role-legend-item"><span class="tl-role-pill tl-role-accoglienza">A</span> Accoglienza</span>
+                    <span class="role-legend-item"><span class="tl-role-pill tl-role-jolly">J</span> Jolly</span>
+                    <span class="role-legend-hint">Clicca giorno (header) per riepilogo · clicca cella per gestire il turno</span>
+                </div>
+
+                <div class="timeline-wrap" id="timelineWrap">
+                    <table class="timeline-table" id="timelineTable"></table>
+                </div>
+            </section>
+
+            <!-- RIEPILOGO TIPOLOGIA GIORNATA -->
+            <section class="calendar-card day-summary-card day-summary-card--bar">
+                <div class="calendar-head">
+                    <div class="calendar-meta">Tipologia giornata settimana</div>
+                </div>
+                <div class="day-summary-body" id="daySummaryBody"></div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<!-- ====== MODAL: DETTAGLIO GIORNO ====== -->
+<div class="modal-backdrop" id="dayModalBackdrop" style="display:none">
+    <div class="modal day-modal">
+        <div class="modal-head">
+            <div class="modal-title" id="dayModalTitle">Dettaglio giorno</div>
+            <button class="modal-close" id="dayModalClose">✕</button>
+        </div>
+        <div class="modal-body" id="dayModalBody"></div>
+        <!-- footer nascosto: i bottoni qa/qd ora sono nel modal gestione turno -->
+        <div class="modal-actions" style="display:none">
+            <button class="btn btn-ghost" id="dayModalQdBtn">➖ Eliminazione rapida</button>
+            <button class="btn primary" id="dayModalQaBtn">➕ Inserimento rapido</button>
+        </div>
     </div>
 </div>

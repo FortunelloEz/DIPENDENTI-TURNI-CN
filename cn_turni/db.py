@@ -20,22 +20,7 @@ def week_id_from_ui_weekkey(week_key: str) -> str:
     return (d + timedelta(days=1)).isoformat()
 
 def default_db_path() -> str:
-    """
-    Path DB centralizzato.
-    In dev usa ./data/app.db
-    In exe usa %APPDATA%/TurniCascina/app.db
-    """
     return str(paths.db_path)
-
-##def default_db_path() -> str:
-##  """
-##  DB locale: /data/turni_cn.db (accanto al progetto, come MVP).
-##  Se poi vuoi AppData per exe, lo cambiamo in paths.py senza toccare UI.
-##  """
-##  base_dir = Path(__file__).resolve().parent  # .../cn_turni
-##  data_dir = (base_dir / ".." / "data").resolve()
-##  data_dir.mkdir(parents=True, exist_ok=True)
-##  return str(data_dir / "turni_cn.db")
 
 
 def get_db() -> "Db":
@@ -47,7 +32,7 @@ def get_db() -> "Db":
 
 def init_db() -> None:
     """Usata da main.py: crea schema se manca."""
-    get_db()  # istanzia e fa _init_schema()
+    get_db()
 
 
 def apply_retention(months: int = 6) -> int:
@@ -80,6 +65,7 @@ class Db:
             if not row:
                 raise ValueError(f"Template '{name}' non trovato")
             return json.loads(row["payload_json"])
+
     def __init__(self, db_path: str):
         self.db_path = db_path
         Path(os.path.dirname(db_path)).mkdir(parents=True, exist_ok=True)
@@ -90,6 +76,7 @@ class Db:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON;")
         return conn
+
     def _ensure_column(self, conn: sqlite3.Connection, table: str, col: str, ddl: str) -> None:
         cols = [r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
         if col not in cols:
@@ -108,7 +95,7 @@ class Db:
                     slot_evening    INTEGER NOT NULL DEFAULT 1,
                     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
                 );
-                
+
                 CREATE TABLE IF NOT EXISTS employee_skills (
                     employee_id INTEGER NOT NULL,
                     role        TEXT NOT NULL,
@@ -116,7 +103,7 @@ class Db:
                     PRIMARY KEY (employee_id, role),
                     FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
                 );
-    
+
                 CREATE TABLE IF NOT EXISTS schedule_override (
                     week_id      TEXT NOT NULL,
                     day_index    INTEGER NOT NULL,
@@ -126,7 +113,7 @@ class Db:
                     updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
                     PRIMARY KEY (week_id, day_index, role, time_label)
                 );
-    
+
                 CREATE TABLE IF NOT EXISTS squads_required (
                     week_id     TEXT NOT NULL,
                     day_index   INTEGER NOT NULL,
@@ -135,7 +122,7 @@ class Db:
                     required    INTEGER NOT NULL,
                     PRIMARY KEY (week_id, day_index, shift, role)
                 );
-    
+
                 CREATE TABLE IF NOT EXISTS permanent_week (
                     week_id       TEXT NOT NULL,
                     employee_id   INTEGER NOT NULL,
@@ -144,21 +131,32 @@ class Db:
                     PRIMARY KEY (week_id, employee_id),
                     FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
                 );
-    
+
                 CREATE TABLE IF NOT EXISTS squads_templates (
                     id           INTEGER PRIMARY KEY AUTOINCREMENT,
                     name         TEXT NOT NULL UNIQUE,
                     payload_json TEXT NOT NULL,
                     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
                 );
+
                 CREATE TABLE IF NOT EXISTS day_type_presets (
                     name         TEXT PRIMARY KEY,
                     payload_json TEXT NOT NULL,
                     updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
                 );
+
+                CREATE TABLE IF NOT EXISTS imported_files (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    filename    TEXT NOT NULL UNIQUE,
+                    file_path   TEXT NOT NULL DEFAULT '',
+                    week_key    TEXT NOT NULL,
+                    imported_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
                 CREATE INDEX IF NOT EXISTS idx_override_week ON schedule_override(week_id);
                 CREATE INDEX IF NOT EXISTS idx_squads_week ON squads_required(week_id);
                 CREATE INDEX IF NOT EXISTS idx_perm_week ON permanent_week(week_id);
+                CREATE INDEX IF NOT EXISTS idx_imported_files_week ON imported_files(week_key);
                 """
             )
             conn.execute("""
@@ -179,6 +177,7 @@ class Db:
             self._ensure_column(conn, "employees", "slot_evening", "slot_evening INTEGER NOT NULL DEFAULT 1")
             self._ensure_column(conn, "employees", "work_days", "work_days TEXT NULL")
             self._ensure_column(conn, "employees", "max_daily_hours", "max_daily_hours INTEGER NULL")
+            self._ensure_column(conn, "imported_files", "file_path", "file_path TEXT NOT NULL DEFAULT ''")
     # ---------- Retention ----------
     def purge_old_weeks(self, months: int = 6) -> int:
         cutoff = date.today() - timedelta(days=int(30.5 * months))
@@ -190,6 +189,68 @@ class Db:
                 n += int(cur.fetchone()["n"])
                 conn.execute(f"DELETE FROM {table} WHERE week_id < ?", (cutoff_iso,))
             return n
+
+    # ---------- Imported Files ----------
+    def imported_files_list(self) -> List[Dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT id, filename, week_key, imported_at FROM imported_files ORDER BY imported_at DESC"
+            ).fetchall()
+            return [
+                dict(id=int(r["id"]), filename=r["filename"], week_key=r["week_key"], imported_at=r["imported_at"])
+                for r in rows
+            ]
+
+    def imported_files_add(self, filename: str, file_path: str, week_key: str) -> int:
+        with self._connect() as conn:
+            # Controlla se esiste già un record con lo stesso filename
+            existing = conn.execute(
+                "SELECT id FROM imported_files WHERE filename=?", (str(filename),)
+            ).fetchone()
+
+            if existing:
+                # Aggiorna path e week_key del record esistente
+                conn.execute(
+                    """
+                    UPDATE imported_files
+                    SET file_path=?, week_key=?, imported_at=datetime('now')
+                    WHERE filename=?
+                    """,
+                    (str(file_path), str(week_key), str(filename)),
+                )
+                return int(existing["id"])
+            else:
+                # Inserisce nuovo record
+                cur = conn.execute(
+                    "INSERT INTO imported_files(filename, file_path, week_key) VALUES (?, ?, ?)",
+                    (str(filename), str(file_path), str(week_key)),
+                )
+                return int(cur.lastrowid)
+
+    def imported_files_get_content(self, file_id: int) -> dict:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT file_path FROM imported_files WHERE id=?", (int(file_id),)
+            ).fetchone()
+            if not row:
+                return {"ok": False, "error": "File non trovato in lista"}
+            path = row["file_path"]
+        try:
+            with open(path, "r", encoding="utf-8-sig") as f:
+                content = f.read()
+            return {"ok": True, "csv_text": content}
+        except FileNotFoundError:
+            return {"ok": False, "error": f"File non trovato su disco: {path}"}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    def imported_files_delete(self, file_id: int) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM imported_files WHERE id=?", (int(file_id),))
+
+    def imported_files_clear(self) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM imported_files")
 
     # ---------- Employees ----------
     def employees_list(self) -> List[Dict[str, Any]]:
@@ -232,7 +293,6 @@ class Db:
         try:
             with self._connect() as conn:
                 aliases = (payload.get("aliases") or payload.get("alias") or "").strip()
-
                 work_days = (payload.get("work_days") or "").strip()
                 max_daily_hours = payload.get("max_daily_hours")
                 max_daily_hours = float(max_daily_hours) if max_daily_hours not in (None, "", "null") else None
@@ -251,7 +311,6 @@ class Db:
                 return emp_id
 
         except sqlite3.IntegrityError as e:
-            # intercettiamo duplicato nome
             if "UNIQUE constraint failed: employees.name" in str(e):
                 raise ValueError("Esiste già un dipendente con questo nome.")
             raise
@@ -360,10 +419,6 @@ class Db:
             return out
 
     def overrides_set_many(self, week_id: str, day_index: int, role: str, items: List[Dict[str, Any]]) -> None:
-        """
-        items: [{time_label:"10:00", employee_ids:[1,2]}, ...]
-        Se employee_ids è vuoto -> delete della riga.
-        """
         with self._connect() as conn:
             for it in items:
                 t = str(it["time_label"])
@@ -388,10 +443,6 @@ class Db:
 
     # ---------- Squads / fabbisogni ----------
     def squads_week_get(self, week_id: str) -> Dict[str, Any]:
-        """
-        Ritorna struttura:
-        { "0": {"morning":{role:required}, "evening":{role:required}}, ... "6": {...} }
-        """
         def mk() -> Dict[str, Dict[str, int]]:
             return {"morning": {}, "evening": {}}
 
@@ -403,7 +454,6 @@ class Db:
                 (week_id,),
             ).fetchall()
 
-            # ✅ fallback: se la settimana non ha squadre salvate, usa il profilo globale
             if (not rows) and week_id != GLOBAL_SQUADS_WEEK_ID:
                 rows = conn.execute(
                     "SELECT day_index, shift, role, required FROM squads_required WHERE week_id=?",
@@ -421,9 +471,7 @@ class Db:
         return {str(k): v for k, v in out.items()}
 
     def squads_week_set(self, week_id: str, data: Dict[str, Any]) -> None:
-        """data come squads_week_get."""
         with self._connect() as conn:
-            # ✅ salva sempre anche la versione globale
             target_week_ids = {week_id, GLOBAL_SQUADS_WEEK_ID}
 
             for wid in target_week_ids:
@@ -444,32 +492,24 @@ class Db:
                                 "INSERT INTO squads_required(week_id, day_index, shift, role, required) VALUES (?,?,?,?,?)",
                                 (wid, d, shift, str(role), int(req or 0)),
                             )
+
     def squads_template_delete(self, name: str) -> None:
         with self._connect() as conn:
             conn.execute("DELETE FROM squads_templates WHERE name=?", (name,))
             try:
                 conn.execute("DELETE FROM squads_templates_required WHERE template_name=?", (name,))
             except sqlite3.OperationalError:
-                # tabella non presente nello schema (vecchie versioni)
                 pass
-
-
-
-
-
 
     def day_type_presets_get(self) -> dict:
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT name, payload_json FROM day_type_presets"
             ).fetchall()
-
             out = {}
             for r in rows:
                 out[r["name"]] = json.loads(r["payload_json"])
-
             return out
-
 
     def day_type_presets_set(self, payload: dict) -> None:
         with self._connect() as conn:
@@ -484,8 +524,8 @@ class Db:
                     """,
                     (name, json.dumps(data, ensure_ascii=False)),
                 )
+
     def day_type_assignments_get(self) -> dict:
-        """Ritorna {day_index: type_name} per tutti i giorni configurati."""
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT day_index, type_name FROM day_type_assignments"
@@ -493,7 +533,6 @@ class Db:
             return {int(r["day_index"]): r["type_name"] for r in rows}
 
     def day_type_assignments_set(self, day_index: int, type_name: str) -> None:
-        """Salva o aggiorna l'assegnazione per un giorno."""
         with self._connect() as conn:
             conn.execute(
                 """

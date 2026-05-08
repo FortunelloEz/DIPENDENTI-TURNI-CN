@@ -1,10 +1,8 @@
 // =========================
-// Turni CN - CORE UI (calendario, modali, routing)
-// File "core": niente chiamate DB dirette.
-// Dipendenze: db_adapter.js deve essere caricato PRIMA (espone: apiCall, loadEmployeesFromDb, loadWeekFromDb, saveSlotOverrideToDb, saveDayRoleOverridesToDb, saveSquadsToDb, clearWeekOverridesOnDb, loadPermanentWeekFromDb, savePermanentWeekToDb)
+// Turni CN - CORE UI
 // =========================
 
-/* ---------- ROUTING SEMPLICE ---------- */
+/* ---------- ROUTING ---------- */
 async function loadView(route) {
   const viewEl = document.getElementById("view");
   const html = await fetch(`./views/${route}.html`).then(r => r.text());
@@ -24,16 +22,12 @@ async function loadView(route) {
 
 /* ---------- ACCORDION UI ---------- */
 function initAccordions() {
-  // importante: home viene ricaricata via loadView, quindi la rightbar cambia.
   document.querySelectorAll(".accordion").forEach(btn => {
     if (btn.dataset.bound === "1") return;
     btn.dataset.bound = "1";
-
     btn.addEventListener("click", () => {
       const accId = btn.getAttribute("data-acc");
       const panel = document.getElementById(`acc-${accId}`);
-
-      // Sidebar sinistra: Navigazione
       if (accId === "main") {
         const sidebar = document.querySelector(".sidebar");
         const isCollapsed = sidebar.classList.toggle("collapsed");
@@ -42,8 +36,6 @@ function initAccordions() {
         panel?.classList.toggle("open", !isCollapsed);
         return;
       }
-
-      // Barra destra: Dipendenti (esiste solo in home)
       if (accId === "employees") {
         const rightbar = btn.closest(".rightbar");
         if (!rightbar) return;
@@ -52,8 +44,6 @@ function initAccordions() {
         panel?.classList.toggle("open", !isCollapsed);
         return;
       }
-
-      // Default: accordion generico
       const isOpen = panel?.classList.contains("open");
       panel?.classList.toggle("open", !isOpen);
       btn.classList.toggle("open", !isOpen);
@@ -69,24 +59,21 @@ function roleCss(role){
   return (role || '').toLowerCase().replace(/\s+/g,'-').replace('à','a');
 }
 
-/* ---------- EMPLOYEES IN MEMORIA (popolati dal db_adapter) ---------- */
-// employees = [{ id:number|string, label:string, is_permanent?:bool, preferred_role?:string, skills?:{[role]:rank} }]
+/* ---------- EMPLOYEES ---------- */
 let employees = [];
 function getEmployeeById(id){
   return employees.find(e => String(e.id) === String(id)) || null;
 }
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-function nextFrame(){
-  return new Promise(r => requestAnimationFrame(() => r()));
-}
 async function retryUntil(fn, predicate, { tries = 15, delayMs = 120 } = {}){
   for (let i = 0; i < tries; i++){
-    try { await fn(); } catch (e) { /* ignora e ritenta */ }
+    try { await fn(); } catch (e) {}
     try { if (predicate()) return true; } catch (e) {}
     await sleep(delayMs);
   }
   return false;
 }
+
 /* ---------- TEMPI ---------- */
 function buildTimeSlots_30min(startMin, endMinExclusive){
   const out = [];
@@ -109,30 +96,25 @@ function minToTime(min){
   return `${h}:${m}`;
 }
 function bandLabel(startMin,endMin){
-  const sH = String(Math.floor(startMin/60)).padStart(2,"0");
-  const sM = String(startMin%60).padStart(2,"0");
-  const eH = String(Math.floor(endMin/60)).padStart(2,"0");
-  const eM = String(endMin%60).padStart(2,"0");
-  const s = (sM === "00") ? sH : `${sH}:${sM}`;
-  const e = (eM === "00") ? eH : `${eH}:${eM}`;
+  const s = minToTime(startMin).replace(/:00$/,"");
+  const e = endMin === 24*60 ? "24" : minToTime(endMin).replace(/:00$/,"");
   return `${s}–${e}`;
 }
-
 function baseSegments(){
   return [
-    { startMin:8*60, endMin:16*60, id:'480-960', label:'08–16' },
+    { startMin:8*60,  endMin:16*60, id:'480-960',  label:'08–16' },
     { startMin:16*60, endMin:24*60, id:'960-1440', label:'16–24' },
   ];
 }
 function segmentToSlots(seg){
   const start = minToTime(seg.startMin);
-  const end = minToTime(seg.endMin);
+  const end   = minToTime(seg.endMin);
   const startIdx = HALF_HOURS.indexOf(start);
-  const endIdx = (end === '24:00') ? HALF_HOURS.length : HALF_HOURS.indexOf(end);
+  const endIdx   = (end === '24:00') ? HALF_HOURS.length : HALF_HOURS.indexOf(end);
   return HALF_HOURS.slice(startIdx, endIdx);
 }
 
-/* ---------- helpers date/week ---------- */
+/* ---------- DATE/WEEK ---------- */
 function formatDate(d){
   const dd = String(d.getDate()).padStart(2,"0");
   const mm = String(d.getMonth()+1).padStart(2,"0");
@@ -140,7 +122,7 @@ function formatDate(d){
 }
 function getMondayOfCurrentWeek(date){
   const d = new Date(date);
-  const day = d.getDay(); // 0 dom
+  const day = d.getDay();
   const diff = (day === 0 ? -6 : 1) - day;
   d.setDate(d.getDate() + diff);
   d.setHours(0,0,0,0);
@@ -161,37 +143,25 @@ function mondayDateFromWeekKey(weekKey){
   const [y, m, d] = String(weekKey).split("-").map(Number);
   return new Date(y, (m - 1), d, 0, 0, 0, 0);
 }
+
 /* ---------- STATO UI ---------- */
 let currentWeekStart = null;
-let expandedDays = new Set();       // dayIndex espansi (mostrano ruoli)
-let expandedRanges = new Set();     // fasce espanse (mostrano mezz'ore)
-let _visibleRowsCache = [];         // ultimo render: righe visibili per calcolare selezioni
-let isSelecting = false;
-let sel = { dayIndex:null, role:null, labels:[], rowStart:null, rowEnd:null };
-
-/**
- * assignments: Map<key, string[]|number[]>
- * key = `${weekKey}|${dayIndex}|${role}|${timeLabel}`
- * timeLabel è SEMPRE una mezz'ora ("08:00" ... "23:30")
- */
 let assignments = new Map();
-
-// Segmenti per settimana (calcolati dinamicamente in base a dove cambia la tabella)
-let weekSegments = new Map(); // Map<weekKey, segments[]>
-
-/**
- * squads: Map<weekKey, data>
- * data: { [dayIndex]: { morning:{role->qty}, evening:{role->qty} } }
- */
+let weekSegments = new Map();
 let squads = new Map();
+let activeModalEl = null;
+
+function closeModal(){
+  activeModalEl?.remove();
+  activeModalEl = null;
+}
 
 /* ---------- ASSIGNMENTS HELPERS ---------- */
 function keyOf(weekKey, dayIndex, role, timeLabel){
   return `${weekKey}|${dayIndex}|${role}|${timeLabel}`;
 }
 function getAssignedIdsFor(weekKey, dayIndex, role, timeLabel){
-  const k = keyOf(weekKey, dayIndex, role, timeLabel);
-  return assignments.get(k) || [];
+  return assignments.get(keyOf(weekKey, dayIndex, role, timeLabel)) || [];
 }
 function setAssignedIdsFor(weekKey, dayIndex, role, timeLabel, ids){
   const k = keyOf(weekKey, dayIndex, role, timeLabel);
@@ -199,20 +169,10 @@ function setAssignedIdsFor(weekKey, dayIndex, role, timeLabel, ids){
   if (clean.length === 0) assignments.delete(k);
   else assignments.set(k, clean);
 }
-
-/* ---------- Segmenti dinamici: “merge” dove la tabella non cambia ---------- */
-function tableSignatureAt(weekKey, timeLabel){
-  const parts = [];
-  for (let d=0; d<DAYS.length; d++){
-    for (let r=0; r<ROLES.length; r++){
-      const role = ROLES[r];
-      const ids = getAssignedIdsFor(weekKey, d, role, timeLabel).slice().sort();
-      parts.push(ids.join(","));
-      parts.push("|");
-    }
-    parts.push("||");
-  }
-  return parts.join("");
+function unionAssignedOverLabels(weekKey, dayIndex, role, timeLabels){
+  const set = new Set();
+  timeLabels.forEach(t => getAssignedIdsFor(weekKey, dayIndex, role, t).forEach(id => set.add(id)));
+  return Array.from(set);
 }
 function hasAnyAssignmentsForWeek(weekKey){
   for (const k of assignments.keys()){
@@ -220,25 +180,29 @@ function hasAnyAssignmentsForWeek(weekKey){
   }
   return false;
 }
+function tableSignatureAt(weekKey, timeLabel){
+  const parts = [];
+  for (let d=0; d<DAYS.length; d++){
+    for (let r=0; r<ROLES.length; r++){
+      const ids = getAssignedIdsFor(weekKey, d, ROLES[r], timeLabel).slice().sort();
+      parts.push(ids.join(","), "|");
+    }
+    parts.push("||");
+  }
+  return parts.join("");
+}
 function computeTimeSegments(weekKey){
   if (!hasAnyAssignmentsForWeek(weekKey)) return baseSegments();
-
   const segs = [];
   let segStartMin = 8*60;
   let prevSig = null;
-
   for (let i=0; i<HALF_HOURS.length; i++){
     const t = HALF_HOURS[i];
     const m = timeToMin(t);
     if (m < 8*60) continue;
     if (m >= 24*60) break;
-
     const sig = tableSignatureAt(weekKey, t);
-    if (prevSig === null){
-      prevSig = sig;
-      segStartMin = m;
-      continue;
-    }
+    if (prevSig === null){ prevSig = sig; segStartMin = m; continue; }
     if (sig !== prevSig){
       segs.push({ startMin: segStartMin, endMin: m, id: `${segStartMin}-${m}`, label: bandLabel(segStartMin, m) });
       segStartMin = m;
@@ -246,15 +210,75 @@ function computeTimeSegments(weekKey){
     }
   }
   segs.push({ startMin: segStartMin, endMin: 24*60, id: `${segStartMin}-${24*60}`, label: bandLabel(segStartMin, 24*60) });
-
-  if (segs.length === 1 && segs[0].startMin === 8*60 && segs[0].endMin === 24*60){
-    return baseSegments();
-  }
+  if (segs.length === 1 && segs[0].startMin === 8*60 && segs[0].endMin === 24*60) return baseSegments();
   return segs;
 }
 function recalcSegmentsFromAssignments(weekKey){
-  // opzionale: teniamo in cache eventuali segmenti già calcolati (non strettamente necessario ora)
   weekSegments.set(weekKey, computeTimeSegments(weekKey));
+}
+
+/* ---------- DISPONIBILITÀ HELPER ---------- */
+/**
+ * Dato il preview disponibilità e un dayIndex+seg, restituisce:
+ * [{ name, range, empId|null }] — chi è disponibile in quella fascia
+ * I dati vengono dal _lastAvailabilityPreview salvato dopo l'import.
+ */
+function getAvailableForSlot(dayIndex, seg) {
+  const preview = window._lastAvailabilityPreview;
+  if (!preview || !preview.days) return [];
+
+  const dayData = preview.days.find(d => d.day_index === dayIndex);
+  if (!dayData) return [];
+
+  // Converti seg in ore di inizio/fine
+  const segStartH = Math.floor(seg.startMin / 60);
+  const segEndH   = Math.floor(seg.endMin   / 60);
+
+  return (dayData.items || []).filter(item => {
+    // range = "08-16" o "16-24" ecc.
+    const parts = (item.range || "").split("-").map(Number);
+    if (parts.length < 2) return false;
+    const [avStart, avEnd] = parts;
+    // Sovrappone con il segmento?
+    return avStart < segEndH && avEnd > segStartH;
+  }).map(item => {
+    // Cerca l'empId corrispondente al nome
+    const emp = employees.find(e =>
+      e.label.toUpperCase() === (item.name || "").toUpperCase()
+    );
+    return { name: item.name, range: item.range, empId: emp ? emp.id : null };
+  });
+}
+
+/**
+ * Dato il fabbisogno squadra e le assegnazioni correnti per giorno+seg,
+ * restituisce per ogni ruolo { required, assigned, deficit }.
+ * seg viene mappato su "morning" o "evening" (o entrambi se si sovrappone).
+ */
+function getSquadDeficitForSlot(weekKey, dayIndex, seg) {
+  const squadData = squads.get(weekKey);
+  if (!squadData) return {};
+
+  const daySquad = squadData[dayIndex] || { morning: {}, evening: {} };
+  const timeLabels = segmentToSlots(seg);
+  const segStartH = Math.floor(seg.startMin / 60);
+  const segEndH   = Math.floor(seg.endMin   / 60);
+
+  // Determina quali slot (morning/evening) questo segmento copre
+  const coversMorning = segStartH < 16 && segEndH > 8;
+  const coversEvening = segStartH < 24 && segEndH > 16;
+
+  const result = {};
+  ROLES.forEach(role => {
+    let required = 0;
+    if (coversMorning) required += parseInt(daySquad.morning?.[role] || 0);
+    if (coversEvening) required += parseInt(daySquad.evening?.[role] || 0);
+
+    const assigned = unionAssignedOverLabels(weekKey, dayIndex, role, timeLabels).length;
+    result[role] = { required, assigned, deficit: Math.max(0, required - assigned) };
+  });
+
+  return result;
 }
 
 /* ---------- UI HELPERS ---------- */
@@ -264,24 +288,16 @@ function makeCell(text, className){
   div.textContent = text;
   return div;
 }
-function clearSelection(){
-  isSelecting = false;
-  sel = { dayIndex:null, role:null, labels:[], rowStart:null, rowEnd:null };
-  document.querySelectorAll(".cell.slot.selected").forEach(el => el.classList.remove("selected"));
-}
 function renderEmployees(){
   const list = document.getElementById("empList");
   if (!list) return;
   list.innerHTML = "";
-  employees
-    .slice()
-    .sort((a,b) => a.label.localeCompare(b.label, "it"))
-    .forEach(e => {
-      const item = document.createElement("div");
-      item.className = "emp-item";
-      item.innerHTML = `<span class="emp-dot"></span><span>${e.label}</span>`;
-      list.appendChild(item);
-    });
+  employees.slice().sort((a,b) => a.label.localeCompare(b.label, "it")).forEach(e => {
+    const item = document.createElement("div");
+    item.className = "emp-item";
+    item.innerHTML = `<span class="emp-dot"></span><span>${e.label}</span>`;
+    list.appendChild(item);
+  });
 }
 function renderWeekLabel(){
   const label = document.getElementById("weekLabel");
@@ -293,621 +309,502 @@ function renderWeekLabel(){
 async function renderDaySummary() {
   const container = document.getElementById("daySummaryBody");
   if (!container) return;
-
   const DAY_TYPE_ICONS = { "Leggera": "🟢", "Normale": "🟡", "Pesante": "🔴" };
-
-  let assignments = {};
-  try {
-    assignments = await apiCall("day_type_assignments_get") || {};
-  } catch(e) {}
-
+  let dayAssignments = {};
+  try { dayAssignments = await apiCall("day_type_assignments_get") || {}; } catch(e) {}
   const cells = DAYS.map((day, dayIndex) => {
     const date = new Date(currentWeekStart);
     date.setDate(date.getDate() + dayIndex);
     const dateStr = formatDate(date);
-    const typeName = assignments[String(dayIndex)] || assignments[dayIndex] || null;
+    const typeName = dayAssignments[String(dayIndex)] || dayAssignments[dayIndex] || null;
     const icon = typeName ? (DAY_TYPE_ICONS[typeName] || "") : "—";
-    const typeLabel = typeName || "Non assegnata";
-
-    const typeColors = {
-      "Leggera": "rgba(16,185,129,.10)",
-      "Normale": "rgba(245,158,11,.10)",
-      "Pesante": "rgba(239,68,68,.10)",
-    };
-    const typeBorders = {
-      "Leggera": "rgba(16,185,129,.30)",
-      "Normale": "rgba(245,158,11,.30)",
-      "Pesante": "rgba(239,68,68,.30)",
-    };
+    const typeColors = { "Leggera": "rgba(16,185,129,.10)", "Normale": "rgba(245,158,11,.10)", "Pesante": "rgba(239,68,68,.10)" };
+    const typeBorders = { "Leggera": "rgba(16,185,129,.30)", "Normale": "rgba(245,158,11,.30)", "Pesante": "rgba(239,68,68,.30)" };
     const bg = typeName ? typeColors[typeName] : "transparent";
     const border = typeName ? typeBorders[typeName] : "rgba(15,23,42,.08)";
-
-    return `
-      <div class="ds-item ${typeName ? "ds-item--set" : ""}" style="background:${bg};border-color:${border};">
-        <div class="ds-item-head">
-          <span class="ds-item-day">${day}</span>
-          <span class="ds-item-date">${dateStr}</span>
-        </div>
-        <div class="ds-item-type">${icon} ${typeLabel}</div>
-      </div>
-    `;
+    return `<div class="ds-item ${typeName ? "ds-item--set" : ""}" style="background:${bg};border-color:${border};">
+      <div class="ds-item-head"><span class="ds-item-day">${day}</span><span class="ds-item-date">${dateStr}</span></div>
+      <div class="ds-item-type">${icon} ${typeName || "Non assegnata"}</div>
+    </div>`;
   }).join("");
-
   container.innerHTML = cells;
 }
-function initQuickAdd() {
-  const bar = document.getElementById("quickAddBar");
-  if (!bar) return;
 
-  // Popola dipendenti
-  const selEmp = document.getElementById("qaEmployee");
-  selEmp.innerHTML = `<option value="">— Dipendente —</option>` +
-    employees.slice().sort((a,b) => a.label.localeCompare(b.label, "it"))
-      .map(e => `<option value="${e.id}">${e.label}</option>`).join("");
-
-  // Popola giorni
-  const selDay = document.getElementById("qaDay");
-  selDay.innerHTML = `<option value="">— Giorno —</option>` +
-    DAYS.map((d, i) => {
-      const date = new Date(currentWeekStart);
-      date.setDate(date.getDate() + i);
-      return `<option value="${i}">${d} ${formatDate(date)}</option>`;
-    }).join("");
-
-  // Popola ruoli
-  const selRole = document.getElementById("qaRole");
-  selRole.innerHTML = `<option value="">— Mansione —</option>` +
-    ROLES.map(r => `<option value="${r}">${r}</option>`).join("");
-
-  // Popola orari
-  const hours = [];
-  for (let h = 8; h <= 24; h++) hours.push(`${String(h).padStart(2,"0")}:00`);
-  const selFrom = document.getElementById("qaFrom");
-  const selTo   = document.getElementById("qaTo");
-  selFrom.innerHTML = `<option value="">— Dalle —</option>` + hours.map(h => `<option value="${h}">${h}</option>`).join("");
-  selTo.innerHTML   = `<option value="">— Alle —</option>`  + hours.map(h => `<option value="${h}">${h}</option>`).join("");
-
-  // Confirm
-  const btnConfirm = document.getElementById("qaConfirm");
-  if (btnConfirm.dataset.bound === "1") return;
-  btnConfirm.dataset.bound = "1";
-
-  btnConfirm.addEventListener("click", async () => {
-    const empId  = Number(selEmp.value);
-    const dayIdx = Number(selDay.value);
-    const role   = selRole.value;
-    const from   = selFrom.value;
-    const to     = selTo.value;
-
-    if (!empId || selDay.value === "" || !role || !from || !to) {
-      alert("Compila tutti i campi prima di aggiungere.");
-      return;
-    }
-
-    const fromH = parseInt(from);
-    const toH   = parseInt(to);
-    if (toH <= fromH) {
-      alert("L'orario di fine deve essere successivo a quello di inizio.");
-      return;
-    }
-
-    const weekKey = weekKeyOf(currentWeekStart);
-
-    // genera le mezz'ore nell'intervallo
-    const halfHoursToAdd = [];
-    for (let h = fromH; h < toH; h++) {
-      halfHoursToAdd.push(`${String(h).padStart(2,"0")}:00`);
-      halfHoursToAdd.push(`${String(h).padStart(2,"0")}:30`);
-    }
-
-    // aggiunge il dipendente alle mezz'ore, senza sovrascrivere gli altri
-    for (const t of halfHoursToAdd) {
-      const current = getAssignedIdsFor(weekKey, dayIdx, role, t) || [];
-      if (!current.includes(empId)) {
-        const updated = [...current, empId];
-        setAssignedIdsFor(weekKey, dayIdx, role, t, updated);
-        await saveSlotOverrideToDb(weekKey, dayIdx, role, t, updated);
-      }
-    }
-
-    recalcSegmentsFromAssignments(weekKey);
-    renderCalendar();
-
-    // reset selezioni (mantieni dipendente per aggiunta rapida multipla)
-    selDay.value  = "";
-    selRole.value = "";
-    selFrom.value = "";
-    selTo.value   = "";
-  });
-}
 /* ---------- CALENDARIO ---------- */
-function buildDayColumns(){
-  const cols = [];
-  DAYS.forEach((day, dayIndex) => {
-    if (expandedDays.has(dayIndex)){
-      ROLES.forEach((role, ri) => cols.push({ dayIndex, role, collapsed:false, isDayEnd: ri === ROLES.length-1 }));
-    } else {
-      cols.push({ dayIndex, role:null, collapsed:true, isDayEnd:true });
-    }
-  });
-  return cols;
-}
-
-function unionAssignedOverLabels(weekKey, dayIndex, role, timeLabels){
-  const set = new Set();
-  timeLabels.forEach(t => {
-    getAssignedIdsFor(weekKey, dayIndex, role, t).forEach(id => set.add(id));
-  });
-  return Array.from(set);
-}
-
-function buildCollapsedSummary(weekKey, dayIndex, row){
-  if (row.kind === "slot") return { hasSomething:false, html:"" };
-  const timeLabels = (row.kind === 'range' || row.kind === 'rangeHeader')
-    ? segmentToSlots(row.seg)
-    : [row.timeLabel];
-
-  const lines = [];
-  ROLES.forEach(role => {
-    const ids = unionAssignedOverLabels(weekKey, dayIndex, role, timeLabels);
-    if (!ids.length) return;
-    const names = ids.map(id => getEmployeeById(id)?.label || id);
-    const shown = names.slice(0,2).join(", ");
-    const more = names.length > 2 ? ` +${names.length-2}` : "";
-    lines.push(`<div class="summary-line"><b class="role-tag role-${roleCss(role)}">${ROLE_SHORT[role] || role}</b><span>${shown}${more}</span></div>`);
-  });
-
-  return { hasSomething: lines.length > 0, html: lines.join("") };
-}
-
-function labelsForRow(row){
-  if (!row) return [];
-  if (row.kind === 'slot') return [row.timeLabel];
-  if (row.kind === 'range' || row.kind === 'rangeHeader') return segmentToSlots(row.seg);
-  return [];
-}
-function labelsForRowSpan(rowStartIdx, rowEndIdx){
-  const a = Math.min(rowStartIdx, rowEndIdx);
-  const b = Math.max(rowStartIdx, rowEndIdx);
-  const goingDown = rowEndIdx >= rowStartIdx;
-  const out = [];
-  for (let i=a; i<=b; i++){
-    const row = _visibleRowsCache[i];
-    if (!row) continue;
-    if (row.kind === 'slot') {
-      out.push(row.timeLabel);
-    } else if (row.kind === 'range' || row.kind === 'rangeHeader') {
-      // fascia intermedia: prendi tutte le sue mezz'ore
-      // fascia di bordo (primo o ultimo elemento dello span):
-      // se è la riga di arrivo del drag, prendi solo
-      // la prima mezz'ora (drag verso giù) o l'ultima (drag verso su)
-      const slots = segmentToSlots(row.seg);
-      if (i === a && i !== b) {
-        // bordo superiore: drag verso giù → prendi tutto dalla prima in poi
-        out.push(...slots);
-      } else if (i === b && i !== a) {
-        // bordo inferiore: drag verso su → prendi solo fino all'ultima
-        if (goingDown) {
-          // arrivati qui scendendo: solo la prima mezz'ora della fascia
-          out.push(slots[0]);
-        } else {
-          // arrivati qui salendo: solo l'ultima mezz'ora della fascia
-          out.push(slots[slots.length - 1]);
-        }
-      } else {
-        // fascia interna allo span: prendi tutto
-        out.push(...slots);
-      }
-    }
-  }
-  const set = new Set(out);
-  return HALF_HOURS.filter(t => set.has(t));
-}
-function applySelectionUI(){
-  document.querySelectorAll(".cell.slot").forEach(el => el.classList.remove("selected"));
-  if (!isSelecting || !sel.labels.length) return;
-
-  const dayIndex = String(sel.dayIndex);
-  const role = sel.role;
-  const want = new Set(sel.labels);
-
-  document
-    .querySelectorAll(`.cell.slot[data-day-index="${dayIndex}"][data-role="${CSS.escape(role)}"]`)
-    .forEach(el => {
-      const kind = el.dataset.kind;
-
-      // mezz’ora: match diretto
-      if (kind === "slot") {
-        const t = el.dataset.timeLabel;
-        if (t && want.has(t)) el.classList.add("selected");
-        return;
-      }
-
-      // fascia (range/rangeHeader): se interseca almeno una mezz’ora selezionata -> evidenzia
-      const labels = (el.dataset.timeLabels || "").split(",").filter(Boolean);
-      for (const t of labels) {
-        if (want.has(t)) {
-          el.classList.add("selected");
-          break;
-        }
-      }
-    });
-}
-
 function renderCalendar(){
-  const grid = document.getElementById("calendarGrid");
-  if (!grid) return;
-
-  clearSelection();
+  const wrap = document.getElementById("timelineWrap");
+  if (!wrap) return;
 
   const weekKey = weekKeyOf(currentWeekStart);
-  const cols = buildDayColumns();
-
-  grid.style.gridTemplateColumns = [
-    "160px",
-    ...cols.map(c => c.collapsed ? "70px" : "minmax(140px, 1fr)")
-  ].join(" ");
-  grid.innerHTML = "";
-
-  /* ===== HEADER 1: GIORNI ===== */
-  grid.appendChild(makeCell("Orario", "cell header"));
-
-  DAYS.forEach((day, dayIndex) => {
-    const date = new Date(currentWeekStart);
-    date.setDate(date.getDate() + dayIndex);
-
-    const span = expandedDays.has(dayIndex) ? ROLES.length : 1;
-    const isCollapsed = !expandedDays.has(dayIndex);
-    const cell = makeCell(`${day}\n${formatDate(date)}`,
-      "cell header day-toggle day-" + dayIndex + " day-end" + (isCollapsed ? " day-collapsed-hdr" : "")
-    );
-    cell.style.gridColumn = `span ${span}`;
-    cell.addEventListener("click", () => {
-      if (expandedDays.has(dayIndex)) expandedDays.delete(dayIndex);
-      else expandedDays.add(dayIndex);
-      renderCalendar();
-    });
-    grid.appendChild(cell);
-  });
-
-  /* ===== HEADER 2: RUOLI ===== */
-  grid.appendChild(makeCell("", "cell header"));
-  DAYS.forEach((_, dayIndex) => {
-    if (expandedDays.has(dayIndex)){
-      ROLES.forEach((role, ri) => {
-        const c = makeCell(role, "cell header day-" + dayIndex + (ri === ROLES.length-1 ? " day-end" : ""));
-        c.title = role;
-        grid.appendChild(c);
-      });
-    } else {
-      const c = makeCell("", "cell header day-" + dayIndex + " day-end micro-hdr");
-      c.innerHTML = ``; // niente testo
-      grid.appendChild(c);
-    }
-  });
-
-  /* ===== RIGHE ORARIE VISIBILI ===== */
   const segments = computeTimeSegments(weekKey);
-  const visibleRows = [];
+
+  const table = document.createElement("table");
+  table.className = "timeline-table";
+
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  const thTime = document.createElement("th");
+  thTime.className = "tl-th tl-th-time";
+  thTime.textContent = "Fascia";
+  headerRow.appendChild(thTime);
+
+  DAYS.forEach((day, di) => {
+    const date = new Date(currentWeekStart);
+    date.setDate(date.getDate() + di);
+    const th = document.createElement("th");
+    th.className = `tl-th tl-th-day day-col-${di}`;
+    th.innerHTML = `<div class="tl-day-name">${day}</div><div class="tl-day-date">${formatDate(date)}</div>`;
+    th.title = "Clicca per vedere il dettaglio del giorno";
+    th.style.cursor = "pointer";
+    th.addEventListener("click", () => openDayModal(di));
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  segments.forEach(seg => {
+    const timeLabels = segmentToSlots(seg);
+    const tr = document.createElement("tr");
+    tr.className = "tl-row";
+
+    const tdTime = document.createElement("td");
+    tdTime.className = "tl-time";
+    tdTime.textContent = seg.label;
+    tr.appendChild(tdTime);
+
+    DAYS.forEach((_, di) => {
+      const td = document.createElement("td");
+      td.className = `tl-cell day-col-${di}`;
+      td.dataset.dayIndex = di;
+      td.dataset.segId = seg.id;
+      td.title = "Clicca per gestire questo turno";
+
+      const byRole = {};
+      ROLES.forEach(role => {
+        const ids = unionAssignedOverLabels(weekKey, di, role, timeLabels);
+        if (ids.length) byRole[role] = ids;
+      });
+
+      if (Object.keys(byRole).length === 0) {
+        td.classList.add("tl-empty");
+        td.innerHTML = `<span class="tl-empty-dash">—</span>`;
+      } else {
+        td.classList.add("tl-filled");
+        td.innerHTML = Object.entries(byRole).map(([role, ids]) => {
+          const names = ids.map(id => getEmployeeById(id)?.label || String(id));
+          return `<div class="tl-role-group">
+            <span class="tl-role-pill tl-role-${roleCss(role)}">${ROLE_SHORT[role] || role}</span>
+            <span class="tl-names">${names.join(", ")}</span>
+          </div>`;
+        }).join("");
+      }
+
+      // Click sulla cella → modal gestione turno unificato
+      td.addEventListener("click", () => {
+        openSlotManageModal({ weekKey, dayIndex: di, seg, timeLabels });
+      });
+
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  wrap.innerHTML = "";
+  wrap.appendChild(table);
+}
+
+/* ===========================================
+   MODAL: DETTAGLIO GIORNO — card scure per fascia
+   =========================================== */
+function openDayModal(dayIndex){
+  const weekKey = weekKeyOf(currentWeekStart);
+  const date = new Date(currentWeekStart);
+  date.setDate(date.getDate() + dayIndex);
+
+  const bd = document.getElementById("dayModalBackdrop");
+  const titleEl = document.getElementById("dayModalTitle");
+  const bodyEl  = document.getElementById("dayModalBody");
+  if (!bd || !titleEl || !bodyEl) return;
+
+  const DAY_FULL = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
+  titleEl.textContent = `${DAY_FULL[dayIndex]} ${formatDate(date)}`;
+
+  const segments = computeTimeSegments(weekKey);
+  bodyEl.innerHTML = "";
 
   segments.forEach(seg => {
-    if (expandedRanges.has(seg.id)){
-      visibleRows.push({ kind:'rangeHeader', rangeId:seg.id, seg, label: seg.label + ' ▴' });
-      segmentToSlots(seg).forEach(t => visibleRows.push({ kind:'slot', rangeId:seg.id, seg, timeLabel:t, label:t }));
-    } else {
-      visibleRows.push({ kind:'range', rangeId:seg.id, seg, label: seg.label });
-    }
-  });
-  _visibleRowsCache = visibleRows;
+    const timeLabels = segmentToSlots(seg);
+    const deficit    = getSquadDeficitForSlot(weekKey, dayIndex, seg);
+    const missingRoles = ROLES.filter(r => deficit[r]?.deficit > 0);
+    const hasNeed      = ROLES.some(r => (deficit[r]?.required || 0) > 0);
+    const allCovered   = hasNeed && missingRoles.length === 0;
+    const someMissing  = missingRoles.length > 0;
 
-  const prevSigByCol = new Map(); // key: dayIndex|role -> sig
+    const card = document.createElement("div");
+    card.className = "dm-card" + (someMissing ? " dm-card-missing" : allCovered ? " dm-card-ok" : "");
 
-  visibleRows.forEach((row, rIdx) => {
-    const timeCell = makeCell(row.label, "cell time " + ((row.kind === "range" || row.kind === "rangeHeader") ? "toggle" : ""));
-    if (row.kind === "range" || row.kind === "rangeHeader"){
-      timeCell.title = "Clicca per espandere / comprimere";
-      timeCell.addEventListener("click", () => {
-        if (expandedRanges.has(row.rangeId)) expandedRanges.delete(row.rangeId);
-        else expandedRanges.add(row.rangeId);
-        renderCalendar();
+    // Header card
+    const cardHead = document.createElement("div");
+    cardHead.className = "dm-card-head";
+
+    const headLeft = document.createElement("div");
+    headLeft.className = "dm-head-left";
+
+    const statusDot = document.createElement("span");
+    statusDot.className = "dm-status-dot" + (someMissing ? " dm-dot-bad" : allCovered ? " dm-dot-ok" : " dm-dot-neutral");
+    headLeft.appendChild(statusDot);
+
+    const segLabel = document.createElement("span");
+    segLabel.className = "dm-seg-label";
+    segLabel.textContent = seg.label;
+    headLeft.appendChild(segLabel);
+
+    if (hasNeed) {
+      const chips = document.createElement("div");
+      chips.className = "dm-chips";
+      ROLES.forEach(role => {
+        const d = deficit[role];
+        if (!d || d.required === 0) return;
+        const ok = d.deficit === 0;
+        const chip = document.createElement("span");
+        chip.className = "dm-chip" + (ok ? " dm-chip-ok" : " dm-chip-bad");
+        chip.textContent = `${ROLE_SHORT[role]} ${d.assigned}/${d.required}`;
+        chips.appendChild(chip);
       });
+      headLeft.appendChild(chips);
     }
-    grid.appendChild(timeCell);
 
-    cols.forEach(col => {
-      if (col.collapsed){
-        const cell = document.createElement("div");
-        cell.className = "cell slot day-collapsed micro day-" + col.dayIndex + (col.isDayEnd ? " day-end" : "");
-        cell.dataset.dayIndex = col.dayIndex;
+    cardHead.appendChild(headLeft);
 
-        // click per ri-espandere il giorno
-        cell.addEventListener("click", () => {
-          expandedDays.add(col.dayIndex);
-          renderCalendar();
-        });
+    const manageBtn = document.createElement("button");
+    manageBtn.className = "dm-manage-btn";
+    manageBtn.dataset.segStart = seg.startMin;
+    manageBtn.dataset.segEnd   = seg.endMin;
+    manageBtn.dataset.day      = dayIndex;
+    manageBtn.textContent      = "Gestisci →";
+    cardHead.appendChild(manageBtn);
+    card.appendChild(cardHead);
 
-        // ✅ niente riepilogo: sempre colonna micro
-        // Se vuoi un hint minimo quando c'è qualcosa, mettiamo solo un pallino
-        const timeLabels = (row.kind === 'range' || row.kind === 'rangeHeader')
-          ? segmentToSlots(row.seg)
-          : (row.kind === "slot" ? [row.timeLabel] : []);
+    // Corpo card: righe ruolo
+    const cardBody = document.createElement("div");
+    cardBody.className = "dm-card-body";
+    let hasAnyone = false;
 
-        // c'è qualsiasi assegnazione in QUALSIASI ruolo in quel giorno su quelle label?
-        let hasAny = false;
-        if (timeLabels.length){
-          for (const role of ROLES){
-            const ids = unionAssignedOverLabels(weekKey, col.dayIndex, role, timeLabels);
-            if (ids.length){ hasAny = true; break; }
-          }
-        }
+    ROLES.forEach(role => {
+      const ids = unionAssignedOverLabels(weekKey, dayIndex, role, timeLabels);
+      if (!ids.length) return;
+      hasAnyone = true;
+      const names = ids.map(id => {
+        const emp = getEmployeeById(id);
+        if (!emp) return String(id);
+        return emp.label.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+      });
+      const row = document.createElement("div");
+      row.className = "dm-role-row";
+      row.innerHTML = `
+        <span class="sm-role-badge sm-badge-${roleCss(role)} dm-role-badge">${ROLE_SHORT[role]}</span>
+        <span class="dm-role-label">${role}</span>
+        <span class="dm-role-names">${names.join("  ·  ")}</span>
+      `;
+      cardBody.appendChild(row);
+    });
 
-        cell.classList.toggle("filled", hasAny);
-        cell.classList.toggle("empty", !hasAny);
+    // Ruoli scoperti (fabbisogno > 0, nessuno assegnato)
+    ROLES.forEach(role => {
+      const d   = deficit[role];
+      const ids = unionAssignedOverLabels(weekKey, dayIndex, role, timeLabels);
+      if (!d || d.required === 0 || ids.length > 0) return;
+      hasAnyone = true;
+      const row = document.createElement("div");
+      row.className = "dm-role-row dm-role-row-missing";
+      row.innerHTML = `
+        <span class="sm-role-badge sm-badge-${roleCss(role)} dm-role-badge">${ROLE_SHORT[role]}</span>
+        <span class="dm-role-label">${role}</span>
+        <span class="dm-role-names dm-role-uncovered">Scoperto — servono ${d.required}</span>
+      `;
+      cardBody.appendChild(row);
+    });
 
-        // icona minimal: • se pieno, — se vuoto
-        let total = 0;
-        if (timeLabels.length){
-          const set = new Set();
-          for (const role of ROLES){
-            unionAssignedOverLabels(weekKey, col.dayIndex, role, timeLabels).forEach(id => set.add(id));
-          }
-          total = set.size;
-        }
-        cell.innerHTML = total ? `<span class="micro-count">${total}</span>` : `<span class="micro-dash">—</span>`;
+    if (!hasAnyone) {
+      cardBody.innerHTML = `<div class="dm-empty">Nessun dipendente assegnato</div>`;
+    }
 
-        grid.appendChild(cell);
-        return;
-      }
+    card.appendChild(cardBody);
+    bodyEl.appendChild(card);
+  });
 
-      const cell = document.createElement("div");
-      cell.className = "cell slot empty day-" + col.dayIndex + (col.isDayEnd ? " day-end" : "");
-      cell.dataset.dayIndex = col.dayIndex;
-      cell.dataset.role = col.role;
-
-      // ✅ serve a applySelectionUI per capire che tipo di cella è
-      cell.dataset.kind = row.kind;
-
-      if (row.kind === "slot") {
-        cell.dataset.timeLabel = row.timeLabel; // singola mezz’ora
-      } else if (row.kind === "range" || row.kind === "rangeHeader") {
-        cell.dataset.rangeId = row.rangeId;
-      }
-
-      const timeLabels = (row.kind === 'range' || row.kind === 'rangeHeader')
-        ? segmentToSlots(row.seg)
-        : [row.timeLabel];
-
-      // ✅ PER IL COLORE SELEZIONE: sulle fasce salvo tutte le mezz’ore coperte
-      if (row.kind === "range" || row.kind === "rangeHeader") {
-        cell.dataset.timeLabels = timeLabels.join(",");
-      } else {
-        delete cell.dataset.timeLabels;
-      }
-
-      const ids = unionAssignedOverLabels(weekKey, col.dayIndex, col.role, timeLabels);
-      const sig = ids.slice().sort().join('|');
-      const sigKey = `${col.dayIndex}|${col.role}`;
-      const prevSig = prevSigByCol.get(sigKey) || '';
-      const suppress = sig && sig === prevSig;
-
-      if (ids.length){
-        cell.classList.remove("empty");
-        cell.classList.add("filled");
-        if (!suppress){
-          cell.classList.add('merged-start');
-          cell.innerHTML = ids.map(id => `<span class="badge badge-${roleCss(col.role)}">${getEmployeeById(id)?.label || id}</span>`).join("");
-        } else {
-          cell.classList.add('merged-cont');
-          cell.innerHTML = ``;
-        }
-      } else {
-        cell.innerHTML = `<span style="opacity:.4">—</span>`;
-      }
-      prevSigByCol.set(sigKey, sig);
-
-      // ✅ selezione con drag: funziona sia su mezz'ore (slot) sia su fasce (range/rangeHeader)
-      if (row.kind === "slot" || row.kind === "range" || row.kind === "rangeHeader") {
-        cell.addEventListener("mousedown", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-
-          // se inizi a trascinare, sopprimiamo il click “assegna fascia”
-          window._suppressNextRangeClick = true;
-
-          isSelecting = true;
-          sel.dayIndex = col.dayIndex;
-          sel.role = col.role;
-          sel.rowStart = rIdx;
-          sel.rowEnd = rIdx;
-          sel.labels = labelsForRowSpan(sel.rowStart, sel.rowEnd);
-          applySelectionUI();
-        });
-
-        cell.addEventListener("mouseenter", () => {
-          if (!isSelecting) return;
-          if (sel.dayIndex !== col.dayIndex) return;
-          if (sel.role !== col.role) return;
-
-          sel.rowEnd = rIdx;
-          sel.labels = labelsForRowSpan(sel.rowStart, sel.rowEnd);
-          applySelectionUI();
-        });
-      } else {
-        // click su fascia -> picker su tutta la fascia
-        cell.title = "Clicca per assegnare su tutta la fascia";
-        cell.style.cursor = "pointer";
-        cell.addEventListener("click", (e) => {
-          e.stopPropagation();
-
-          // ✅ se arriviamo da drag-select, non aprire anche il picker “a click”
-          if (window._suppressNextRangeClick) {
-            window._suppressNextRangeClick = false;
-            return;
-          }
-          window._suppressNextRangeClick = false;
-          openEmployeePicker({ weekKey, dayIndex: col.dayIndex, role: col.role, timeLabels });
-        });
-      }
-
-      grid.appendChild(cell);
+  bodyEl.querySelectorAll(".dm-manage-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const startMin = Number(btn.dataset.segStart);
+      const endMin   = Number(btn.dataset.segEnd);
+      const di       = Number(btn.dataset.day);
+      const seg      = { startMin, endMin, id: `${startMin}-${endMin}`, label: bandLabel(startMin, endMin) };
+      closeDayModal();
+      openSlotManageModal({ weekKey, dayIndex: di, seg, timeLabels: segmentToSlots(seg) });
     });
   });
+
+  const qaBtn = document.getElementById("dayModalQaBtn");
+  const qdBtn = document.getElementById("dayModalQdBtn");
+  if (qaBtn) qaBtn.style.display = "none";
+  if (qdBtn) qdBtn.style.display = "none";
+
+  bd.style.display = "flex";
 }
 
-/* ---------- MODAL: PICKER MULTI-DIPENDENTE ---------- */
-let activeModalEl = null;
-
-function closeModal(){
-  activeModalEl?.remove();
-  activeModalEl = null;
+function closeDayModal(){
+  const bd = document.getElementById("dayModalBackdrop");
+  if (bd) bd.style.display = "none";
 }
 
-function nextLabelExclusive(labels){
-  if (!labels.length) return "";
-  const last = labels[labels.length-1];
-  const idx = HALF_HOURS.indexOf(last);
-  const next = HALF_HOURS[idx+1];
-  return next || "24:00";
-}
-
-function openEmployeePicker({ weekKey, dayIndex, role, timeLabels }){
+/* ===========================================
+   MODAL UNIFICATO: GESTIONE TURNO — tabella scura
+   =========================================== */
+function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels }) {
   closeModal();
+
+  const ROLE_BADGE_CLASS = {
+    Cassa:"sm-badge-cassa", Runner:"sm-badge-runner", Bar:"sm-badge-bar",
+    Comande:"sm-badge-comande", Accoglienza:"sm-badge-accoglienza", Jolly:"sm-badge-jolly",
+  };
 
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
-  overlay.addEventListener("mousedown", (e) => {
-    if (e.target === overlay) closeModal();
-  });
+  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) closeModal(); });
 
   const modal = document.createElement("div");
-  modal.className = "modal";
+  modal.className = "modal slot-manage-modal";
 
   const head = document.createElement("div");
   head.className = "modal-head";
-  const title = document.createElement("div");
-  title.className = "modal-title";
-  title.textContent = `${DAYS[dayIndex]} – ${role} (${timeLabels[0]} → ${nextLabelExclusive(timeLabels)})`;
-  const close = document.createElement("div");
-  close.className = "modal-close";
-  close.textContent = "✕";
-  close.addEventListener("click", closeModal);
-  head.appendChild(title);
-  head.appendChild(close);
+  const titleEl = document.createElement("div");
+  titleEl.className = "modal-title";
+  const date = new Date(currentWeekStart);
+  date.setDate(date.getDate() + dayIndex);
+  titleEl.textContent = `${DAYS[dayIndex]} ${formatDate(date)} · ${seg.label}`;
+  const closeBtn = document.createElement("div");
+  closeBtn.className = "modal-close";
+  closeBtn.textContent = "✕";
+  closeBtn.addEventListener("click", closeModal);
+  head.appendChild(titleEl);
+  head.appendChild(closeBtn);
+  modal.appendChild(head);
 
   const body = document.createElement("div");
-  body.className = "modal-body";
-
-  const wrap = document.createElement("div");
-  wrap.className = "picker-wrap";
-
-  const boxAll = document.createElement("div");
-  boxAll.className = "picker-box";
-  boxAll.innerHTML = `<div class="picker-title">Dipendenti</div>`
-    + `<input class="picker-search" id="pickerSearch" type="text" placeholder="Cerca..." />`
-    + `<div class="picker-list" id="pickerAll"></div>`;
-
-  const boxSel = document.createElement("div");
-  boxSel.className = "picker-box";
-  boxSel.innerHTML = `<div class="picker-title">Selezionati</div><div class="picker-list" id="pickerSel"></div>`;
-
-  wrap.appendChild(boxAll);
-  wrap.appendChild(boxSel);
-  body.appendChild(wrap);
-
-  const foot = document.createElement("div");
-  foot.className = "modal-foot";
-
-  const btnCancel = document.createElement("button");
-  btnCancel.className = "btn btn-ghost";
-  btnCancel.textContent = "Annulla";
-  btnCancel.addEventListener("click", closeModal);
-
-  const btnClear = document.createElement("button");
-  btnClear.className = "btn btn-ghost";
-  btnClear.textContent = "Svuota";
-  btnClear.addEventListener("click", () => {
-    selected.clear();
-    renderPickers();
-  });
-
-  const btnApply = document.createElement("button");
-  btnApply.className = "btn";
-  btnApply.textContent = "Applica";
-  btnApply.addEventListener("click", async () => {
-    const idsArr = Array.from(selected);
-
-    // 1) memoria + 2) DB: salva per ogni mezz'ora (semplice, consistente)
-    for (const t of timeLabels){
-      setAssignedIdsFor(weekKey, dayIndex, role, t, idsArr);
-      await saveSlotOverrideToDb(weekKey, dayIndex, role, t, idsArr);
-    }
-
-    recalcSegmentsFromAssignments(weekKey);
-
-    closeModal();
-    renderCalendar();
-  });
-
-  foot.appendChild(btnCancel);
-  foot.appendChild(btnClear);
-  foot.appendChild(btnApply);
-
-  modal.appendChild(head);
+  body.className = "modal-body slot-manage-body";
   modal.appendChild(body);
-  modal.appendChild(foot);
+
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   activeModalEl = overlay;
 
-  const selected = new Set(unionAssignedOverLabels(weekKey, dayIndex, role, timeLabels));
+  const localAssigned = {};
+  ROLES.forEach(role => {
+    localAssigned[role] = new Set(
+      unionAssignedOverLabels(weekKey, dayIndex, role, timeLabels).map(String)
+    );
+  });
 
-  const allEl = modal.querySelector("#pickerAll");
-  const selEl = modal.querySelector("#pickerSel");
-  const searchEl = modal.querySelector("#pickerSearch");
-  let searchQ = "";
-  searchEl?.addEventListener("input", () => { searchQ = (searchEl.value || "").trim().toLowerCase(); renderPickers(); });
+  let openDropdownRole = null;
 
-  function renderPickers(){
-    allEl.innerHTML = "";
-    selEl.innerHTML = "";
+  function renderBody() {
+    body.innerHTML = "";
+    const deficit   = getSquadDeficitForSlot(weekKey, dayIndex, seg);
+    const available = getAvailableForSlot(dayIndex, seg);
 
-    employees
-      .slice()
-      .sort((a,b) => a.label.localeCompare(b.label, "it"))
-      .filter(emp => !searchQ || emp.label.toLowerCase().includes(searchQ))
-      .forEach(emp => {
-        const chip = document.createElement("div");
-        chip.className = "picker-item" + (selected.has(emp.id) ? " selected" : "");
-        chip.textContent = emp.label;
-        chip.addEventListener("click", () => {
-          if (selected.has(emp.id)) selected.delete(emp.id);
-          else selected.add(emp.id);
-          renderPickers();
+    const allInserted = new Set();
+    ROLES.forEach(r => localAssigned[r].forEach(id => allInserted.add(String(id))));
+
+    // Tabella
+    const table = document.createElement("table");
+    table.className = "sm-table";
+    table.innerHTML = `<colgroup>
+      <col class="col-role"><col class="col-chips"><col class="col-count"><col class="col-action">
+    </colgroup>
+    <thead><tr>
+      <th>Ruolo</th><th>Assegnati</th><th style="text-align:center">Obiett.</th><th></th>
+    </tr></thead>`;
+
+    const tbody = document.createElement("tbody");
+
+    ROLES.forEach(role => {
+      const d           = deficit[role];
+      const hasNeed     = d && d.required > 0;
+      const isMissing   = hasNeed && d.deficit > 0;
+      const assignedIds = Array.from(localAssigned[role]);
+
+      // Riga ruolo
+      const tr = document.createElement("tr");
+      tr.className = "sm-tr" + (isMissing ? " sm-tr-missing" : "");
+
+      const tdRole = document.createElement("td");
+      tdRole.className = "sm-td-role";
+      tdRole.innerHTML = `<div class="sm-role-cell">
+        <span class="sm-role-badge ${ROLE_BADGE_CLASS[role]}">${ROLE_SHORT[role]}</span>
+        <span class="sm-role-name">${role}</span>
+      </div>`;
+
+      const tdChips = document.createElement("td");
+      tdChips.className = "sm-td-chips";
+      const chipsWrap = document.createElement("div");
+      chipsWrap.className = "sm-chips-wrap";
+      if (assignedIds.length === 0) {
+        chipsWrap.innerHTML = `<span class="sm-none-text">—</span>`;
+      } else {
+        assignedIds.forEach(empId => {
+          const emp  = getEmployeeById(empId);
+          const chip = document.createElement("span");
+          chip.className = "sm-chip";
+          const name = emp ? emp.label.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ") : empId;
+          chip.innerHTML = `${name}<button class="sm-chip-remove" title="Rimuovi">×</button>`;
+          chip.querySelector(".sm-chip-remove").addEventListener("click", () => {
+            localAssigned[role].delete(String(empId));
+            renderBody();
+          });
+          chipsWrap.appendChild(chip);
         });
-        allEl.appendChild(chip);
-      });
+      }
+      tdChips.appendChild(chipsWrap);
 
-    Array.from(selected)
-      .map(id => getEmployeeById(id))
-      .filter(Boolean)
-      .sort((a,b) => a.label.localeCompare(b.label, "it"))
-      .forEach(emp => {
-        const chip = document.createElement("div");
-        chip.className = "picker-item selected";
-        chip.textContent = emp.label;
-        chip.title = "Click per rimuovere";
-        chip.addEventListener("click", () => {
-          selected.delete(emp.id);
-          renderPickers();
-        });
-        selEl.appendChild(chip);
+      const tdCount = document.createElement("td");
+      tdCount.className = "sm-td-count";
+      if (hasNeed) {
+        tdCount.innerHTML = `<span class="${isMissing ? "sm-count-bad" : "sm-count-ok"}">${assignedIds.length}/${d.required}</span>`;
+      } else {
+        tdCount.innerHTML = `<span class="sm-count-neutral">—</span>`;
+      }
+
+      const tdAction = document.createElement("td");
+      tdAction.className = "sm-td-action";
+      const addBtn = document.createElement("button");
+      addBtn.className = "sm-add-btn";
+      addBtn.title = `Aggiungi a ${role}`;
+      addBtn.textContent = "+";
+      addBtn.addEventListener("click", () => {
+        openDropdownRole = openDropdownRole === role ? null : role;
+        renderBody();
       });
+      tdAction.appendChild(addBtn);
+
+      tr.appendChild(tdRole);
+      tr.appendChild(tdChips);
+      tr.appendChild(tdCount);
+      tr.appendChild(tdAction);
+      tbody.appendChild(tr);
+
+      // Dropdown inline
+      if (openDropdownRole === role) {
+        const trDrop = document.createElement("tr");
+        trDrop.className = "sm-tr-dropdown";
+        const tdDrop = document.createElement("td");
+        tdDrop.setAttribute("colspan", "4");
+
+        const dropLabel = document.createElement("div");
+        dropLabel.className = "sm-dropdown-label";
+        dropLabel.textContent = `Aggiungi a ${role}`;
+
+        const sel = document.createElement("select");
+        sel.className = "sm-dropdown-select";
+        sel.innerHTML = `<option value="">— Seleziona dipendente —</option>`;
+
+        const avForRole = available.filter(av => av.empId && !localAssigned[role].has(String(av.empId)));
+        if (avForRole.length > 0) {
+          const grp = document.createElement("optgroup");
+          grp.label = "Disponibili in questo slot";
+          avForRole.forEach(av => {
+            const opt = document.createElement("option");
+            opt.value = av.empId;
+            opt.textContent = `${av.name}  (${av.range})`;
+            grp.appendChild(opt);
+          });
+          sel.appendChild(grp);
+        }
+
+        const others = employees.filter(e =>
+          !localAssigned[role].has(String(e.id)) &&
+          !avForRole.find(av => String(av.empId) === String(e.id))
+        );
+        if (others.length > 0) {
+          const grp = document.createElement("optgroup");
+          grp.label = "Altri dipendenti";
+          others.forEach(e => {
+            const opt = document.createElement("option");
+            opt.value = e.id;
+            opt.textContent = e.label;
+            grp.appendChild(opt);
+          });
+          sel.appendChild(grp);
+        }
+
+        sel.addEventListener("change", () => {
+          if (!sel.value) return;
+          localAssigned[role].add(String(sel.value));
+          openDropdownRole = null;
+          renderBody();
+        });
+
+        tdDrop.appendChild(dropLabel);
+        tdDrop.appendChild(sel);
+        trDrop.appendChild(tdDrop);
+        tbody.appendChild(trDrop);
+      }
+    });
+
+    table.appendChild(tbody);
+    body.appendChild(table);
+
+    // Disponibili non inseriti — riga compatta in fondo
+    const notInserted = available.filter(av => av.empId && !allInserted.has(String(av.empId)));
+    if (notInserted.length > 0) {
+      const bar = document.createElement("div");
+      bar.className = "sm-available-bar";
+      bar.innerHTML = `<span class="sm-available-label">Disponibili non assegnati</span>`;
+      notInserted.forEach((av, i) => {
+        if (i > 0) { const sep = document.createElement("span"); sep.className = "sm-available-sep"; sep.textContent = "·"; bar.appendChild(sep); }
+        const span = document.createElement("span");
+        span.innerHTML = `<span class="sm-available-name">${av.name}</span> <span class="sm-available-range">${av.range}</span>`;
+        bar.appendChild(span);
+      });
+      body.appendChild(bar);
+    }
+
+    // Footer
+    const existingFoot = modal.querySelector(".slot-manage-foot");
+    if (existingFoot) existingFoot.remove();
+    const foot = document.createElement("div");
+    foot.className = "modal-foot slot-manage-foot";
+    const btnCancel = document.createElement("button");
+    btnCancel.className = "btn btn-ghost";
+    btnCancel.textContent = "Annulla";
+    btnCancel.addEventListener("click", closeModal);
+    const btnSave = document.createElement("button");
+    btnSave.className = "btn primary";
+    btnSave.textContent = "Salva turno";
+    btnSave.addEventListener("click", async () => {
+      btnSave.disabled = true;
+      btnSave.textContent = "Salvataggio...";
+      for (const role of ROLES) {
+        const idsArr = Array.from(localAssigned[role]).map(Number).filter(Boolean);
+        for (const t of timeLabels) {
+          setAssignedIdsFor(weekKey, dayIndex, role, t, idsArr);
+          await saveSlotOverrideToDb(weekKey, dayIndex, role, t, idsArr);
+        }
+      }
+      recalcSegmentsFromAssignments(weekKey);
+      closeModal();
+      renderCalendar();
+    });
+    foot.appendChild(btnCancel);
+    foot.appendChild(btnSave);
+    modal.appendChild(foot);
   }
 
-  renderPickers();
+  renderBody();
 }
 
-/* ---------- MODAL: SQUADRE SETTIMANA ---------- */
+/* ---------- SQUADRE ---------- */
 function defaultSquadDay(){
   const mk = () => Object.fromEntries(ROLES.map(r => [r, 0]));
   return { morning: mk(), evening: mk() };
@@ -920,147 +817,88 @@ function getWeekSquad(weekKey){
   }
   return squads.get(weekKey);
 }
-/* ---------- INIT HOME ---------- */
-let _homeMouseupInited = false;
 
+/* ---------- INIT HOME ---------- */
 async function initHome(){
   initAccordions();
 
-  currentWeekStart = getNextWeekMonday(new Date());
-  expandedDays = new Set();    // tutto chiuso
-  expandedRanges = new Set();  // fasce compresse
-
+  if (!currentWeekStart) currentWeekStart = getNextWeekMonday(new Date());
   const wk = weekKeyOf(currentWeekStart);
   window.currentWeekKey = wk;
+
   await retryUntil(
     async () => { await loadEmployeesFromDb(); },
     () => Array.isArray(employees) && employees.length > 0,
     { tries: 20, delayMs: 100 }
   );
 
-  // anche se week è vuota “legittimamente”, la carichiamo comunque
   await loadWeekFromDb(wk);
 
   renderEmployees();
   renderWeekLabel();
   renderCalendar();
   renderDaySummary();
-  // ✅ EXPORT: bottone "Elabora settimana"
+
+  await window.renderCsvFilePanel?.();
+  window.bindCsvPanelActions?.();
+  window.bindImportAvailability?.();
+  window.bindElaboraSelectedFile?.();
+  window.bindAvailabilityViewer?.();
+
+  // Bottone "Elabora tabella Export"
   {
     const btn = document.getElementById("btnElaboraWeek");
     if (btn) {
       const clone = btn.cloneNode(true);
       btn.parentNode.replaceChild(clone, btn);
-
       clone.addEventListener("click", async () => {
         const wk2 = weekKeyOf(currentWeekStart);
         window.lastWeekKey = wk2;
-
-        // se sei in PyWebView ok, altrimenti evita crash
         if (!window.pywebview?.api?.export_week) {
           alert("API non pronta: pywebview.api.export_week non disponibile.");
           return;
         }
-
         window.lastExportData = await window.pywebview.api.export_week(wk2);
         await loadView("export");
       });
     }
   }
-  window.bindImportAvailability?.();
-  window.bindAvailabilityViewer?.();
-  document.getElementById("btnPrevWeek")?.addEventListener("click", async () => {
-    currentWeekStart.setDate(currentWeekStart.getDate() - 7);
-    expandedRanges = new Set();
+
+  // Modal dettaglio giorno
+  document.getElementById("dayModalClose")?.addEventListener("click", closeDayModal);
+  document.getElementById("dayModalBackdrop")?.addEventListener("mousedown", (e) => {
+    if (e.target === document.getElementById("dayModalBackdrop")) closeDayModal();
+  });
+
+  // Navigazione settimana
+  const navWeek = async (delta) => {
+    currentWeekStart.setDate(currentWeekStart.getDate() + delta);
     const wk2 = weekKeyOf(currentWeekStart);
     window.currentWeekKey = wk2;
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
     await renderDaySummary();
-    initQuickAdd();
-  });
-
-  document.getElementById("btnNextWeek")?.addEventListener("click", async () => {
-    currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-    expandedRanges = new Set();
-    const wk2 = weekKeyOf(currentWeekStart);
-    window.currentWeekKey = wk2;
-    await loadWeekFromDb(wk2);
-    renderWeekLabel();
-    renderCalendar();
-    await renderDaySummary();
-    initQuickAdd();
-  });
-
+  };
+  document.getElementById("btnPrevWeek")?.addEventListener("click", () => navWeek(-7));
+  document.getElementById("btnNextWeek")?.addEventListener("click", () => navWeek(+7));
   document.getElementById("btnToday")?.addEventListener("click", async () => {
     currentWeekStart = getNextWeekMonday(new Date());
-    expandedRanges = new Set();
-    const wk2 = weekKeyOf(currentWeekStart);
-    window.currentWeekKey = wk2;
-    await loadWeekFromDb(wk2);
-    renderWeekLabel();
-    renderCalendar();
-    await renderDaySummary();
-    initQuickAdd();
+    await navWeek(0);
   });
-
   document.getElementById("btnTodayTop")?.addEventListener("click", async () => {
     currentWeekStart = getNextWeekMonday(new Date());
-    expandedRanges = new Set();
-    const wk2 = weekKeyOf(currentWeekStart);
-    window.currentWeekKey = wk2;
-    await loadWeekFromDb(wk2);
-    renderWeekLabel();
-    renderCalendar();
-    await renderDaySummary();
-    initQuickAdd();
+    await navWeek(0);
   });
-
   document.getElementById("btnClear")?.addEventListener("click", async () => {
     const wk2 = weekKeyOf(currentWeekStart);
-
     Array.from(assignments.keys()).forEach(k => { if (k.startsWith(wk2 + "|")) assignments.delete(k); });
-    clearSelection();
-
     await clearWeekOverridesOnDb(wk2);
-
     recalcSegmentsFromAssignments(wk2);
     renderCalendar();
     await renderDaySummary();
-    initQuickAdd();
   });
-  document.getElementById("btnPermManage")?.addEventListener("click", () => openPermanentModal());
-
-  // mouseup globale: se stavi selezionando -> picker su quelle mezz'ore
-  if (!_homeMouseupInited) {
-    _homeMouseupInited = true;
-    window.addEventListener("mousemove", (e) => {
-      if (!isSelecting) return;
-      const wrap = document.querySelector(".calendar-wrap");
-      if (!wrap) return;
-      const rect = wrap.getBoundingClientRect();
-      const threshold = 60;
-      const speed = 14;
-      if (e.clientY > rect.bottom - threshold) wrap.scrollTop += speed;
-      else if (e.clientY < rect.top + threshold) wrap.scrollTop -= speed;
-      if (e.clientX > rect.right - threshold) wrap.scrollLeft += speed;
-      else if (e.clientX < rect.left + threshold) wrap.scrollLeft -= speed;
-    });
-
-    window.addEventListener("mouseup", () => {
-      if (!isSelecting) return;
-      if (sel.dayIndex === null || !sel.role || !sel.labels.length) { clearSelection(); return; }
-
-      const weekKey = weekKeyOf(currentWeekStart);
-      const timeLabels = sel.labels.slice();
-      const dayIndex = sel.dayIndex;
-      const role = sel.role;
-
-      clearSelection();
-      openEmployeePicker({ weekKey, dayIndex, role, timeLabels });
-    });
-  }
+  document.getElementById("btnPermManage")?.addEventListener("click", () => openPermanentModal?.());
 }
 
 /* ---------- NAV ---------- */
@@ -1068,7 +906,6 @@ let _navBound = false;
 function bindNavigation(){
   if (_navBound) return;
   _navBound = true;
-
   document.querySelectorAll(".nav-item").forEach(btn => {
     btn.addEventListener("click", () => {
       const route = btn.getAttribute("data-route");
@@ -1078,46 +915,26 @@ function bindNavigation(){
   });
 }
 
-/* ---------- DIPENDENTI (CRUD) ---------- */
-// (spostato in ./assets/employees.js)
-
 /* ---------- BOOT ---------- */
 let _booted = false;
-
 function boot() {
   if (_booted) return;
   _booted = true;
-
   bindNavigation();
   loadView("home");
 }
-
 function isPywebviewApiReady(){
   return !!(window.pywebview && window.pywebview.api);
 }
-
 function bootWhenReady(){
-  // Se non è PyWebView, parti subito
   const inPyWebView = typeof window.pywebview !== "undefined";
-  if (!inPyWebView) {
-    boot();
-    return;
-  }
-
-  // PyWebView: aspetta davvero l'API (polling)
+  if (!inPyWebView) { boot(); return; }
   const tick = () => {
     if (_booted) return;
-    if (isPywebviewApiReady()) {
-      boot();
-      return;
-    }
+    if (isPywebviewApiReady()) { boot(); return; }
     setTimeout(tick, 50);
   };
   tick();
 }
-
-// 1) prova evento standard
 window.addEventListener("pywebviewready", bootWhenReady);
-
-// 2) fallback: comunque al DOMContentLoaded prova a partire quando pronto
 window.addEventListener("DOMContentLoaded", bootWhenReady);

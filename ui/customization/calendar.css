@@ -1,948 +1,917 @@
-.home-layout{
-  min-width: 0;
+/* =========================================
+   calendar.css — Timeline compatta + pannello CSV + modal giorno
+   ========================================= */
+
+/* ---------- HOME LAYOUT ---------- */
+.home-main-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 200px 1fr;
   gap: 14px;
+  flex: 1;
   min-height: 0;
-  height: 100%;
+  overflow: hidden;
 }
 
-.calendar-card{
-  min-width: 0;
-  border:1px solid var(--line);
+/* ---------- PANNELLO CSV LATERALE ---------- */
+.csv-panel {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   background: rgba(255,255,255,.03);
   box-shadow: var(--shadow);
-  display:flex;
-  flex-direction:column;
-  min-height:0;
+  min-height: 0;
+  overflow: hidden;
 }
-.calendar-head{
-  padding:12px 14px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  border-bottom:1px solid var(--line);
-}
-.calendar-meta{ color:var(--muted); font-size:13px; }
-.legend{ display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; }
-.dot{ width:10px;height:10px;border-radius:50%; display:inline-block; border:1px solid var(--line); }
-.dot-empty{ background: rgba(255,255,255,.05); }
-.dot-filled{ background: rgba(124,242,199,.55); border-color: rgba(124,242,199,.65); }
-
-.calendar-wrap{
-  min-width: 0;
-  flex:1;
-  min-height:0;
-  overflow: auto;
-  padding:12px;
-
-  position: relative;         /* sticky */
-  overscroll-behavior: contain;
-
-  scrollbar-width: auto;      /* firefox */
-  scrollbar-color: rgba(106,166,255,.45) rgba(255,255,255,.08);
-}
-
-.sidebar, .rightbar{
-  transition: width .22s ease, padding .22s ease;
-}
-/* GRID: prima colonna orari, poi 6 giorni */
-.calendar-grid{
-  min-width: 900px;
-  display:grid;
-  grid-auto-flow:row;
-  gap:0;
-  border:1px solid var(--line);
-  border-radius: 14px;
-  overflow:hidden;
-  background: rgba(0,0,0,.15);
-  width: max-content;
-  min-width: 100%;
-}
-
-.cell{
-  border-right:1px solid var(--line);
-  border-bottom:1px solid var(--line);
-  padding:8px 10px;
-  font-size:12px;
-  min-height:34px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  user-select:none;
-}
-
-.cell.header{
-  background: rgba(255,255,255,.05);
-  font-weight:700;
-  min-height:38px;
-}
-
-.cell.time{
-  background: rgba(255,255,255,.03);
-  color:var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.slot{
-  cursor:pointer;
-  transition: background .15s ease, outline-color .15s ease;
-}
-.slot.empty{
-  background: rgba(255,106,106,.10);
-}
-.slot.empty:hover{
-  background: rgba(255,106,106,.18);
-}
-.slot.filled{
-  background: rgba(124,242,199,.12);
-}
-
-.badge{
-  padding:4px 8px;
-  border-radius:999px;
-  border:1px solid rgba(124,242,199,.35);
-  background: rgba(124,242,199,.14);
-  font-size:12px;
-  white-space:nowrap;
-}
-.badge.gen{ border-color: rgba(106,166,255,.35); background: rgba(106,166,255,.14); }
-
-.rightbar{
-  border:1px solid var(--line);
-  border-radius: var(--radius);
-  background: rgba(255,255,255,.03);
-  box-shadow: var(--shadow);
-  overflow:hidden;
-  display:flex;
-  flex-direction:column;
-  min-height:0;
-  justify-self: end;
-  margin-left: auto;
-  width: 320px;
-  transition: width .22s ease, padding .22s ease;
-  flex-shrink: 0;
-
-}
-
-.right-acc{
-  border:none;
-  border-radius:0;
-  border-bottom:1px solid var(--line);
-}
-
-.rightbar-tools{
-  padding:10px 12px;
-  display:flex;
-  gap:8px;
-}
-
-.emp-list{
-  padding:10px 12px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  overflow:auto;
-  min-height:0;
-}
-.emp{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:10px 10px;
-  border:1px solid var(--line);
-  border-radius: 14px;
-  background: rgba(255,255,255,.03);
-}
-.emp .name{ font-weight:700; font-size:13px; }
-.emp .meta{ color:var(--muted); font-size:12px; }
-.emp button{
-  padding:6px 10px;
-  border-radius: 12px;
-  border:1px solid var(--line);
-  background: rgba(255,255,255,.04);
-  color:var(--text);
-  cursor:pointer;
-}
-.emp button:hover{ background: rgba(255,255,255,.07); }
-
-.hint{
-  padding:10px 12px 14px 12px;
-  color:var(--muted);
-  font-size:12px;
-  border-top:1px solid var(--line);
-}
-
-/* mini popup */
-.modal-backdrop{
-  position:fixed; inset:0;
-  background: rgba(0,0,0,.55);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:999;
-}
-.modal-backdrop.open{ display:flex; }
-.modal{
-  width: 520px;
-  max-width: calc(100vw - 40px);
-  border-radius: 18px;
-  border:1px solid var(--line);
-  background: #0d1423;
-  box-shadow: var(--shadow);
-  overflow:hidden;
-}
-.modal header{
-  padding:12px 14px;
-  border-bottom:1px solid var(--line);
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-.modal h3{ margin:0; font-size:14px; }
-.modal .body{ padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
-.modal .list{ display:flex; flex-direction:column; gap:8px; max-height: 360px; overflow:auto; }
-.modal .row{
-  padding:10px 10px;
-  border:1px solid var(--line);
-  border-radius: 14px;
-  background: rgba(255,255,255,.03);
-  cursor:pointer;
-}
-.modal .row:hover{ background: rgba(106,166,255,.10); }
-.modal footer{
-  padding:12px 14px;
-  border-top:1px solid var(--line);
-  display:flex;
-  justify-content:flex-end;
-  gap:8px;
-}
-.slot.selected{
-  outline: 2px solid rgba(106,166,255,.75);
-  outline-offset: -2px;
-  background: rgba(106,166,255,.14);
-}
-
-.slot.continuation{
-  border-top-color: transparent;
-}
-.slot.continuation .badge{
-  display:none;
-}
-/* COLLAPSE LEFT SIDEBAR */
-.sidebar.collapsed{
-  width: 72px;
-  padding: 12px 10px;
-}
-.sidebar.collapsed .brand-text,
-.sidebar.collapsed .nav-item,
-.sidebar.collapsed .chip,
-.sidebar.collapsed .sidebar-footer{
-  display:none;
-}
-
-.sidebar.collapsed .accordion{
-  justify-content:center;
-}
-.sidebar.collapsed .acc-txt{
-  display:none;
-}
-.sidebar.collapsed .brand{
-  justify-content:center;
-}
-.sidebar.collapsed ~ .content{
-  /* nulla, si adatta automaticamente */
-}
-
-/* COLLAPSE RIGHT BAR */
-.rightbar.collapsed{
-  width: 56px !important;
-  padding: 8px 6px !important;
-  border-left: 1px solid var(--line) !important;
-}
-
-
-.rightbar.collapsed .acc-txt { display:none; }
-.sidebar.collapsed .accordion,
-.rightbar.collapsed .accordion{
-  justify-content:center;
-}
-.acc-ic{ width:24px; display:inline-flex; justify-content:center; }
-
-.rightbar.collapsed #acc-employees{
-  display:none !important;
-}
-.rightbar.collapsed .accordion{
-  justify-content:center;
-}
-
-/* 1) Header giorni sticky (riga in alto) */
-.calendar-grid > .cell.header{
-  position: sticky;
-  top: 0;
-  z-index: 4;
-  background: rgba(16,24,39,.92);   /* copre sotto mentre scrolli */
-  backdrop-filter: blur(6px);
-}
-
-/* 2) Colonna orari sticky (prima colonna a sinistra) */
-.calendar-grid > .cell.time{
-  position: sticky;
-  left: 0;
-  z-index: 3;
-  background: rgba(15,22,36,.92);
-  backdrop-filter: blur(6px);
-}
-
-/* angolo in alto a sinistra (header "Orario") sticky sia top che left */
-.calendar-grid > .cell.header:first-child{
-  left: 0;
-  z-index: 5;
-  background: rgba(16,24,39,.96);
-}
-
-/* piccola ombra per separare visivamente le zone sticky */
-.calendar-grid > .cell.time{
-  box-shadow: 10px 0 18px rgba(0,0,0,.20);
-}
-.calendar-grid > .cell.header{
-  box-shadow: 0 10px 18px rgba(0,0,0,.18);
-}
-
-/* 3) Scrollbar più visibile (Chrome/Edge/WebView2) */
-.calendar-wrap::-webkit-scrollbar{
-  width: 12px;
-  height: 12px;
-}
-.calendar-wrap::-webkit-scrollbar-track{
-  background: rgba(255,255,255,.06);
-  border-radius: 999px;
-}
-.calendar-wrap::-webkit-scrollbar-thumb{
-  background: rgba(106,166,255,.35);
-  border: 3px solid rgba(0,0,0,0);     /* crea “padding” interno */
-  background-clip: padding-box;
-  border-radius: 999px;
-}
-.calendar-wrap::-webkit-scrollbar-thumb:hover{
-  background: rgba(106,166,255,.55);
-  border: 3px solid rgba(0,0,0,0);
-  background-clip: padding-box;
-}
-
-/* (opzionale ma utile) scrollbar anche per lista dipendenti */
-.emp-list::-webkit-scrollbar{
-  width: 12px;
-}
-.emp-list::-webkit-scrollbar-track{
-  background: rgba(255,255,255,.06);
-  border-radius: 999px;
-}
-.emp-list::-webkit-scrollbar-thumb{
-  background: rgba(124,242,199,.28);
-  border: 3px solid rgba(0,0,0,0);
-  background-clip: padding-box;
-  border-radius: 999px;
-}
-.emp-list::-webkit-scrollbar-thumb:hover{
-  background: rgba(124,242,199,.45);
-}
-.calendar-left{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-.week-nav{
-  display:flex;
-  gap:8px;
-  align-items:center;
-}
-
-.page-header{
-  width: 100%;
-  min-width: 0;
-}
-
-.page{
-  width: 100%;
-  min-width: 0;
-}
-
-/* ===== FIX SCROLL SIDEBAR DIPENDENTI ===== */
-.rightbar{ display:flex; flex-direction:column; min-height:0; }
-#acc-employees.panel.open{ flex:1; min-height:0; overflow:hidden; }
-.emp-list{ overflow-y:auto; flex:1; min-height:0; max-height: calc(100vh - 280px); }
-
-/* ===== MODAL SCROLL (SQUADRE + PICKER) ===== */
-.modal-overlay{
-  position:fixed; inset:0;
-  background: rgba(0,0,0,.6);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index: 1000;
-  padding: 18px;
-}
-.modal{
-  width: min(980px, 96vw);
-  background: linear-gradient(180deg, rgba(16,24,39,.98) 0%, rgba(12,19,34,.98) 100%);
-  border:1px solid var(--line);
-  border-radius: 18px;
-  box-shadow: var(--shadow);
-  overflow:hidden;
-}
-.modal-head{
-  display:flex; align-items:center; justify-content:space-between;
-  padding: 14px 16px;
+.csv-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--line);
-}
-.modal-title{ font-weight:700; }
-.modal-close{ cursor:pointer; opacity:.7; }
-.modal-close:hover{ opacity:1; }
-.modal-body{
-  padding: 14px 16px;
-  max-height: 70vh;
-  overflow:auto;
-}
-.modal-foot{
-  display:flex; justify-content:flex-end; gap:10px;
-  padding: 12px 16px;
-  border-top:1px solid var(--line);
-}
-
-/* ===== CALENDARIO: GIORNI COLONNE + RUOLI A SCOMPARSA ===== */
-.cell.day-collapsed{
-  flex-direction:column;
-  align-items:flex-start;
-  gap:6px;
-}
-.summary-line{
-  width:100%;
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  opacity:.9;
-}
-.summary-line b{ font-weight:700; opacity:.95; }
-.summary-line span{ opacity:.8; text-align:right; flex:1; }
-.cell.time.toggle{
-  cursor:pointer;
-}
-.cell.time.toggle:hover{
   background: rgba(255,255,255,.04);
+  flex-shrink: 0;
 }
-.cell.header.day-toggle{
-  cursor:pointer;
-}
-.cell.header.day-toggle:hover{
-  background: rgba(255,255,255,.04);
-}
-.role-pill{
-  font-size:11px;
-  opacity:.85;
-}
-.badge{
-  display:inline-flex;
-  align-items:center;
-  padding: 3px 8px;
-  border-radius: 999px;
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(106,166,255,.12);
-  white-space:nowrap;
-}
-.badge + .badge{ margin-left:6px; }
-
-/* Picker layout */
-.picker-wrap{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap:14px;
-}
-.picker-box{
-  border:1px solid var(--line);
-  border-radius: 14px;
-  padding: 10px;
-  background: rgba(0,0,0,.12);
-  min-height: 220px;
-}
-.picker-title{ font-weight:700; margin-bottom:8px; opacity:.9; }
-.picker-list{ display:flex; flex-wrap:wrap; gap:8px; }
-.picker-item{
-  cursor:pointer;
-  padding:6px 10px;
-  border-radius: 999px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.04);
-}
-.picker-item:hover{ background: rgba(255,255,255,.07); }
-.picker-item.selected{
-  border-color: rgba(124,242,199,.35);
-  background: rgba(124,242,199,.10);
-}
-
-/* Squad table */
-.squad-table{
-  width:100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  overflow:hidden;
-  border:1px solid var(--line);
-  border-radius: 14px;
-}
-.squad-table th, .squad-table td{
-  border-bottom:1px solid var(--line);
-  border-right:1px solid var(--line);
-  padding:10px;
-  font-size:12px;
-  vertical-align:middle;
-}
-.squad-table th{ background: rgba(255,255,255,.03); text-align:left; }
-.squad-table tr:last-child td{ border-bottom:0; }
-.squad-table td:last-child, .squad-table th:last-child{ border-right:0; }
-.squad-input{
-  width:64px;
-  padding:6px 8px;
-  border-radius: 10px;
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.18);
-  color: var(--text);
-}
-.calendar-actions-inline{ display:flex; gap:10px; align-items:center; }
-
-
-/* ===== COLLAPSE CHE LIBERA SPAZIO (LEFT + RIGHT) ===== */
-.home-layout{ align-items: stretch; }
-.rightbar{ width: 320px; min-width: 0; position: relative; }
-.rightbar.collapsed{
-  width: 56px !important;
-  padding: 8px 6px !important;
-  border-left: 1px solid var(--line) !important;
-}
-
-.rightbar.collapsed #acc-employees{ max-height:0 !important; opacity:0 !important; }
-.rightbar.collapsed .right-acc{
-  position:absolute;
-  right:-56px;
-  top: 10px;
-  width:56px;
-  border-radius: 14px;
-  border:1px solid var(--line);
-  background: var(--panel);
-  box-shadow: var(--shadow);
-}
-.rightbar.collapsed .right-acc .acc-txt{ display:none; }
-.rightbar.collapsed .right-acc .chev{ display:none; }
-
-/* panel employees senza limite fisso */
-#acc-employees.panel.open{ max-height: none !important; opacity:1; }
-
-/* lista dipendenti: scroll vero */
-#acc-employees{ display:flex; flex-direction:column; min-height:0; }
-.rightbar-tools{ flex:0 0 auto; }
-.emp-list{ flex:1 1 auto; overflow-y:auto; max-height:none !important; min-height:0; }
-.hint{ flex:0 0 auto; }
-
-
-/* ===== CALENDARIO PIÙ LEGGIBILE (CHIARO) ===== */
-.calendar-card{
-  background: var(--panel);
-}
-.cell{
-  border-color: var(--line);
-}
-.cell.header{
-  background: var(--panel2);
-  color: var(--text);
-}
-.cell.time{
-  background: #fbfcff;
+.csv-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
   color: var(--muted);
 }
-.cell.slot{
-  background: #ffffff;
-}
-.cell.slot.filled{
-  background: rgba(37, 99, 235, .06);
-}
-.cell.slot.selected{
-  outline: 2px solid rgba(37, 99, 235, .45);
-  outline-offset: -2px;
-}
-.badge{
-  background: rgba(37, 99, 235, .10);
-  border-color: rgba(37, 99, 235, .25);
-  color: var(--text);
-}
-
-
-/* ===== CORREZIONI LEGGIBILITÀ + STRIPING ===== */
-
-/* Modal su sfondo scuro -> testo chiaro */
-.modal{
-  background: linear-gradient(180deg, rgba(16,24,39,.98) 0%, rgba(12,19,34,.98) 100%);
-  color: #f3f6ff;
-}
-.modal .modal-title{ color:#f3f6ff; }
-.modal .modal-close{ color:#f3f6ff; }
-.modal .picker-box{
-  background: rgba(255,255,255,.06);
-  border-color: rgba(255,255,255,.14);
-}
-.modal .picker-item{
-  color:#f3f6ff;
-  border-color: rgba(255,255,255,.16);
-  background: rgba(255,255,255,.08);
-}
-.modal .picker-item:hover{ background: rgba(255,255,255,.12); }
-.modal .picker-item.selected{
-  border-color: rgba(16,185,129,.55);
-  background: rgba(16,185,129,.16);
-}
-
-/* Colonna ORARIO con colore dedicato */
-.cell.time{
-  background: #eef2ff !important;
-  color: #1f2a44 !important;
-  font-weight: 700;
-}
-
-/* Alternanza giorni (colonne) */
-.daycol-even{ background: rgba(37, 99, 235, .04); }
-.daycol-odd{ background: rgba(16, 185, 129, .04); }
-
-/* Header giorni più marcato, mantenendo alternanza */
-.cell.header.day-toggle.daycol-even{ background: rgba(37, 99, 235, .10) !important; }
-.cell.header.day-toggle.daycol-odd{ background: rgba(16, 185, 129, .10) !important; }
-
-/* Celle compilate sopra lo striping */
-.cell.slot.filled.daycol-even{ background: rgba(37, 99, 235, .10) !important; }
-.cell.slot.filled.daycol-odd{ background: rgba(16, 185, 129, .10) !important; }
-
-/* Fasce 08-16 e 16-24: colorazione leggermente diversa */
-.cell.time.toggle{
-  background: #a5b4fc !important;
-  color: #0f172a !important;
-  font-weight: 900;
-  box-shadow: inset 0 -1px 0 rgba(15,23,42,.12);
-}
-
-
-/* ===== MODAL CHIARO (picker + squadre) ===== */
-.modal{
-  background: var(--panel) !important;
-  color: var(--text) !important;
-}
-.modal .modal-title,
-.modal .modal-close{
-  color: var(--text) !important;
-}
-.modal .picker-box{
-  background: #f7f9ff !important;
-  border-color: var(--line) !important;
-}
-.modal .picker-item{
-  color: var(--text) !important;
-  border-color: rgba(11,18,32,.18) !important;
-  background: rgba(255,255,255,.75) !important;
-}
-.modal .picker-item:hover{ background: rgba(37,99,235,.08) !important; }
-.modal .picker-item.selected{
-  border-color: rgba(37,99,235,.35) !important;
-  background: rgba(37,99,235,.12) !important;
-}
-.squad-table th{ background: #eef2ff !important; color: var(--text) !important; }
-.squad-table td{ background: #ffffff !important; color: var(--text) !important; }
-.squad-input{
-  background: #f7f9ff !important;
-  color: var(--text) !important;
-  border-color: rgba(11,18,32,.18) !important;
-}
-
-
-/* ===== COLORI RUOLI (badge) ===== */
-.role-tag{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  border:1px solid rgba(11,18,32,.18);
-  font-weight: 800;
-}
-.badge-cassa{ background: rgba(245,158,11,.18) !important; border-color: rgba(245,158,11,.35) !important; }
-.badge-runner{ background: rgba(37,99,235,.18) !important; border-color: rgba(37,99,235,.35) !important; }
-.badge-bar{ background: rgba(16,185,129,.18) !important; border-color: rgba(16,185,129,.35) !important; }
-.badge-comande{ background: rgba(168,85,247,.18) !important; border-color: rgba(168,85,247,.35) !important; }
-.badge-accoglienza{ background: rgba(244,63,94,.18) !important; border-color: rgba(244,63,94,.35) !important; }
-.badge-jolly{ background: rgba(100,116,139,.18) !important; border-color: rgba(100,116,139,.35) !important; }
-
-.role-cassa{ background: rgba(245,158,11,.22) !important; }
-.role-runner{ background: rgba(37,99,235,.22) !important; }
-.role-bar{ background: rgba(16,185,129,.22) !important; }
-.role-comande{ background: rgba(168,85,247,.22) !important; }
-.role-accoglienza{ background: rgba(244,63,94,.22) !important; }
-.role-jolly{ background: rgba(100,116,139,.22) !important; }
-
-
-/* ===== COLORI GIORNI COERENTI SU TUTTA LA TABELLA ===== */
-.day-0{ background: rgba(16,185,129,.06); }   /* Lun */
-.day-1{ background: rgba(37,99,235,.06); }    /* Mar */
-.day-2{ background: rgba(245,158,11,.06); }   /* Mer */
-.day-3{ background: rgba(168,85,247,.06); }   /* Gio */
-.day-4{ background: rgba(244,63,94,.06); }    /* Ven */
-.day-5{ background: rgba(20,184,166,.06); }   /* Sab */
-.day-6{ background: rgba(100,116,139,.06); }  /* Dom */
-
-.cell.header.day-toggle.day-0{ background: rgba(16,185,129,.12) !important; }
-.cell.header.day-toggle.day-1{ background: rgba(37,99,235,.12) !important; }
-.cell.header.day-toggle.day-2{ background: rgba(245,158,11,.12) !important; }
-.cell.header.day-toggle.day-3{ background: rgba(168,85,247,.12) !important; }
-.cell.header.day-toggle.day-4{ background: rgba(244,63,94,.12) !important; }
-.cell.header.day-toggle.day-5{ background: rgba(20,184,166,.12) !important; }
-.cell.header.day-toggle.day-6{ background: rgba(100,116,139,.12) !important; }
-
-/* Celle compilate mantengono il colore giorno ma più evidente */
-.cell.slot.filled.day-0{ background: rgba(16,185,129,.12) !important; }
-.cell.slot.filled.day-1{ background: rgba(37,99,235,.12) !important; }
-.cell.slot.filled.day-2{ background: rgba(245,158,11,.12) !important; }
-.cell.slot.filled.day-3{ background: rgba(168,85,247,.12) !important; }
-.cell.slot.filled.day-4{ background: rgba(244,63,94,.12) !important; }
-.cell.slot.filled.day-5{ background: rgba(20,184,166,.12) !important; }
-.cell.slot.filled.day-6{ background: rgba(100,116,139,.12) !important; }
-
-/* legacy no-op */
-.daycol-even,.daycol-odd{ background: unset !important; }
-
-
-/* ===== FORZA COLORE GIORNO SU TUTTE LE RIGHE DEL GIORNO ===== */
-.cell.slot.day-0,.cell.header.day-0{ background: rgba(16,185,129,.06) !important; }
-.cell.slot.day-1,.cell.header.day-1{ background: rgba(37,99,235,.06) !important; }
-.cell.slot.day-2,.cell.header.day-2{ background: rgba(245,158,11,.06) !important; }
-.cell.slot.day-3,.cell.header.day-3{ background: rgba(168,85,247,.06) !important; }
-.cell.slot.day-4,.cell.header.day-4{ background: rgba(244,63,94,.06) !important; }
-.cell.slot.day-5,.cell.header.day-5{ background: rgba(20,184,166,.06) !important; }
-.cell.slot.day-6,.cell.header.day-6{ background: rgba(100,116,139,.06) !important; }
-
-/* base slot trasparente: il colore lo decide la colonna (giorno) */
-.cell.slot{ background: transparent !important; }
-
-/* celle vuote: trattino più leggibile */
-.cell.slot.empty{ color: rgba(11,18,32,.55); }
-
-
-/* ===== GRID CON POSIZIONAMENTO ESPLICITO + BLOCCHI (MERGE) ===== */
-.calendar-grid{
-  --rowH: 44px;
-  display: grid;
-  grid-auto-flow: dense;
-  align-items: stretch;
-}
-.cell.slot.block{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
+.csv-file-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 8px;
-  border-radius: 10px;
-  background: rgba(255,255,255,.55) !important;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
-.cell.slot.block.filled{
-  background: rgba(255,255,255,.82) !important;
-}
-.cell.slot.block:hover{
-  outline: 2px solid rgba(37,99,235,.25);
-  outline-offset: -2px;
-}
-.block .badge{ margin: 3px; }
-
-
-/* ===== BADGE VERTICALI NELLA CELLA (uno sotto l'altro) ===== */
-.cell.slot.filled{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:6px;
-}
-.cell.slot.filled .badge{
-  margin: 0 !important;
-}
-
-
-/* ===== FIX: PULSANTE RIAPRI SIDEBAR DIPENDENTI VISIBILE ===== */
-.rightbar.collapsed{ overflow: visible !important; }
-.rightbar.collapsed .right-acc{
-  display:flex !important;
-  align-items:center;
-  justify-content:center;
-  gap:0;
-  padding: 10px 8px;
-}
-.rightbar.collapsed .right-acc .acc-ico{
-  margin: 0 !important;
-}
-
-
-/* ===== SEPARAZIONE PIÙ NETTA TRA GIORNI ===== */
-.day-end{
-  border-right: 4px solid rgba(15, 23, 42, .16) !important;
-}
-.cell.header.day-end{
-  border-right: 4px solid rgba(15, 23, 42, .22) !important;
-}
-
-/* ===== SEARCH BAR PICKER ===== */
-.picker-search{
-  width: 100%;
-  margin: 8px 0 10px 0;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: #ffffff;
-  color: var(--text);
-  outline: none;
-}
-.picker-search:focus{
-  border-color: rgba(37,99,235,.45);
-  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
-}
-
-
-/* ===== BLOCCO VISIVO PER CELLE "MERGIATE" (stesso contenuto su righe consecutive) ===== */
-.cell.slot.filled.merged-start{
-  background: rgba(255,255,255,.86) !important;
-  border: 1px solid rgba(15, 23, 42, .18);
-  box-shadow: 0 1px 0 rgba(15,23,42,.06);
-  border-bottom: 0;
-  border-radius: 12px 12px 0 0;
-}
-.cell.slot.filled.merged-cont{
-  background: rgba(255,255,255,.86) !important;
-  border-left: 1px solid rgba(15, 23, 42, .18);
-  border-right: 1px solid rgba(15, 23, 42, .18);
-  border-bottom: 0;
-  border-top: 0;
-  border-radius: 0;
-}
-/* chiudi il blocco: quando la riga successiva non è continuation, la cella corrente (se filled) avrà border-bottom
-   -> lo facciamo via :not(.merged-cont) su quella dopo? non possibile. Compromesso: metto border-bottom su tutte le filled e poi lo tolgo su cont */
-.cell.slot.filled{
-  border: 1px solid rgba(15, 23, 42, .18);
-  border-radius: 12px;
-}
-.cell.slot.filled.merged-cont{
-  border-bottom: 0;
-}
-.cell.slot.filled.merged-start{
-  border-bottom: 0;
-}
-
-/* ===== FILLED PIÙ EVIDENTE (ma non troppo) ===== */
-.cell.slot.filled{
-  background: rgba(255,255,255,.82) !important;
-}
-.day-0.cell.slot.filled{ background: rgba(16,185,129,.16) !important; }
-.day-1.cell.slot.filled{ background: rgba(37,99,235,.16) !important; }
-.day-2.cell.slot.filled{ background: rgba(245,158,11,.16) !important; }
-.day-3.cell.slot.filled{ background: rgba(168,85,247,.16) !important; }
-.day-4.cell.slot.filled{ background: rgba(244,63,94,.16) !important; }
-.day-5.cell.slot.filled{ background: rgba(20,184,166,.16) !important; }
-.day-6.cell.slot.filled{ background: rgba(100,116,139,.16) !important; }
-/* ===== OVERRIDE: niente blu scuro su sticky ===== */
-.calendar-grid > .cell.header{
-  background: var(--panel2) !important;
-  color: var(--text) !important;
-  backdrop-filter: none !important;
-}
-
-.calendar-grid > .cell.time{
-  background: #eef2ff !important;
-  color: #1f2a44 !important;
-  backdrop-filter: none !important;
-}
-
-.calendar-grid > .cell.header:first-child{
-  background: var(--panel2) !important;
-  color: var(--text) !important;
-}
-/* ===== GIORNO COLLASSATO: COLONNA MICRO ===== */
-.cell.day-collapsed.micro{
-  padding: 0 !important;
-  justify-content: center !important;
-  align-items: center !important;
-  text-align: center;
-}
-
-.cell.header.micro-hdr{
-  padding: 0 !important;
-}
-
-/* puntino / trattino minimal */
-.micro-dot{
-  font-size: 18px;
-  line-height: 1;
-  opacity: .75;
-}
-.micro-dash{
-  font-size: 14px;
-  line-height: 1;
-  opacity: .35;
-}
-
-/* Evita che contenuti “lunghi” forzino larghezze */
-.cell.day-collapsed.micro *{
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: clip;
-  white-space: nowrap;
-}
-/* header giorno quando è collassato: 2 righe, centrato */
-.day-collapsed-hdr{
+.csv-empty-hint {
+  color: var(--muted);
   font-size: 12px;
-  line-height: 1.05;
-  padding: 6px 4px !important;
   text-align: center;
-  white-space: pre-line; /* permette \n */
+  padding: 20px 10px;
+  opacity: .7;
 }
-.micro-count{
-  font-weight: 700;
-  font-size: 14px;
-  opacity: .8;
+.csv-file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255,255,255,.03);
+  cursor: pointer;
+  transition: background .12s ease, border-color .12s ease;
 }
-/* ===== STICKY HEADERS CALENDARIO ===== */
+.csv-file-item:hover { background: rgba(106,166,255,.08); border-color: rgba(106,166,255,.25); }
+.csv-file-item.selected { background: rgba(37,99,235,.12); border-color: rgba(37,99,235,.40); }
+.csv-file-info { flex: 1; min-width: 0; }
+.csv-file-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.csv-file-meta { font-size: 10px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.csv-file-delete {
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .1s, color .1s;
+}
+.csv-file-delete:hover { background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.35); color: #ef4444; }
 
-/* Prima colonna (orari): sticky a sinistra */
-.calendar-grid .cell.time {
+/* ---------- AREA DESTRA ---------- */
+.home-right-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ---------- CALENDAR CARD ---------- */
+.calendar-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.03);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.calendar-head {
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.calendar-left { display: flex; align-items: center; gap: 12px; }
+.calendar-meta { color: var(--muted); font-size: 13px; }
+.week-nav { display: flex; gap: 6px; }
+
+/* ---------- LEGENDA RUOLI ---------- */
+.role-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,.02);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.role-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.role-legend-hint {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+  opacity: .6;
+  font-style: italic;
+}
+
+/* ---------- TIMELINE WRAP ---------- */
+.timeline-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 10px 12px;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(106,166,255,.35) transparent;
+}
+
+/* ---------- TIMELINE TABLE ---------- */
+.timeline-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: clamp(10px, 1.1vw, 13px); /* font fluido */
+  table-layout: fixed;
+  min-width: 480px;
+}
+
+/* Header giorno */
+.tl-th {
+  padding: 8px 6px;
+  background: #eef2ff;
+  border: 1px solid var(--line);
+  text-align: center;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  cursor: pointer;
+  transition: background .12s ease;
+  user-select: none;
+}
+.tl-th:hover { background: #dde6ff; }
+.tl-th-time {
+  width: 64px;
+  text-align: left;
+  cursor: default;
+  position: sticky;
+  left: 0;
+  z-index: 4;
+}
+.tl-th-time:hover { background: #eef2ff; }
+
+.tl-day-name { font-size: clamp(11px, 1vw, 13px); font-weight: 800; }
+.tl-day-date { font-size: clamp(9px, 0.85vw, 11px); color: var(--muted); margin-top: 2px; }
+
+/* Colori intestazioni giorni */
+.tl-th.day-col-0 { background: rgba(16,185,129,.14); }
+.tl-th.day-col-1 { background: rgba(37,99,235,.14); }
+.tl-th.day-col-2 { background: rgba(245,158,11,.14); }
+.tl-th.day-col-3 { background: rgba(168,85,247,.14); }
+.tl-th.day-col-4 { background: rgba(244,63,94,.14); }
+.tl-th.day-col-5 { background: rgba(20,184,166,.14); }
+.tl-th.day-col-6 { background: rgba(100,116,139,.14); }
+
+.tl-th.day-col-0:hover { background: rgba(16,185,129,.24); }
+.tl-th.day-col-1:hover { background: rgba(37,99,235,.24); }
+.tl-th.day-col-2:hover { background: rgba(245,158,11,.24); }
+.tl-th.day-col-3:hover { background: rgba(168,85,247,.24); }
+.tl-th.day-col-4:hover { background: rgba(244,63,94,.24); }
+.tl-th.day-col-5:hover { background: rgba(20,184,166,.24); }
+.tl-th.day-col-6:hover { background: rgba(100,116,139,.24); }
+
+/* Cella orario */
+.tl-time {
+  padding: 8px 8px;
+  font-size: clamp(10px, 0.9vw, 12px);
+  font-weight: 700;
+  color: var(--muted);
+  background: #f8f9fc;
+  border: 1px solid var(--line);
+  white-space: nowrap;
   position: sticky;
   left: 0;
   z-index: 2;
-  background: #f8f9fc;
 }
 
-/* Prima cella header (angolo): sticky in alto a sinistra */
-.calendar-grid .cell.header:first-child {
-  position: sticky;
-  top: 0;
-  left: 0;
-  z-index: 4;
-  background: #eef2ff;
+/* Celle corpo */
+.tl-cell {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  vertical-align: top;
+  cursor: pointer;
+  transition: filter .12s ease;
+  min-height: 40px;
+}
+.tl-cell:hover {
+  filter: brightness(.93);
+  outline: 2px solid rgba(37,99,235,.20);
+  outline-offset: -2px;
 }
 
-/* Header giorni (prima riga): sticky in alto */
-.calendar-grid .cell.header.day-toggle {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: #eef2ff;
+/* Colori leggeri per colonne */
+.tl-cell.day-col-0 { background: rgba(16,185,129,.04); }
+.tl-cell.day-col-1 { background: rgba(37,99,235,.04); }
+.tl-cell.day-col-2 { background: rgba(245,158,11,.04); }
+.tl-cell.day-col-3 { background: rgba(168,85,247,.04); }
+.tl-cell.day-col-4 { background: rgba(244,63,94,.04); }
+.tl-cell.day-col-5 { background: rgba(20,184,166,.04); }
+.tl-cell.day-col-6 { background: rgba(100,116,139,.04); }
+
+.tl-empty { opacity: .5; }
+.tl-empty-dash { font-size: 11px; color: var(--muted); }
+
+/* Gruppo ruolo nella cella */
+.tl-role-group {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 3px;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
-/* Header ruoli (seconda riga): sticky sotto i giorni */
-.calendar-grid .cell.header:not(.day-toggle):not(:first-child) {
-  position: sticky;
-  top: 38px;   /* altezza della prima riga header */
-  z-index: 3;
-  background: #e8ecf8;
+/* Pill ruolo */
+.tl-role-pill {
+  display: inline-block;
+  padding: 1px 4px;
+  border-radius: 5px;
+  font-size: clamp(9px, 0.8vw, 11px);
+  font-weight: 800;
+  flex-shrink: 0;
+  line-height: 1.4;
 }
+.tl-role-cassa       { background: rgba(245,158,11,.22);  border: 1px solid rgba(245,158,11,.35); }
+.tl-role-runner      { background: rgba(37,99,235,.22);   border: 1px solid rgba(37,99,235,.35);  }
+.tl-role-bar         { background: rgba(16,185,129,.22);  border: 1px solid rgba(16,185,129,.35); }
+.tl-role-comande     { background: rgba(168,85,247,.22);  border: 1px solid rgba(168,85,247,.35); }
+.tl-role-accoglienza { background: rgba(244,63,94,.22);   border: 1px solid rgba(244,63,94,.35);  }
+.tl-role-jolly       { background: rgba(100,116,139,.22); border: 1px solid rgba(100,116,139,.35);}
+
+/* Nomi dipendenti — fluidi, mai overflow */
+.tl-names {
+  font-size: clamp(9px, 0.9vw, 12px);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+/* ---------- PICKER: barra ruoli ---------- */
+.picker-role-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.picker-role-btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background .12s;
+}
+.picker-role-btn.active { background: rgba(37,99,235,.18); border-color: rgba(37,99,235,.45); }
+
+/* ---------- DAY SUMMARY BAR ---------- */
+.day-summary-card--bar { flex-shrink: 0; }
+.day-summary-card--bar .day-summary-body {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  padding: 0;
+  overflow-x: auto;
+}
+.ds-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-right: 1px solid var(--line);
+  min-width: 0;
+}
+.ds-item:last-child { border-right: none; }
+.ds-item--set { background: rgba(255,255,255,.04); }
+.ds-item-head { display: flex; align-items: baseline; gap: 5px; }
+.ds-item-day { font-weight: 800; font-size: 12px; }
+.ds-item-date { font-size: 10px; opacity: .55; }
+.ds-item-type { font-size: 11px; font-weight: 600; opacity: .80; }
+
+/* ---------- HOME HEADER ---------- */
+.home-header { flex-shrink: 0; }
+.home-page { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+
+/* ---------- MODAL OVERLAY (picker slot) ---------- */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+
+/* ---------- MODAL GENERICO ---------- */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(2,6,23,.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  z-index: 900;
+}
+.modal {
+  width: 100%;
+  max-width: 560px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(15,23,42,.16);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(15,23,42,.10);
+  background: #f8fafc;
+}
+.modal-title { font-weight: 900; font-size: 14px; }
+.modal-close {
+  border: 1px solid rgba(15,23,42,.16);
+  background: #fff;
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.modal-close:hover { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.30); }
+.modal-body { padding: 14px; overflow-y: auto; max-height: 60vh; }
+.modal-hint-text { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+.modal-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(15,23,42,.10);
+  background: #f8fafc;
+}
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(15,23,42,.10);
+  background: #f8fafc;
+}
+
+/* ---------- DAY MODAL legacy (classi rimosse, ora dm-card) ---------- */
+.day-modal-seg, .day-modal-seg-head, .day-modal-role-row,
+.day-modal-role-name, .day-modal-names, .day-modal-empty { display: none; }
+
+/* ---------- PICKER MODALE ---------- */
+.picker-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.picker-box { display: flex; flex-direction: column; gap: 8px; }
+.picker-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+.picker-search {
+  width: 100%; padding: 8px 10px;
+  border-radius: 10px; border: 1px solid var(--line);
+  background: #fff; color: var(--text); font-size: 13px; outline: none;
+}
+.picker-search:focus { border-color: rgba(37,99,235,.45); box-shadow: 0 0 0 3px rgba(37,99,235,.10); }
+.picker-list { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
+.picker-item {
+  padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
+  background: rgba(255,255,255,.04); cursor: pointer; font-size: 13px; transition: background .1s;
+}
+.picker-item:hover { background: rgba(37,99,235,.08); }
+.picker-item.selected { background: rgba(37,99,235,.14); border-color: rgba(37,99,235,.35); font-weight: 600; }
+
+/* ---------- QUICK ADD/DELETE FORM ---------- */
+.qa-modal { max-width: 560px; }
+.qa-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.quick-add-select {
+  width: 100%; height: 38px; padding: 0 10px;
+  border-radius: 10px; border: 1px solid var(--line);
+  background: #fff; font-size: 13px; color: var(--text);
+}
+.quick-add-select:focus { outline: none; border-color: rgba(37,99,235,.45); box-shadow: 0 0 0 3px rgba(37,99,235,.10); }
+
+/* ---------- QUICK DELETE LISTA ---------- */
+.qd-emp-list { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.qd-emp-list-title { font-size: 11px; font-weight: 700; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--line); background: #f8fafc; }
+.qd-emp-items { display: flex; flex-direction: column; max-height: 220px; overflow-y: auto; }
+.qd-emp-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-bottom: 1px solid var(--line);
+  cursor: pointer; transition: background .1s;
+}
+.qd-emp-row:last-child { border-bottom: none; }
+.qd-emp-row:hover { background: rgba(239,68,68,.05); }
+.qd-check { accent-color: var(--danger); }
+.qd-emp-name { font-size: 13px; font-weight: 600; flex: 1; }
+.qd-emp-roles { font-size: 11px; color: var(--muted); }
+.qd-no-emp { font-size: 12px; color: var(--muted); margin-top: 14px; text-align: center; padding: 10px; }
+
+/* ---------- BTN DANGER / PRIMARY ---------- */
+.btn-danger { background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.35); color: #dc2626; }
+.btn-danger:hover { background: rgba(239,68,68,.25); }
+.btn.primary { background: rgba(37,99,235,.18); border-color: rgba(37,99,235,.40); font-weight: 700; }
+.btn.primary:hover { background: rgba(37,99,235,.28); }
+
+/* ---------- FORM FIELD ---------- */
+.form-field label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; color: var(--muted); }
+.form-field input, .form-field select {
+  width: 100%; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid var(--line); background: #fff; font-size: 13px; color: var(--text); outline: none;
+}
+.form-field input:focus, .form-field select:focus { border-color: rgba(37,99,235,.45); box-shadow: 0 0 0 3px rgba(37,99,235,.10); }
+
+/* ---------- MODAL CARD (conferma eliminazione dipendente) ---------- */
+.modal-card { width: min(480px, calc(100vw - 40px)); background: #fff; border-radius: 16px; border: 1px solid rgba(15,23,42,.16); overflow: hidden; }
+.modal-hint { font-size: 13px; color: var(--muted); padding: 4px 0 8px; }
+
+/* ---------- SIDEBAR COLLAPSE ---------- */
+.sidebar.collapsed { width: 72px; padding: 12px 10px; }
+.sidebar.collapsed .brand-text, .sidebar.collapsed .nav-item,
+.sidebar.collapsed .chip, .sidebar.collapsed .sidebar-footer { display: none; }
+.sidebar.collapsed .accordion { justify-content: center; }
+.sidebar.collapsed .acc-txt { display: none; }
+.sidebar.collapsed .brand { justify-content: center; }
+.acc-ic { width: 24px; display: inline-flex; justify-content: center; }
+
+/* ---------- MODAL GIORNO: tema scuro, card per fascia ---------- */
+
+/* Il modal dettaglio giorno usa il tema scuro come slot-manage */
+#dayModalBackdrop .modal {
+  background: #111827 !important;
+  border-color: rgba(255,255,255,.10) !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,.6) !important;
+  max-width: 580px;
+}
+#dayModalBackdrop .modal-head {
+  background: rgba(255,255,255,.03) !important;
+  border-bottom-color: rgba(255,255,255,.08) !important;
+}
+#dayModalBackdrop .modal-title {
+  color: #f9fafb !important;
+  font-size: 15px;
+  font-weight: 600;
+}
+#dayModalBackdrop .modal-close {
+  background: rgba(255,255,255,.06) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  color: rgba(249,250,251,.50) !important;
+}
+#dayModalBackdrop .modal-close:hover {
+  background: rgba(239,68,68,.20) !important;
+  color: #f87171 !important;
+}
+#dayModalBackdrop .modal-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #111827;
+}
+
+/* Card per ogni fascia oraria */
+.dm-card {
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.04);
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.dm-card-ok {
+  border-color: rgba(52,211,153,.20);
+}
+.dm-card-missing {
+  border-color: rgba(248,113,113,.20);
+}
+
+/* Header card */
+.dm-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.03);
+}
+.dm-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+/* Pallino stato */
+.dm-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dm-dot-ok      { background: #34d399; box-shadow: 0 0 6px rgba(52,211,153,.50); }
+.dm-dot-bad     { background: #f87171; box-shadow: 0 0 6px rgba(248,113,113,.50); }
+.dm-dot-neutral { background: rgba(255,255,255,.20); }
+
+/* Label orario fascia */
+.dm-seg-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f9fafb;
+  letter-spacing: .2px;
+  white-space: nowrap;
+}
+
+/* Chips fabbisogno nell'header */
+.dm-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.dm-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.dm-chip-ok {
+  background: rgba(52,211,153,.12);
+  border-color: rgba(52,211,153,.25);
+  color: #34d399;
+}
+.dm-chip-bad {
+  background: rgba(248,113,113,.12);
+  border-color: rgba(248,113,113,.25);
+  color: #f87171;
+}
+
+/* Bottone Gestisci — ghost, secondario */
+.dm-manage-btn {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: transparent;
+  color: rgba(249,250,251,.55);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+  white-space: nowrap;
+}
+.dm-manage-btn:hover {
+  background: rgba(96,165,250,.15);
+  border-color: rgba(96,165,250,.35);
+  color: #93c5fd;
+}
+
+/* Corpo card: righe ruolo */
+.dm-card-body {
+  padding: 6px 0;
+}
+
+.dm-role-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  transition: background .1s;
+}
+.dm-role-row:last-child { border-bottom: none; }
+.dm-role-row:hover { background: rgba(255,255,255,.03); }
+
+/* Riga scoperta */
+.dm-role-row-missing { background: rgba(248,113,113,.04); }
+.dm-role-row-missing:hover { background: rgba(248,113,113,.07); }
+
+/* Badge ruolo (riuso sm-role-badge + sm-badge-* già definiti) */
+.dm-role-badge {
+  flex-shrink: 0;
+}
+
+.dm-role-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(249,250,251,.55);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.dm-role-names {
+  font-size: 13px;
+  color: #f9fafb;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dm-role-uncovered {
+  color: rgba(248,113,113,.70);
+  font-style: italic;
+  font-size: 12px;
+}
+
+.dm-empty {
+  padding: 12px 14px;
+  font-size: 12px;
+  color: rgba(249,250,251,.30);
+  font-style: italic;
+}
+
+/* ---------- MODAL GESTIONE TURNO — tema scuro, tabella compatta ---------- */
+
+/* Variabili locali scure per il modal */
+.slot-manage-modal {
+  --sm-bg:        #111827;
+  --sm-bg2:       rgba(255,255,255,.04);
+  --sm-bg3:       rgba(255,255,255,.07);
+  --sm-border:    rgba(255,255,255,.10);
+  --sm-text:      #f9fafb;
+  --sm-muted:     rgba(249,250,251,.50);
+  --sm-ok:        #34d399;
+  --sm-bad:       #f87171;
+  --sm-accent:    #60a5fa;
+
+  max-width: 640px;
+  width: 100%;
+  background: var(--sm-bg) !important;
+  border-color: var(--sm-border) !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,.6) !important;
+}
+
+/* Head scuro */
+.slot-manage-modal .modal-head {
+  background: rgba(255,255,255,.03) !important;
+  border-bottom-color: var(--sm-border) !important;
+}
+.slot-manage-modal .modal-title {
+  color: var(--sm-text) !important;
+  font-size: 14px;
+  font-weight: 600;
+}
+.slot-manage-modal .modal-close {
+  background: rgba(255,255,255,.06) !important;
+  border-color: var(--sm-border) !important;
+  color: var(--sm-muted) !important;
+}
+.slot-manage-modal .modal-close:hover {
+  background: rgba(239,68,68,.20) !important;
+  color: #f87171 !important;
+}
+
+/* Body */
+.slot-manage-body {
+  padding: 0;
+  overflow-y: auto;
+  max-height: 68vh;
+}
+
+/* Footer scuro */
+.slot-manage-modal .slot-manage-foot {
+  background: rgba(255,255,255,.03) !important;
+  border-top-color: var(--sm-border) !important;
+}
+
+/* ── TABELLA ── */
+.sm-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+.sm-table col.col-role   { width: 140px; }
+.sm-table col.col-chips  { width: auto;  }
+.sm-table col.col-count  { width: 52px;  }
+.sm-table col.col-action { width: 44px;  }
+
+.sm-table thead th {
+  padding: 8px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .3px;
+  color: rgba(249,250,251,.40);
+  background: rgba(255,255,255,.03);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.sm-table thead th:nth-child(3) { text-align: center; }
+.sm-table thead th:nth-child(4) { text-align: center; }
+
+/* Riga ruolo */
+.sm-tr {
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  transition: background .12s;
+}
+.sm-tr:last-child { border-bottom: none; }
+.sm-tr:hover { background: rgba(255,255,255,.04); }
+
+/* Riga scoperta: accento rosso sottile a sinistra + sfondo tenue */
+.sm-tr.sm-tr-missing {
+  background: rgba(239,68,68,.06);
+  box-shadow: inset 3px 0 0 rgba(239,68,68,.50);
+}
+.sm-tr.sm-tr-missing:hover { background: rgba(239,68,68,.10); }
+
+.sm-td-role   { padding: 11px 14px; vertical-align: middle; white-space: nowrap; }
+.sm-td-chips  { padding: 7px 10px;  vertical-align: middle; }
+.sm-td-count  { padding: 11px 8px;  text-align: center; vertical-align: middle; white-space: nowrap; font-size: 12px; font-weight: 600; }
+.sm-td-action { padding: 11px 10px; text-align: center; vertical-align: middle; }
+
+/* Cella ruolo */
+.sm-role-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sm-role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.sm-role-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #f9fafb;
+}
+
+/* Badge ruolo — leggermente più luminosi per il tema scuro */
+.sm-badge-cassa       { background: rgba(245,158,11,.25); color: #fcd34d; }
+.sm-badge-runner      { background: rgba(37,99,235,.28);  color: #93c5fd; }
+.sm-badge-bar         { background: rgba(16,185,129,.25); color: #6ee7b7; }
+.sm-badge-comande     { background: rgba(168,85,247,.25); color: #d8b4fe; }
+.sm-badge-accoglienza { background: rgba(244,63,94,.25);  color: #fca5a5; }
+.sm-badge-jolly       { background: rgba(100,116,139,.25);color: #cbd5e1; }
+
+/* Contatori */
+.sm-count-ok      { color: #34d399; }
+.sm-count-bad     { color: #f87171; }
+.sm-count-neutral { color: rgba(249,250,251,.35); }
+
+/* Chips dipendenti */
+.sm-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 28px;
+  align-items: center;
+}
+.sm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px 4px 10px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #f9fafb;
+  transition: background .1s;
+}
+.sm-chip:hover { background: rgba(255,255,255,.12); }
+
+.sm-chip-remove {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  color: rgba(249,250,251,.40);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  transition: color .1s;
+}
+.sm-chip-remove:hover { color: #f87171; }
+
+/* Placeholder nessuno */
+.sm-none-text {
+  font-size: 12px;
+  color: rgba(249,250,251,.25);
+}
+
+/* Bottone + */
+.sm-add-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.15);
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(249,250,251,.40);
+  font-size: 18px;
+  line-height: 1;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.sm-add-btn:hover {
+  background: rgba(96,165,250,.15);
+  border-color: rgba(96,165,250,.40);
+  color: #60a5fa;
+}
+
+/* Dropdown inline */
+.sm-tr-dropdown td {
+  padding: 8px 14px 12px;
+  background: rgba(37,99,235,.08);
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.sm-dropdown-label {
+  font-size: 11px;
+  color: rgba(249,250,251,.45);
+  margin-bottom: 5px;
+}
+.sm-dropdown-select {
+  width: 100%;
+  max-width: 380px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.06);
+  font-size: 12px;
+  color: #f9fafb;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .12s, box-shadow .12s;
+}
+.sm-dropdown-select option,
+.sm-dropdown-select optgroup {
+  background: #1f2937;
+  color: #f9fafb;
+}
+.sm-dropdown-select:focus {
+  border-color: rgba(96,165,250,.55);
+  box-shadow: 0 0 0 3px rgba(96,165,250,.15);
+}
+
+/* Riga disponibili — compatta, in fondo */
+.sm-available-bar {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 9px 14px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  background: rgba(255,255,255,.02);
+  font-size: 12px;
+}
+.sm-available-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(249,250,251,.35);
+  white-space: nowrap;
+  margin-right: 2px;
+}
+.sm-available-name  { color: #f9fafb; font-weight: 500; }
+.sm-available-range { color: rgba(249,250,251,.40); font-size: 11px; font-family: monospace; }
+.sm-available-sep   { color: rgba(255,255,255,.15); }
+
+/* ---------- LEGACY (mantenuto per compatibilità) ---------- */
+.calendar-grid { display: none; }

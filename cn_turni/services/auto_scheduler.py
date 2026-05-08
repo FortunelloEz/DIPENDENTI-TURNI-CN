@@ -71,34 +71,6 @@ def _best_skill_value(emp: Employee) -> int:
     vals = [_raw_skill(emp, r) for r in ROLES]
     return max(vals) if vals else 0
 
-"""
-def _candidate_priority(emp: Employee, role: str) -> tuple:
-    
-    Ordinamento migliore:
-    1) skill sul ruolo DESC
-    2) preferred role prima
-    3) meno alternative prima (specialista prima del jolly)
-    4) distacco tra ruolo corrente e seconda scelta DESC
-    5) nome per stabilità
-    
-    role_skill = _raw_skill(emp, role)
-    preferred = 1 if emp.preferred_role == role else 0
-
-    positive = sorted((_raw_skill(emp, r) for r in ROLES if _raw_skill(emp, r) > 0), reverse=True)
-    best = positive[0] if positive else 0
-    second = positive[1] if len(positive) > 1 else 0
-    gap = role_skill - second if role_skill == best else 0
-
-    return (
-        role_skill,               # più bravo su quel ruolo
-        preferred,                # preferred role
-        -_role_options_count(emp),# meno ruoli possibili = prima
-        gap,                      # specializzazione vera
-        -(emp.id or 0),           # stabilità deterministica
-    )
-"""
-#MODIFICA LOGICA CON SOMMA
-
 
 def _best_other_open_role_skill(emp: Employee, role: str, open_roles: List[str]) -> int:
     vals = [_raw_skill(emp, r) for r in open_roles if r != role]
@@ -135,7 +107,8 @@ def _candidate_priority(emp: Employee, role: str, open_roles: List[str]) -> tupl
         gap,
         -(emp.id or 0),
     )
-#MODIFICA LOGICA CON SOMMA
+
+
 def _day_labels(availability: dict, emp_name: str, iso_day: str) -> Optional[Set[str]]:
     """
     Ritorna il set di labels disponibili per quel giorno (mezz'ore),
@@ -168,20 +141,16 @@ def _allowed_by_profile(emp: Employee, slot: str) -> bool:
     return bool(emp.slot_evening)
 
 def _allowed_by_work_days(emp: Employee, day_index: int) -> bool:
-    """
-    Se work_days è configurato (es. "0,2,4" = Lun/Mer/Ven),
-    il dipendente è considerato SOLO in quei giorni.
-    Se work_days è vuoto/None -> nessun filtro (comportamento invariato).
-    day_index: 0=Lun … 6=Dom (come nel calendario)
-    """
     raw = (getattr(emp, "work_days", None) or "").strip()
     if not raw:
-        return True  # non configurato: nessun filtro
+        return True
     try:
         allowed = {int(x.strip()) for x in raw.split(",") if x.strip().isdigit()}
         return day_index in allowed
     except Exception:
         return True
+
+
 def _is_available_slot(
         availability: dict,
         emp: Employee,
@@ -191,25 +160,90 @@ def _is_available_slot(
 ) -> bool:
     labels = _day_labels(availability, emp.name, iso_day)
     if labels is None:
+        # Non nel CSV: disponibile solo se permanente
         is_perm = bool(emp.is_permanent) or (permanent_ids is not None and emp.id in permanent_ids)
         return is_perm
+    if not labels:
+        # Nel CSV ma con labels vuote = non disponibile
+        return False
     if slot == "morning":
         return _has_morning(labels)
     return _has_evening(labels)
 
 
-def _choose_slot_for_permanent(availability: dict, emp: Employee, iso_day: str) -> Optional[str]:
+def _is_available_any_slot(
+        availability: dict,
+        emp: Employee,
+        iso_day: str,
+        permanent_ids: Optional[Set[int]] = None,
+) -> bool:
+    """Vero se disponibile in almeno uno dei due slot."""
+    return (
+            _is_available_slot(availability, emp, iso_day, "morning", permanent_ids)
+            or _is_available_slot(availability, emp, iso_day, "evening", permanent_ids)
+    )
+
+
+def _slot_need_total(squads_need: dict, day: int, slot: str) -> int:
+    """Somma del fabbisogno di tutti i ruoli per un giorno+slot."""
+    return sum(
+        int((squads_need.get(day, {}).get(slot, {}) or {}).get(r, 0) or 0)
+        for r in ROLES
+    )
+
+
+def _slot_coverage_ratio(plan: Plan, squads_need: dict, day: int, slot: str) -> float:
+    """
+    Rapporto tra persone già assegnate e fabbisogno totale per giorno+slot.
+    0.0 = nessuno assegnato, 1.0 = pieno, >1.0 = sovrannumero.
+    Usato per bilanciare gli INDIFFERENTI verso lo slot più scoperto.
+    """
+    need = _slot_need_total(squads_need, day, slot)
+    if need == 0:
+        return 1.0  # nessuna necessità = non prioritario
+    assigned = sum(len(plan[day][slot].get(r, [])) for r in ROLES)
+    return assigned / need
+
+
+def _choose_slot_for_indifferent(
+        plan: Plan,
+        squads_need: dict,
+        emp: Employee,
+        day: int,
+) -> Optional[str]:
+    """
+    Per chi è INDIFFERENTE: assegna allo slot con copertura peggiore.
+    Rispetta comunque i vincoli di profilo (slot_morning/slot_evening).
+    """
+    can_morning = bool(emp.slot_morning)
+    can_evening = bool(emp.slot_evening)
+
+    if not can_morning and not can_evening:
+        return None
+
+    ratio_m = _slot_coverage_ratio(plan, squads_need, day, "morning") if can_morning else float("inf")
+    ratio_e = _slot_coverage_ratio(plan, squads_need, day, "evening") if can_evening else float("inf")
+
+    if can_morning and not can_evening:
+        return "morning"
+    if can_evening and not can_morning:
+        return "evening"
+
+    # Entrambi disponibili: sceglie lo slot più scoperto (ratio minore)
+    return "morning" if ratio_m <= ratio_e else "evening"
+
+
+def _choose_slot_for_permanent(availability: dict, emp: Employee, iso_day: str, plan: Plan = None, squads_need: dict = None, day: int = None) -> Optional[str]:
     """
     Sceglie lo slot per i permanenti:
     - Se nel CSV ha SOLO mattina => morning
     - Se nel CSV ha SOLO sera    => evening
-    - Se ha entrambe => morning (default)
+    - Se ha entrambe (indifferente) => slot più scoperto (se plan/squads_need disponibili), altrimenti morning
     - Se non è nel CSV => morning (default)
     Poi applica vincoli anagrafica (slot_morning/slot_evening).
     """
     labels = _day_labels(availability, emp.name, iso_day)
 
-    # default
     slot = "morning"
 
     if labels is not None:
@@ -219,21 +253,24 @@ def _choose_slot_for_permanent(availability: dict, emp: Employee, iso_day: str) 
             slot = "morning"
         elif he and not hm:
             slot = "evening"
-        else:
-            slot = "morning"
+        elif hm and he:
+            # Indifferente: usa il bilanciamento se abbiamo i dati
+            if plan is not None and squads_need is not None and day is not None:
+                balanced = _choose_slot_for_indifferent(plan, squads_need, emp, day)
+                if balanced:
+                    slot = balanced
+            else:
+                slot = "morning"
 
-    # rispetta profilo
+    # Rispetta profilo
     if slot == "morning" and not emp.slot_morning and emp.slot_evening:
         slot = "evening"
     if slot == "evening" and not emp.slot_evening and emp.slot_morning:
         slot = "morning"
 
-    # se non può fare nessuno dei due, scarta
     if not emp.slot_morning and not emp.slot_evening:
         return None
 
-    # se ha scelto uno slot che comunque non è disponibile (es: ha solo sera ma profilo solo mattina),
-    # allora scarta.
     if not _is_available_slot(availability, emp, iso_day, slot):
         return None
 
@@ -242,51 +279,48 @@ def _choose_slot_for_permanent(availability: dict, emp: Employee, iso_day: str) 
 
 def build_plan(
         *,
-        week_days_iso: List[str],  # len=7 iso dates
+        week_days_iso: List[str],
         employees: List[Employee],
         permanent_settings: List[PermanentSettings],
         availability: dict,
-        squads_need: dict,  # squads_need[day][slot][role] = int
+        squads_need: dict,
 ) -> Tuple[Plan, List[NeedDeficit]]:
-
 
     perm_map = {p.employee_id: p for p in permanent_settings}
     perm_ids = set(perm_map.keys())
 
-    # ✅ permanente se flag=1 O se ha settings in questa settimana
     permanents = [e for e in employees if e.is_permanent or e.id in perm_ids]
     temps = [e for e in employees if (not e.is_permanent) and (e.id not in perm_ids)]
-
-
 
     squads_need = {int(k): v for k, v in (squads_need or {}).items()}
 
     plan: Plan = {d: {"morning": {}, "evening": {}} for d in range(7)}
     deficits: List[NeedDeficit] = []
-    # ore assegnate per permanenti (slot = 8h)
+
     perm_hours: Dict[int, int] = {e.id: 0 for e in permanents}
     perm_targets: Dict[int, int] = {}
     perm_dayoff: Dict[int, Optional[int]] = {}
 
     perm_used_day: Dict[Tuple[int, int], bool] = {}
-    # Per i giorni 'INDIFFERENTE' impediamo doppio turno (mattina+sera)
-    indiff_used_day: Dict[Tuple[int, int], bool] = {}
-    # Stesso per determinati: traccia se usati in un qualsiasi slot del giorno
-    temp_used_day: Dict[Tuple[int, int], bool] = {}
+    # Traccia per gli INDIFFERENTI: usati in un certo slot di un certo giorno
+    # (non blocca doppio slot se hanno disponibilità esplicita per entrambi)
+    indiff_used_slot: Dict[Tuple[int, int, str], bool] = {}
+    # Determinati: traccia slot già usati (non giorno intero)
+    temp_used_slot: Dict[Tuple[int, int, str], bool] = {}
 
     for e in permanents:
         p = perm_map.get(e.id, PermanentSettings(e.id, None, 40))
         perm_targets[e.id] = int(p.target_hours or 40)
         perm_dayoff[e.id] = p.day_off
-    # ---- 1) permanenti coprono per primi il fabbisogno ----
+
+    # ── 1) PERMANENTI ──
     for d in range(7):
         iso = week_days_iso[d]
 
-        # Ordine slot guidato dal fabbisogno totale (metà giornata con più bisogno prima)
         slot_order = ["morning", "evening"]
         try:
             slot_order.sort(
-                key=lambda s: sum(int((squads_need.get(d, {}).get(s, {}) or {}).get(r, 0) or 0) for r in ROLES),
+                key=lambda s: _slot_need_total(squads_need, d, s),
                 reverse=True,
             )
         except Exception:
@@ -295,11 +329,10 @@ def build_plan(
         for slot in slot_order:
             need = squads_need.get(d, {}).get(slot, {})
 
-            # già usati nello slot (qualsiasi ruolo)
-            used = set()
+            used_this_slot = set()
             for r in ROLES:
                 for eid in plan[d][slot].get(r, []):
-                    used.add(eid)
+                    used_this_slot.add(eid)
 
             role_order = [r for r in ROLES if int(need.get(r, 0) or 0) > 0]
             role_order.sort(
@@ -311,7 +344,7 @@ def build_plan(
                         and _is_available_slot(availability, emp, iso, slot, perm_ids)
                         and perm_dayoff.get(emp.id) != d
                         and not perm_used_day.get((emp.id, d))
-                        and not (_is_indifferent_day(availability, emp.name, iso) and indiff_used_day.get((emp.id, d)))
+                        and not indiff_used_slot.get((emp.id, d, slot))
                         and (perm_hours.get(emp.id, 0) + 8 <= perm_targets.get(emp.id, 40))
                     ),
                     -int(need.get(r, 0) or 0)
@@ -328,16 +361,16 @@ def build_plan(
                 if missing <= 0:
                     continue
 
-                # candidati permanenti: disponibili + profilo slot + non day_off + non superare target
                 candidates: List[Employee] = []
                 for emp in permanents:
-                    if emp.id in used:
+                    if emp.id in used_this_slot:
                         continue
                     if perm_dayoff.get(emp.id) == d:
                         continue
                     if perm_used_day.get((emp.id, d)):
                         continue
-                    if _is_indifferent_day(availability, emp.name, iso) and indiff_used_day.get((emp.id, d)):
+                    # Blocca indifferenti già usati in questo stesso slot
+                    if _is_indifferent_day(availability, emp.name, iso) and indiff_used_slot.get((emp.id, d, slot)):
                         continue
                     if not _allowed_by_profile(emp, slot):
                         continue
@@ -345,11 +378,8 @@ def build_plan(
                         continue
                     if not _is_available_slot(availability, emp, iso, slot, perm_ids):
                         continue
-
-                    # 0 = NON può coprire quel ruolo
                     if not _can_cover_role(emp, role):
                         continue
-
                     if perm_hours.get(emp.id, 0) + 8 > perm_targets.get(emp.id, 40):
                         continue
 
@@ -367,21 +397,26 @@ def build_plan(
 
                 for emp in candidates[:missing]:
                     current.append(emp.id)
-                    used.add(emp.id)
+                    used_this_slot.add(emp.id)
 
                     if _is_indifferent_day(availability, emp.name, iso):
-                        indiff_used_day[(emp.id, d)] = True
+                        indiff_used_slot[(emp.id, d, slot)] = True
 
                     perm_hours[emp.id] = perm_hours.get(emp.id, 0) + 8
                     perm_used_day[(emp.id, d)] = True
-    # ---- determinati: riempiono fabbisogno per slot ----
+
+    # ── 2) DETERMINATI ──
+    # FIX: i determinati con disponibilità ESPLICITA per entrambi i slot
+    # possono lavorare in entrambi (es. 08-24). Non vengono bloccati sul giorno intero.
+    # Vengono bloccati solo sul singolo slot già usato (tramite temp_used_slot).
+    # Gli INDIFFERENTI (mode=indifferent) invece vengono assegnati a UN SOLO slot bilanciato.
     for d in range(7):
         iso = week_days_iso[d]
-        # Ordine slot guidato dal fabbisogno totale (metà giornata con più bisogno prima)
+
         slot_order = ["morning", "evening"]
         try:
             slot_order.sort(
-                key=lambda s: sum(int((squads_need.get(d, {}).get(s, {}) or {}).get(r, 0) or 0) for r in ROLES),
+                key=lambda s: _slot_need_total(squads_need, d, s),
                 reverse=True,
             )
         except Exception:
@@ -390,11 +425,10 @@ def build_plan(
         for slot in slot_order:
             need = squads_need.get(d, {}).get(slot, {})
 
-            # già usati nello slot (qualsiasi ruolo)
-            used = set()
+            used_this_slot = set()
             for r in ROLES:
                 for eid in plan[d][slot].get(r, []):
-                    used.add(eid)
+                    used_this_slot.add(eid)
 
             role_order = [r for r in ROLES if int(need.get(r, 0) or 0) > 0]
             role_order.sort(
@@ -404,10 +438,8 @@ def build_plan(
                         if _can_cover_role(emp, r)
                         and _allowed_by_profile(emp, slot)
                         and _is_available_slot(availability, emp, iso, slot, perm_ids)
-
-
-                        and not (_is_indifferent_day(availability, emp.name, iso) and indiff_used_day.get((emp.id, d)))
-
+                        and not temp_used_slot.get((emp.id, d, slot))
+                        and not (_is_indifferent_day(availability, emp.name, iso) and indiff_used_slot.get((emp.id, d, slot)))
                     ),
                     -int(need.get(r, 0) or 0)
                 )
@@ -425,12 +457,19 @@ def build_plan(
 
                 candidates: List[Employee] = []
                 for emp in temps:
-                    if emp.id in used:
+                    if emp.id in used_this_slot:
                         continue
-                    if temp_used_day.get((emp.id, d)):
+                    # Già usato in questo slot specifico
+                    if temp_used_slot.get((emp.id, d, slot)):
                         continue
-                    if _is_indifferent_day(availability, emp.name, iso) and indiff_used_day.get((emp.id, d)):
+                    # Indifferente già usato in questo slot
+                    if _is_indifferent_day(availability, emp.name, iso) and indiff_used_slot.get((emp.id, d, slot)):
                         continue
+                    # Indifferente: assegna solo allo slot bilanciato
+                    if _is_indifferent_day(availability, emp.name, iso):
+                        target_slot = _choose_slot_for_indifferent(plan, squads_need, emp, d)
+                        if target_slot != slot:
+                            continue
                     if not _allowed_by_profile(emp, slot):
                         continue
                     if not _allowed_by_work_days(emp, d):
@@ -453,10 +492,11 @@ def build_plan(
 
                 for emp in candidates[:missing]:
                     current.append(emp.id)
-                    used.add(emp.id)
-                    temp_used_day[(emp.id, d)] = True
+                    used_this_slot.add(emp.id)
+                    # Segna lo slot usato (NON il giorno intero per i non-indifferenti)
+                    temp_used_slot[(emp.id, d, slot)] = True
                     if _is_indifferent_day(availability, emp.name, iso):
-                        indiff_used_day[(emp.id, d)] = True
+                        indiff_used_slot[(emp.id, d, slot)] = True
 
                 if len(current) < required:
                     deficits.append(NeedDeficit(d, slot, role, required - len(current)))

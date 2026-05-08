@@ -1,7 +1,6 @@
 // =========================
 // Turni CN - DB ADAPTER (pywebview bridge + load/save)
-// File "db": solo pywebview bridge + persistenza.
-// Deve essere caricato PRIMA di app_core.js.
+// Deve essere caricato PRIMA di app.js.
 // =========================
 
 /* ---------- Safe bridge helpers ---------- */
@@ -19,7 +18,6 @@ async function apiCall(method, ...args){
 }
 
 /* ---------- Employees ---------- */
-// Popola la variabile globale `employees` (definita in app_core.js)
 async function loadEmployeesFromDb(){
   const rows = await apiCall("employees_list");
   if (!rows) { employees = []; return; }
@@ -35,10 +33,8 @@ async function loadEmployeesFromDb(){
 
 /* ---------- Week: overrides + squads ---------- */
 async function loadWeekFromDb(weekKey){
-  // OVERRIDES: lista di righe (day_index, role, time_label, employee_ids[])
   const ovs = await apiCall("overrides_get_week", weekKey);
 
-  // pulisco week corrente in memoria
   Array.from(assignments.keys()).forEach(k => { if (k.startsWith(weekKey + "|")) assignments.delete(k); });
 
   if (Array.isArray(ovs)){
@@ -51,7 +47,6 @@ async function loadWeekFromDb(weekKey){
     });
   }
 
-  // SQUADS: dict {"0":{morning:{},evening:{}}, ...}
   const sq = await apiCall("squads_get_week", weekKey);
   if (sq && typeof sq === "object"){
     const base = {};
@@ -69,13 +64,11 @@ async function loadWeekFromDb(weekKey){
 }
 
 /* ---------- Overrides SAVE helpers ---------- */
-// Salva 1 slot (mezz'ora) al DB: usa overrides_set_many con un item.
 async function saveSlotOverrideToDb(weekKey, dayIndex, role, timeLabel, ids){
   const items = [{ time_label: timeLabel, employee_ids: ids || [] }];
   await apiCall("overrides_set_many", weekKey, dayIndex, role, items);
 }
 
-// Utile se vuoi “salva tutto day+role” in futuro (non usato ora).
 async function saveDayRoleOverridesToDb(weekKey, dayIndex, role){
   const items = [];
   HALF_HOURS.forEach(t => {
@@ -129,4 +122,23 @@ async function squadsTemplateSave(name, payload){
 
 async function squadsTemplateGet(name){
   return await apiCall("squads_template_get", name);
+}
+
+/* ---------- Imported Files ---------- */
+async function importedFilesList(){
+  return await apiCall("imported_files_list") || [];
+}
+
+async function importedFilesAdd(filename, filePath, weekKey){
+  return await apiCall("imported_files_add", filename, filePath, weekKey);
+}
+async function importedFilesGetContent(fileId){
+  return await apiCall("imported_files_get_content", fileId);
+}
+async function importedFilesDelete(fileId){
+  return await apiCall("imported_files_delete", fileId);
+}
+
+async function importedFilesClear(){
+  return await apiCall("imported_files_clear");
 }

@@ -7,6 +7,7 @@ from cn_turni.db import Db, default_db_path, week_id_from_ui_weekkey
 from cn_turni.services.export_service import build_week_export
 from cn_turni.services.pdf_export import build_pdf_from_export
 import base64
+import os
 
 class Api:
     def __init__(self, db_path: Optional[str] = None):
@@ -164,3 +165,47 @@ class Api:
             f.write(pdf_bytes)
 
         return {"saved": True, "path": path}
+    # =========================
+    # Imported Files (lista CSV caricati)
+    # =========================
+    def imported_files_list(self) -> List[Dict[str, Any]]:
+        return self.db.imported_files_list()
+
+    def imported_files_open_dialog(self) -> dict:
+        """Apre il picker Windows e restituisce path + filename. Nessun salvataggio ancora."""
+        from tkinter import Tk, filedialog
+        root = Tk()
+        root.withdraw()
+        root.lift()
+        root.attributes("-topmost", True)
+        path = filedialog.askopenfilename(
+            title="Seleziona file CSV disponibilità",
+            filetypes=[("CSV files", "*.csv"), ("Tutti i file", "*.*")]
+        )
+        root.destroy()
+        if not path:
+            return {"ok": False, "cancelled": True}
+        import os
+        return {"ok": True, "path": path, "filename": os.path.basename(path)}
+
+    def imported_files_add(self, filename: str, file_path: str, week_key: str) -> int:
+        return self.db.imported_files_add(str(filename), str(file_path), str(week_key))
+
+    def imported_files_get_content(self, file_id: int) -> dict:
+        return self.db.imported_files_get_content(int(file_id))
+
+    def imported_files_delete(self, file_id) -> None:
+        self.db.imported_files_delete(int(file_id))
+
+    def imported_files_clear(self) -> None:
+        self.db.imported_files_clear()
+
+    def imported_files_read_path(self, file_path: str) -> dict:
+        """Legge il contenuto di un file CSV da path assoluto."""
+        if not os.path.isfile(file_path):
+            return {"ok": False, "error": f"File non trovato: {file_path}"}
+        try:
+            with open(file_path, "r", encoding="utf-8-sig") as f:
+                return {"ok": True, "csv_text": f.read()}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
