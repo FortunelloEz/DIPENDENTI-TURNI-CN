@@ -1,6 +1,7 @@
 # cn_turni/services/export_service.py
 from __future__ import annotations
 
+import json
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional
 
@@ -92,7 +93,6 @@ def build_week_export(db: Any, week_key: str) -> dict:
         if isinstance(eids, str):
             s = eids.strip()
             if s.startswith("["):
-                import json
                 eids = json.loads(s)
             elif s == "":
                 eids = []

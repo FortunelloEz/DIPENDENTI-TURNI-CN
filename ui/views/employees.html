@@ -2,57 +2,16 @@
     <div class="page-header">
         <h2>Dipendenti</h2>
         <div class="row gap">
+            <button id="btnEmpBulkSkill" class="btn btn-ghost">⚙ Aggiornamento massivo skill</button>
             <button id="btnEmpNew" class="btn primary">+ Aggiungi</button>
         </div>
     </div>
 
-    <div class="emp-panel emp-bulk-panel">
-        <div class="bulk-title">Aggiornamento massivo skill</div>
-
-        <div class="form-grid emp-bulk-grid">
-            <div class="form-field">
-                <label>Ruolo</label>
-                <select id="empBulkRole">
-                    <option value="Cassa">Cassa</option>
-                    <option value="Runner">Runner</option>
-                    <option value="Bar">Bar</option>
-                    <option value="Comande">Comande</option>
-                    <option value="Accoglienza">Accoglienza</option>
-                    <option value="Jolly">Jolly</option>
-                </select>
-            </div>
-
-            <div class="form-field">
-                <label>Valore</label>
-                <select id="empBulkValue">
-                    <option value="0">0</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                    <option value="6">6</option>
-                    <option value="7">7</option>
-                    <option value="8">8</option>
-                    <option value="9">9</option>
-                    <option value="10">10</option>
-                </select>
-            </div>
-
-            <div class="form-field bulk-action-field">
-                <label>&nbsp;</label>
-                <button id="btnEmpBulkApply" class="btn primary" type="button">
-                    Applica a tutti
-                </button>
-            </div>
-        </div>
-
-        <div class="bulk-hint">
-            Imposta lo stesso valore di skill per tutti i dipendenti sul ruolo selezionato.
-        </div>
-    </div>
-
     <div class="emp-panel">
+        <div class="emp-search-bar">
+            <input type="text" id="empSearch" class="emp-search-input"
+                   placeholder="Cerca dipendente per nome..." autocomplete="off" />
+        </div>
         <div class="table-wrap">
             <table class="table" id="empTable">
                 <thead>
@@ -70,6 +29,7 @@
     </div>
 </div>
 
+<!-- MODAL: Modifica / Nuovo dipendente -->
 <div class="modal-backdrop" id="empModalBackdrop" style="display:none">
     <div class="modal" style="max-width:760px">
         <div class="modal-head">
@@ -178,6 +138,7 @@
         </div>
     </div>
 </div>
+
 <!-- MODAL: Conferma eliminazione dipendente -->
 <div class="modal-backdrop hidden" id="empDeleteModal">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="empDeleteTitle">
@@ -196,6 +157,59 @@
         <div class="modal-actions">
             <button class="btn btn-ghost" id="empDeleteCancel">Annulla</button>
             <button class="btn btn-danger" id="empDeleteConfirm">Elimina</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODAL: Aggiornamento massivo skill -->
+<div class="modal-backdrop hidden" id="empBulkModal">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="empBulkTitle">
+
+        <div class="modal-head">
+            <div class="modal-title" id="empBulkTitle">Aggiornamento massivo skill</div>
+            <button class="modal-close" id="empBulkClose">✕</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="emp-bulk-modal-grid">
+                <div class="form-field">
+                    <label>Ruolo</label>
+                    <select id="empBulkRole">
+                        <option value="Cassa">Cassa</option>
+                        <option value="Runner">Runner</option>
+                        <option value="Bar">Bar</option>
+                        <option value="Comande">Comande</option>
+                        <option value="Accoglienza">Accoglienza</option>
+                        <option value="Jolly">Jolly</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Valore (0–10)</label>
+                    <select id="empBulkValue">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-hint" style="margin-top:12px">
+                Imposta lo stesso valore di skill per tutti i dipendenti sul ruolo selezionato.
+                Questa operazione sovrascrive i valori esistenti.
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-ghost" id="empBulkCancel">Annulla</button>
+            <button class="btn emp-btn-save-primary" id="btnEmpBulkApply">Applica a tutti</button>
         </div>
 
     </div>

@@ -160,13 +160,6 @@ class Db:
                 """
             )
             conn.execute("""
-                CREATE TABLE IF NOT EXISTS day_type_presets(
-                    name TEXT PRIMARY KEY,
-                    payload_json TEXT NOT NULL,
-                    updated_at TEXT
-                )
-            """)
-            conn.execute("""
                 CREATE TABLE IF NOT EXISTS day_type_assignments(
                     day_index INTEGER PRIMARY KEY,
                     type_name TEXT NOT NULL
@@ -330,7 +323,7 @@ class Db:
             aliases = (payload.get("aliases") or payload.get("alias") or "").strip()
             work_days = (payload.get("work_days") or "").strip()
             max_daily_hours = payload.get("max_daily_hours")
-            max_daily_hours = int(max_daily_hours) if max_daily_hours not in (None, "", "null") else None
+            max_daily_hours = float(max_daily_hours) if max_daily_hours not in (None, "", "null") else None
             conn.execute(
                 "UPDATE employees SET name=?, is_permanent=?, preferred_role=?, slot_morning=?, slot_evening=?, aliases=?, work_days=?, max_daily_hours=? WHERE id=?",
                 (name, is_perm, pref, slot_morning, slot_evening, aliases, work_days, max_daily_hours, emp_id),
@@ -496,10 +489,6 @@ class Db:
     def squads_template_delete(self, name: str) -> None:
         with self._connect() as conn:
             conn.execute("DELETE FROM squads_templates WHERE name=?", (name,))
-            try:
-                conn.execute("DELETE FROM squads_templates_required WHERE template_name=?", (name,))
-            except sqlite3.OperationalError:
-                pass
 
     def day_type_presets_get(self) -> dict:
         with self._connect() as conn:

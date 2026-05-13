@@ -291,6 +291,7 @@
    SEZIONE TIPI GIORNATA
    ========================= */
 .day-types-card {
+  flex: 0 0 auto;
   margin-top: 0;
 }
 
@@ -476,4 +477,30 @@
   background: rgba(37,99,235,.14) !important;
   border-color: rgba(37,99,235,.35) !important;
   font-weight: 700;
+}
+
+/* =========================
+   SQUADS PAGE — separazione sezioni senza sovrapposizione
+   La tabella fabbisogni occupa lo spazio rimasto, scorre internamente.
+   La sezione Tipi giornata rimane sempre visibile sotto.
+   ========================= */
+
+.squads-page {
+  overflow-y: auto;
+}
+
+.squads-page > .page-header {
+  flex-shrink: 0;
+}
+
+.squads-fabbisogni-card {
+  flex: 1;
+  min-height: 150px;
+  overflow: hidden;
+}
+
+.squads-fabbisogni-card .calendar-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }

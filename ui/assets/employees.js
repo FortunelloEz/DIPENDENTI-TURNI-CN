@@ -29,8 +29,10 @@
   function els() {
     return {
       btnNew: $("btnEmpNew"),
+      btnBulkSkill: $("btnEmpBulkSkill"),
       tbody: $("empTbody"),
       panel: q(".employees-page .emp-panel"),
+      empSearch: $("empSearch"),
 
       backdrop: $("empModalBackdrop"),
       title: $("empModalTitle"),
@@ -48,6 +50,9 @@
       workDaysGrid: $("empWorkDaysGrid"),
       inpMaxDailyHours: $("empMaxDailyHours"),
 
+      bulkModal: $("empBulkModal"),
+      btnBulkClose: $("empBulkClose"),
+      btnBulkCancel: $("empBulkCancel"),
       bulkRole: $("empBulkRole"),
       bulkValue: $("empBulkValue"),
       btnBulkApply: $("btnEmpBulkApply"),
@@ -295,6 +300,14 @@
     _editingId = null;
   }
 
+  function openBulkModal(E) {
+    if (E.bulkModal) E.bulkModal.classList.remove("hidden");
+  }
+
+  function closeBulkModal(E) {
+    if (E.bulkModal) E.bulkModal.classList.add("hidden");
+  }
+
   // ---- Render table ----
   function formatPermInfo(emp) {
     const days = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
@@ -402,7 +415,7 @@
 
     const list = (rows || [])
       .map(r => ({ ...r, label: r.name }))
-      .sort((a, b) => Number(b.id) - Number(a.id));
+      .sort((a, b) => a.name.localeCompare(b.name, "it", { sensitivity: "base" }));
 
     // --- aggiunta: carica giorno riposo + ore target per la settimana corrente ---
     try {
@@ -437,7 +450,16 @@
     }
 
     window.employees = list;
-    renderEmployeesTable(E, list);
+    renderFiltered(E);
+  }
+
+  function renderFiltered(E) {
+    const q = (E.empSearch?.value || "").trim().toLowerCase();
+    const list = window.employees || [];
+    const filtered = q
+      ? list.filter(e => e.name.toLowerCase().includes(q))
+      : list;
+    renderEmployeesTable(E, filtered);
   }
 
   async function onSave(E) {
@@ -510,6 +532,7 @@
 
         try {
           const res = await employeesBulkSetSkill(role, value);
+          closeBulkModal(E);
           await refreshEmployeesUI(E);
           showBanner(
             E,
@@ -538,8 +561,24 @@
       btnPermManage.onclick = () => openPermanentModal();
     }
 
+    if (E.btnBulkSkill) {
+      E.btnBulkSkill.onclick = () => openBulkModal(E);
+    }
     if (E.btnBulkApply) {
       E.btnBulkApply.onclick = async () => { await onBulkApply(E); };
+    }
+    if (E.btnBulkClose) {
+      E.btnBulkClose.onclick = () => closeBulkModal(E);
+    }
+    if (E.btnBulkCancel) {
+      E.btnBulkCancel.onclick = () => closeBulkModal(E);
+    }
+    if (E.bulkModal) {
+      E.bulkModal.onmousedown = (ev) => { if (ev.target === E.bulkModal) closeBulkModal(E); };
+    }
+
+    if (E.empSearch) {
+      E.empSearch.addEventListener("input", () => renderFiltered(E));
     }
 
     E.btnClose.onclick = () => closeEmpModal(E);
@@ -550,11 +589,7 @@
     renderSkillsGrid(E, {});
 
     // 2) Render immediato da window.employees (così non è mai vuoto)
-    if (Array.isArray(window.employees) && window.employees.length > 0) {
-      renderEmployeesTable(E, window.employees);
-    } else {
-      renderEmployeesTable(E, []);
-    }
+    renderFiltered(E);
 
     // 3) Refresh da DB (se fallisce, almeno vedi un errore in pagina)
     try {

@@ -15,7 +15,6 @@ async function loadView(route) {
   if (route === "employees") initEmployees();
   if (route === "squads") initSquadsPage();
   if (route === "export") {
-    console.log("[export] view loaded");
     window.initExportView?.();
   }
 }

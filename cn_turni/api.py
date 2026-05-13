@@ -6,6 +6,7 @@ from cn_turni.services.import_service import ImportService
 from cn_turni.db import Db, default_db_path, week_id_from_ui_weekkey
 from cn_turni.services.export_service import build_week_export
 from cn_turni.services.pdf_export import build_pdf_from_export
+from tkinter import Tk, filedialog
 import base64
 import os
 
@@ -42,7 +43,6 @@ class Api:
             resolutions: Optional[List[Dict[str, Any]]] = None,
             custom_resolutions: Optional[List[Dict[str, Any]]] = None,
     ):
-        week_id = week_id_from_ui_weekkey(week_key)
         return self.import_service.import_availability_and_autofill(
             week_key, csv_text, resolutions, custom_resolutions
         )
@@ -134,14 +134,9 @@ class Api:
     def export_week_pdf_base64(self, week_key: str):
         export = build_week_export(self.db, week_key)
         pdf_bytes = build_pdf_from_export(export)
-        import base64
         return base64.b64encode(pdf_bytes).decode("ascii")
 
     def export_week_pdf_save_dialog(self, week_key: str) -> dict:
-        from tkinter import Tk, filedialog
-        from cn_turni.services.export_service import build_week_export
-        from cn_turni.services.pdf_export import build_pdf_from_export
-
         export = build_week_export(self.db, week_key)
         pdf_bytes = build_pdf_from_export(export)
 
@@ -173,7 +168,6 @@ class Api:
 
     def imported_files_open_dialog(self) -> dict:
         """Apre il picker Windows e restituisce path + filename. Nessun salvataggio ancora."""
-        from tkinter import Tk, filedialog
         root = Tk()
         root.withdraw()
         root.lift()
@@ -185,7 +179,6 @@ class Api:
         root.destroy()
         if not path:
             return {"ok": False, "cancelled": True}
-        import os
         return {"ok": True, "path": path, "filename": os.path.basename(path)}
 
     def imported_files_add(self, filename: str, file_path: str, week_key: str) -> int:
@@ -194,7 +187,7 @@ class Api:
     def imported_files_get_content(self, file_id: int) -> dict:
         return self.db.imported_files_get_content(int(file_id))
 
-    def imported_files_delete(self, file_id) -> None:
+    def imported_files_delete(self, file_id: int) -> None:
         self.db.imported_files_delete(int(file_id))
 
     def imported_files_clear(self) -> None:
