@@ -180,10 +180,20 @@ class Db:
                     value TEXT NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS availability_cache (
+                    week_id       TEXT NOT NULL,
+                    employee_name TEXT NOT NULL,
+                    iso_date      TEXT NOT NULL,
+                    range_label   TEXT,
+                    raw_json      TEXT,
+                    PRIMARY KEY (week_id, employee_name, iso_date)
+                );
+
                 CREATE INDEX IF NOT EXISTS idx_override_week ON schedule_override(week_id);
                 CREATE INDEX IF NOT EXISTS idx_squads_week ON squads_required(week_id);
                 CREATE INDEX IF NOT EXISTS idx_perm_week ON permanent_week(week_id);
                 CREATE INDEX IF NOT EXISTS idx_imported_files_week ON imported_files(week_key);
+                CREATE INDEX IF NOT EXISTS idx_avail_week ON availability_cache(week_id);
                 """
             )
             conn.execute("""
@@ -261,13 +271,38 @@ class Db:
     def gemini_key_delete(self) -> None:
         self._setting_delete("gemini_api_key")
 
+    # ---------- Availability cache ----------
+    def availability_save(self, week_id: str, preview_json: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM availability_cache WHERE week_id=?", (week_id,))
+            conn.execute(
+                "INSERT INTO availability_cache(week_id, employee_name, iso_date, raw_json) "
+                "VALUES (?,?,?,?)",
+                (week_id, "_preview", week_id, str(preview_json)),
+            )
+
+    def availability_get(self, week_id: str) -> dict:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT raw_json FROM availability_cache "
+                "WHERE week_id=? AND employee_name='_preview'",
+                (week_id,),
+            ).fetchone()
+            if not row or not row["raw_json"]:
+                return {"ok": False}
+            return {"ok": True, "data": row["raw_json"]}
+
+    def availability_clear(self, week_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM availability_cache WHERE week_id=?", (week_id,))
+
     # ---------- Retention ----------
     def purge_old_weeks(self, months: int = 6) -> int:
         cutoff = date.today() - timedelta(days=int(30.5 * months))
         cutoff_iso = cutoff.isoformat()
         with self._connect() as conn:
             n = 0
-            for table in ("schedule_override", "squads_required", "permanent_week"):
+            for table in ("schedule_override", "squads_required", "permanent_week", "availability_cache"):
                 cur = conn.execute(f"SELECT COUNT(*) as n FROM {table} WHERE week_id < ?", (cutoff_iso,))
                 n += int(cur.fetchone()["n"])
                 conn.execute(f"DELETE FROM {table} WHERE week_id < ?", (cutoff_iso,))

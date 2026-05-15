@@ -33,11 +33,12 @@ async function loadEmployeesFromDb(){
 
 /* ---------- Week: overrides + squads ---------- */
 async function loadWeekFromDb(weekKey){
-  console.log(`[DB] loadWeekFromDb → ${weekKey}`);
+  console.log(`[DB] loadWeekFromDb -> ${weekKey}`);
 
-  const [ovs, sq] = await Promise.all([
+  const [ovs, sq, avail] = await Promise.all([
     apiCall("overrides_get_week", weekKey),
     apiCall("squads_get_week", weekKey),
+    apiCall("availability_get", weekKey),
   ]);
 
   Array.from(assignments.keys()).forEach(k => { if (k.startsWith(weekKey + "|")) assignments.delete(k); });
@@ -62,6 +63,10 @@ async function loadWeekFromDb(weekKey){
       base[Number(dayKey)] = sq[dayKey] || defaultSquadDay();
     });
     squads.set(weekKey, base);
+  }
+
+  if (avail?.ok && avail.data) {
+    try { window._lastAvailabilityPreview = JSON.parse(avail.data); } catch (_) {}
   }
 
   recalcSegmentsFromAssignments(weekKey);

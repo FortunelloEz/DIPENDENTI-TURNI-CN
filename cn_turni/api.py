@@ -61,6 +61,23 @@ class Api:
         self.db.settings_set(str(key), str(value))
         return {"ok": True}
 
+    # =========================
+    # Availability Cache
+    # =========================
+    def availability_save(self, week_key: str, preview_json: str) -> Dict[str, Any]:
+        week_id = week_id_from_ui_weekkey(week_key)
+        self.db.availability_save(week_id, str(preview_json))
+        return {"ok": True}
+
+    def availability_get(self, week_key: str) -> Dict[str, Any]:
+        week_id = week_id_from_ui_weekkey(week_key)
+        return self.db.availability_get(week_id)
+
+    def availability_clear(self, week_key: str) -> Dict[str, Any]:
+        week_id = week_id_from_ui_weekkey(week_key)
+        self.db.availability_clear(week_id)
+        return {"ok": True}
+
     def import_availability_and_autofill(
             self,
             week_key: str,

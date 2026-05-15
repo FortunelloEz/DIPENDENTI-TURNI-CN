@@ -50,7 +50,7 @@
                     </div>
                     <div class="calendar-right">
                         <button class="btn btn-small qi-open-btn" id="btnQuickInsert" title="Aggiungi un dipendente a un turno su più slot in una volta">➕ Aggiungi turno</button>
-                        <!--<button class="btn btn-small btn-ghost" id="btnQuickRemove" title="Rimuovi un dipendente da tutti gli slot di una fascia">➖ Rimuovi turno</button>-->
+                        <button class="btn btn-small btn-ghost" id="btnQuickRemove" title="Rimuovi un dipendente da tutti gli slot di una fascia">➖ Rimuovi turno</button>
                     </div>
                 </div>
 
@@ -248,6 +248,19 @@
                                 <span class="qi-shift-name">Entrambe</span>
                                 <span class="qi-shift-sub">tutto il giorno</span>
                             </button>
+                            <button class="qi-shift-btn" data-rmshift="custom" disabled>
+                                <span class="qi-shift-icon">🕐</span>
+                                <span class="qi-shift-name">Personalizzata</span>
+                                <span class="qi-shift-sub">orario libero</span>
+                            </button>
+                        </div>
+                        <div class="qi-custom-times" id="rmCustomTimes" style="display:none">
+                            <div class="qi-custom-row">
+                                <label class="qi-label-sm">Dalle</label>
+                                <select id="rmTimeStart" class="qi-select qi-select--time"></select>
+                                <label class="qi-label-sm">alle</label>
+                                <select id="rmTimeEnd" class="qi-select qi-select--time"></select>
+                            </div>
                         </div>
                     </div>
                 </div>

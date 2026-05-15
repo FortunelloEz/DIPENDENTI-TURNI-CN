@@ -8,7 +8,7 @@ from typing import Any, Optional
 import re
 
 from cn_turni.db import week_id_from_ui_weekkey
-from .auto_scheduler import Employee, PermanentSettings, build_plan
+from .auto_scheduler import Employee, PermanentSettings, BalanceWarning, build_plan, ROLES
 from .csv_availability import DayAvailability, norm_name, parse_availability_csv
 
 
@@ -335,12 +335,22 @@ class ImportService:
 
         # 9) squads need (USA week_id)
         squads_need = self.db.squads_week_get(week_id)
+        # FIX: il CSV può partire da martedì.
+        # Non schedulare giorni che non esistono nel CSV, altrimenti i permanenti
+        # vengono usati su giorni fantasma e consumano ore prima del weekend.
+        csv_days_set = set(all_days)
 
+        for i, iso_day in enumerate(week_days_iso):
+            if iso_day not in csv_days_set:
+                squads_need[i] = {
+                    "morning": {},
+                    "evening": {},
+                }
 
         # 8.5) remap availability keys (CSV nicknames/alias) -> canonical DB full-name keys
         availability_for_sched = self._remap_availability_to_canonical_keys(availability, emp_rows, name_to_id)
 
-        plan, deficits = build_plan(
+        plan, deficits, balance_warnings = build_plan(
             week_days_iso=week_days_iso,
             employees=employees,
             permanent_settings=perm_settings,
@@ -411,9 +421,119 @@ class ImportService:
                                 "time_label": t,
                                 "employee_ids": filtered,
                             })
+        # 10b) FIX: riempi buchi reali sulle singole mezz'ore.
+        # Lo scheduler lavora ancora su macro-slot morning/evening.
+        # Qui invece controlliamo ogni time_label reale: se manca qualcuno,
+        # scegliamo tra i disponibili in quella mezz'ora.
+        by_cell: dict[tuple[int, str, str], list[int]] = {}
+        busy_by_time: dict[tuple[int, str], set[int]] = {}
+        daily_halfhours: dict[tuple[int, int], int] = {}
 
+        for item in all_override_items:
+            d = int(item["day_index"])
+            role = str(item["role"])
+            t = str(item["time_label"])
+            ids = [int(x) for x in (item.get("employee_ids") or [])]
+
+            by_cell[(d, t, role)] = list(dict.fromkeys(ids))
+            busy_by_time.setdefault((d, t), set()).update(ids)
+
+            for eid in ids:
+                daily_halfhours[(eid, d)] = daily_halfhours.get((eid, d), 0) + 1
+
+        def _role_skill(emp: Employee, role_name: str) -> int:
+            return int((emp.skills or {}).get(role_name, 0) or 0)
+
+        def _can_use_on_time(emp: Employee, d: int, iso_day: str, slot_name: str, role_name: str, t: str) -> bool:
+            if _role_skill(emp, role_name) <= 0:
+                return False
+
+            if slot_name == "morning" and not emp.slot_morning:
+                return False
+            if slot_name == "evening" and not emp.slot_evening:
+                return False
+
+            if not self._is_available_label(
+                    availability_for_sched,
+                    emp.name,
+                    iso_day,
+                    t,
+                    emp.is_permanent or emp.id in perm_ids_set,
+            ):
+                return False
+
+            if emp.id in busy_by_time.get((d, t), set()):
+                return False
+
+            if emp.max_daily_hours is not None:
+                max_halfhours = round(float(emp.max_daily_hours) * 2)
+                if daily_halfhours.get((emp.id, d), 0) >= max_halfhours:
+                    return False
+
+            return True
+
+        def _candidate_score(emp: Employee, role_name: str, d: int) -> tuple:
+            return (
+                _role_skill(emp, role_name),
+                1 if emp.preferred_role == role_name else 0,
+                -daily_halfhours.get((emp.id, d), 0),
+                -(emp.id or 0),
+            )
+
+        for d, iso_day in enumerate(week_days_iso):
+            day_need = squads_need.get(d, {}) or {}
+
+            for slot_name, labels in {
+                "morning": MORNING_LABELS,
+                "evening": EVENING_LABELS,
+            }.items():
+                slot_need = day_need.get(slot_name, {}) or {}
+
+                for role in ROLES:
+                    required = int(slot_need.get(role, 0) or 0)
+                    if required <= 0:
+                        continue
+
+                    for t in labels:
+                        key = (d, t, role)
+                        current_ids = by_cell.setdefault(key, [])
+                        missing = required - len(current_ids)
+
+                        if missing <= 0:
+                            continue
+
+                        candidates = [
+                            emp for emp in employees
+                            if _can_use_on_time(emp, d, iso_day, slot_name, role, t)
+                        ]
+
+                        candidates.sort(
+                            key=lambda emp: _candidate_score(emp, role, d),
+                            reverse=True,
+                        )
+
+                        for emp in candidates[:missing]:
+                            current_ids.append(emp.id)
+                            busy_by_time.setdefault((d, t), set()).add(emp.id)
+                            daily_halfhours[(emp.id, d)] = daily_halfhours.get((emp.id, d), 0) + 1
+
+        all_override_items = [
+            {
+                "day_index": d,
+                "role": role,
+                "time_label": t,
+                "employee_ids": ids,
+            }
+            for (d, t, role), ids in by_cell.items()
+            if ids
+        ]
+        print("[CHECK FIX 10B] all_override_items prima del salvataggio:", len(all_override_items), flush=True)
+
+        for item in all_override_items:
+            if item["day_index"] == 2 and item["time_label"] in ("16:00", "16:30", "17:00", "17:30") and item["role"] == "Runner":
+                print("[CHECK RUNNER 16-18]", item, flush=True)
         saved_count = self.db.overrides_bulk_save(week_id, all_override_items)
-        print(f"[AutoSchedule] Salvati {saved_count} slot → week_id={week_id} (week_key={week_key})", flush=True)
+        print(f"[AutoSchedule] Salvati {saved_count} slot -> week_id={week_id} (week_key={week_key})", flush=True)
 
         availability_preview = self._build_availability_preview(
             availability=availability_for_sched,
@@ -425,6 +545,7 @@ class ImportService:
         return {
             "ok": True,
             "deficits": [asdict(d) for d in deficits],
+            "balance_warnings": [asdict(w) for w in balance_warnings],
             "week_key_used": week_key,
             "week_id_used": week_id,
             "availability_preview": availability_preview,

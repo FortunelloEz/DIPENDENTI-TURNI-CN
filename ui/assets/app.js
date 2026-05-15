@@ -1029,6 +1029,7 @@ async function initHome(){
   document.getElementById("btnPermManage")?.addEventListener("click", () => openPermanentModal?.());
 
   initQuickInsert();
+  initQuickRemove();
 
   document.getElementById("btnCopyPrevWeek")?.addEventListener("click", async () => {
     const prev = new Date(currentWeekStart);
@@ -1449,6 +1450,292 @@ function initQuickInsert() {
   document.getElementById("qiModalClose2")?.addEventListener("click", closeQiModal);
   backdrop.addEventListener("mousedown", e => { if (e.target === backdrop) closeQiModal(); });
   document.getElementById("qiModalSave")?.addEventListener("click", saveQiModal);
+}
+
+/* ---------- RIMOZIONE RAPIDA ---------- */
+function initQuickRemove() {
+  const rmBackdrop = document.getElementById("rmModalBackdrop");
+  if (!rmBackdrop) return;
+
+  let _rmShift = null;
+
+  /* -------- SELETTORI ORARIO PERSONALIZZATO -------- */
+  const rmStartSel = document.getElementById("rmTimeStart");
+  const rmEndSel   = document.getElementById("rmTimeEnd");
+  (() => {
+    const makeOpts = (sH, eH, closing) => {
+      const a = [];
+      for (let h = sH; h < eH; h++) { a.push(`${String(h).padStart(2,'0')}:00`); a.push(`${String(h).padStart(2,'0')}:30`); }
+      if (closing) a.push("24:00");
+      return a;
+    };
+    makeOpts(8, 24, false).forEach(t => { const o = document.createElement("option"); o.value = t; o.textContent = t; rmStartSel?.appendChild(o); });
+    makeOpts(8, 24, true).filter(t => t !== "08:00").forEach(t => { const o = document.createElement("option"); o.value = t; o.textContent = t; rmEndSel?.appendChild(o); });
+    if (rmStartSel) rmStartSel.value = "08:00";
+    if (rmEndSel)   rmEndSel.value   = "16:00";
+  })();
+
+  rmStartSel?.addEventListener("change", () => {
+    if (rmEndSel && parseFloat(rmStartSel.value) >= parseFloat(rmEndSel.value)) {
+      const idx = [...rmEndSel.options].findIndex(o => parseFloat(o.value) > parseFloat(rmStartSel.value));
+      if (idx >= 0) rmEndSel.selectedIndex = idx;
+    }
+  });
+
+  /* -------- STEP LOCK / UNLOCK -------- */
+  function _rmSetStep(n, locked) {
+    document.getElementById(`rmStep${n}`)?.classList.toggle("qi-step--locked", locked);
+    if (n === 2) { const el = document.getElementById("rmEmployee"); if (el) el.disabled = locked; }
+    if (n === 3) rmBackdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.disabled = locked; });
+  }
+
+  function _rmResetStep3() {
+    _rmShift = null;
+    document.getElementById("rmCustomTimes").style.display = "none";
+    document.getElementById("rmModalSave").disabled = true;
+    rmBackdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.classList.remove("active"); b.disabled = true; b.title = ""; });
+    _rmSetStep(3, true);
+  }
+
+  /* -------- EMPLOYEE DROPDOWN (solo chi ha slot nel giorno) -------- */
+  function _buildRmEmpDropdown(dayIdx) {
+    const sel = document.getElementById("rmEmployee");
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— seleziona dipendente —</option>';
+
+    const weekKey  = weekKeyOf(currentWeekStart);
+    const empSlots = new Map(); // empId -> { hasMorning, hasEvening, roles }
+
+    for (let h = 8; h < 24; h++) {
+      for (const m of ["00","30"]) {
+        const tl = `${String(h).padStart(2,'0')}:${m}`;
+        ROLES.forEach(role => {
+          (assignments.get(keyOf(weekKey, dayIdx, role, tl)) || []).forEach(id => {
+            const k = String(id);
+            if (!empSlots.has(k)) empSlots.set(k, { hasMorning: false, hasEvening: false, roles: new Set() });
+            const s = empSlots.get(k);
+            if (h < 16) s.hasMorning = true; else s.hasEvening = true;
+            s.roles.add(role);
+          });
+        });
+      }
+    }
+
+    if (empSlots.size === 0) {
+      const o = document.createElement("option");
+      o.disabled = true;
+      o.textContent = "Nessun dipendente in turno questo giorno";
+      sel.appendChild(o);
+      _rmSetStep(2, true);
+      return;
+    }
+
+    [...empSlots.entries()].forEach(([empId, info]) => {
+      const emp = (employees || []).find(e => String(e.id) === empId);
+      if (!emp) return;
+      const shifts = `${info.hasMorning ? "☀️" : ""}${info.hasEvening ? "🌙" : ""}`;
+      const opt = document.createElement("option");
+      opt.value = empId;
+      opt.textContent = `${emp.label}  ${shifts}  — ${[...info.roles].join(", ")}`;
+      sel.appendChild(opt);
+    });
+
+    _rmSetStep(2, false);
+  }
+
+  /* -------- EMP INFO (fasce e ruoli assegnati) -------- */
+  function _showRmEmpInfo(empId, dayIdx) {
+    const el = document.getElementById("rmEmpInfo");
+    if (!el) return;
+    if (!empId) { el.innerHTML = ""; return; }
+
+    const weekKey = weekKeyOf(currentWeekStart);
+    const mRoles  = new Set(), eRoles = new Set();
+
+    for (let h = 8; h < 24; h++) {
+      for (const m of ["00","30"]) {
+        const tl = `${String(h).padStart(2,'0')}:${m}`;
+        ROLES.forEach(role => {
+          const ids = assignments.get(keyOf(weekKey, dayIdx, role, tl)) || [];
+          if (ids.map(String).includes(String(empId)))
+            (h < 16 ? mRoles : eRoles).add(role);
+        });
+      }
+    }
+
+    const parts = [];
+    if (mRoles.size) parts.push(`<span class="qi-emp-detail-item">☀️ Mattina: ${[...mRoles].join(", ")}</span>`);
+    if (eRoles.size) parts.push(`<span class="qi-emp-detail-item">🌙 Pomeriggio: ${[...eRoles].join(", ")}</span>`);
+    el.innerHTML = `<div class="qi-emp-detail">${parts.join('<span class="qi-emp-detail-sep">·</span>')}</div>`;
+  }
+
+  /* -------- SHIFT BUTTONS (abilita solo le fasce presenti; custom sempre attivo) -------- */
+  function _rmSetupShiftBtns(empId, dayIdx) {
+    const weekKey = weekKeyOf(currentWeekStart);
+    let hasMorning = false, hasEvening = false;
+
+    for (let h = 8; h < 24; h++) {
+      for (const m of ["00","30"]) {
+        const tl = `${String(h).padStart(2,'0')}:${m}`;
+        ROLES.forEach(role => {
+          const ids = assignments.get(keyOf(weekKey, dayIdx, role, tl)) || [];
+          if (ids.map(String).includes(String(empId))) {
+            if (h < 16) hasMorning = true; else hasEvening = true;
+          }
+        });
+      }
+    }
+
+    rmBackdrop.querySelectorAll(".qi-shift-btn").forEach(b => {
+      b.disabled = false; b.classList.remove("active"); b.title = "";
+    });
+
+    const mBtn = rmBackdrop.querySelector('[data-rmshift="morning"]');
+    const eBtn = rmBackdrop.querySelector('[data-rmshift="evening"]');
+    const bBtn = rmBackdrop.querySelector('[data-rmshift="both"]');
+
+    if (!hasMorning) { mBtn.disabled = true; mBtn.title = "Nessun turno mattina"; }
+    if (!hasEvening) { eBtn.disabled = true; eBtn.title = "Nessun turno pomeriggio"; }
+    if (!(hasMorning && hasEvening)) { bBtn.disabled = true; bBtn.title = "Non presente in entrambe le fasce"; }
+    // custom sempre abilitato — l'utente può definire qualunque range
+
+    if (hasMorning && !hasEvening)      _rmSelectShift("morning");
+    else if (hasEvening && !hasMorning) _rmSelectShift("evening");
+  }
+
+  function _rmSelectShift(shift) {
+    rmBackdrop.querySelectorAll(".qi-shift-btn").forEach(b =>
+      b.classList.toggle("active", b.dataset.rmshift === shift)
+    );
+    _rmShift = shift;
+    document.getElementById("rmCustomTimes").style.display = shift === "custom" ? "block" : "none";
+    document.getElementById("rmModalSave").disabled = false;
+  }
+
+  /* -------- EVENTS -------- */
+  document.getElementById("rmDay")?.addEventListener("change", () => {
+    const dayIdx = parseInt(document.getElementById("rmDay").value);
+    document.getElementById("rmEmployee").value = "";
+    document.getElementById("rmEmpInfo").innerHTML = "";
+    _rmResetStep3();
+    _buildRmEmpDropdown(dayIdx);
+  });
+
+  document.getElementById("rmEmployee")?.addEventListener("change", () => {
+    const empId  = document.getElementById("rmEmployee").value;
+    const dayIdx = parseInt(document.getElementById("rmDay").value);
+    document.getElementById("rmEmpInfo").innerHTML = "";
+    _rmResetStep3();
+    if (!empId) return;
+    _showRmEmpInfo(empId, dayIdx);
+    _rmSetStep(3, false);
+    _rmSetupShiftBtns(empId, dayIdx);
+  });
+
+  rmBackdrop.querySelectorAll(".qi-shift-btn").forEach(btn => {
+    btn.addEventListener("click", () => { if (!btn.disabled) _rmSelectShift(btn.dataset.rmshift); });
+  });
+
+  /* -------- OPEN / CLOSE -------- */
+  function openRmModal() {
+    const today = new Date();
+    const dayEl = document.getElementById("rmDay");
+    if (dayEl && currentWeekStart) {
+      const diff = Math.floor((today - currentWeekStart) / 86400000);
+      dayEl.value = (diff >= 0 && diff <= 6) ? String(diff) : "0";
+    }
+    document.getElementById("rmEmployee").value = "";
+    document.getElementById("rmEmpInfo").innerHTML = "";
+    _rmResetStep3();
+    _buildRmEmpDropdown(parseInt(dayEl?.value ?? "0"));
+    rmBackdrop.style.display = "flex";
+  }
+
+  function closeRmModal() { rmBackdrop.style.display = "none"; }
+
+  /* -------- UTILITY -------- */
+  function _parseHalf(t) {
+    if (t === "24:00") return 24;
+    const [h, m] = t.split(":").map(Number);
+    return h + (m === 30 ? 0.5 : 0);
+  }
+  function _halfToLabel(v) {
+    if (v >= 24) return "ch";
+    return `${String(Math.floor(v)).padStart(2,'0')}:${v % 1 ? "30" : "00"}`;
+  }
+
+  /* -------- SAVE -------- */
+  async function saveRmModal() {
+    const empId  = document.getElementById("rmEmployee")?.value;
+    const dayIdx = parseInt(document.getElementById("rmDay")?.value ?? "0");
+    if (!empId || !_rmShift) return;
+
+    let shiftStart, shiftEnd, shiftLbl;
+    if (_rmShift === "morning")  { shiftStart = 8;  shiftEnd = 16; shiftLbl = "Mattina"; }
+    else if (_rmShift === "evening") { shiftStart = 16; shiftEnd = 24; shiftLbl = "Pomeriggio"; }
+    else if (_rmShift === "both") { shiftStart = 8;  shiftEnd = 24; shiftLbl = "tutto il giorno"; }
+    else if (_rmShift === "custom") {
+      shiftStart = _parseHalf(rmStartSel?.value || "08:00");
+      shiftEnd   = _parseHalf(rmEndSel?.value   || "16:00");
+      if (shiftStart >= shiftEnd) { showToast("L'ora di fine deve essere dopo l'inizio.", "err"); return; }
+      shiftLbl = `${_halfToLabel(shiftStart)}–${_halfToLabel(shiftEnd)}`;
+    }
+
+    const weekKey = weekKeyOf(currentWeekStart);
+    const saveBtn = document.getElementById("rmModalSave");
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Rimozione..."; }
+
+    try {
+      const ovList = await apiCall("overrides_get_week", weekKey) || [];
+
+      // Raggruppa override del giorno/fascia per ruolo (precisione mezz'ora)
+      const byRole = {};
+      ovList.filter(ov => {
+        if (ov.day_index !== dayIdx) return false;
+        const halfH = _parseHalf(ov.time_label || "0:00");
+        return halfH >= shiftStart && halfH < shiftEnd;
+      }).forEach(ov => {
+        if (!byRole[ov.role]) byRole[ov.role] = [];
+        byRole[ov.role].push(ov);
+      });
+
+      // Salva ogni ruolo con il dipendente rimosso
+      for (const [role, ovs] of Object.entries(byRole)) {
+        const items = ovs.map(ov => ({
+          time_label:   ov.time_label,
+          employee_ids: (ov.employee_ids || []).filter(id => String(id) !== String(empId))
+        }));
+        await apiCall("overrides_set_many", weekKey, dayIdx, role, items);
+        items.forEach(({ time_label, employee_ids }) => {
+          assignments.set(keyOf(weekKey, dayIdx, role, time_label), employee_ids);
+        });
+      }
+
+      recalcSegmentsFromAssignments(weekKey);
+      renderCalendar();
+      window.chatAiUpdateContext?.();
+
+      const empName = (employees || []).find(e => String(e.id) === String(empId))?.label || String(empId);
+      showToast(`✓ ${empName} rimosso — ${DAYS[dayIdx]} ${shiftLbl}`);
+
+      // Reset step 2+3, mantieni giorno per rimuovere altri
+      document.getElementById("rmEmployee").value = "";
+      document.getElementById("rmEmpInfo").innerHTML = "";
+      _rmResetStep3();
+      _buildRmEmpDropdown(dayIdx);
+
+    } catch (err) {
+      showToast("Errore: " + err.message, "err");
+    } finally {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "✕ Rimuovi"; }
+    }
+  }
+
+  document.getElementById("btnQuickRemove")?.addEventListener("click", openRmModal);
+  document.getElementById("rmModalClose")?.addEventListener("click", closeRmModal);
+  document.getElementById("rmModalClose2")?.addEventListener("click", closeRmModal);
+  rmBackdrop.addEventListener("mousedown", e => { if (e.target === rmBackdrop) closeRmModal(); });
+  document.getElementById("rmModalSave")?.addEventListener("click", saveRmModal);
 }
 
 /* ---------- NAV ---------- */
