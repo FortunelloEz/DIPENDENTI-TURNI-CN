@@ -17,6 +17,7 @@ async function loadView(route) {
   if (route === "export") {
     window.initExportView?.();
   }
+  if (route === "report") window.initReportPage?.();
 }
 
 /* ---------- ACCORDION UI ---------- */
@@ -149,10 +150,21 @@ let assignments = new Map();
 let weekSegments = new Map();
 let squads = new Map();
 let activeModalEl = null;
+let _escKeyHandler = null;
 
 function closeModal(){
+  if (_escKeyHandler) { document.removeEventListener("keydown", _escKeyHandler); _escKeyHandler = null; }
   activeModalEl?.remove();
   activeModalEl = null;
+}
+
+function showToast(msg, type = "ok") {
+  const t = document.createElement("div");
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add("toast-visible"));
+  setTimeout(() => { t.classList.remove("toast-visible"); setTimeout(() => t.remove(), 300); }, 2200);
 }
 
 /* ---------- ASSIGNMENTS HELPERS ---------- */
@@ -353,6 +365,12 @@ function renderCalendar(){
     const th = document.createElement("th");
     th.className = `tl-th tl-th-day day-col-${di}`;
     th.innerHTML = `<div class="tl-day-name">${day}</div><div class="tl-day-date">${formatDate(date)}</div>`;
+    // Dot copertura
+    const tl = computeDayTrafficLight(weekKey, di);
+    const dot = document.createElement("span");
+    dot.className = `day-cov-dot day-cov-dot--${tl.color}`;
+    dot.title = tl.tooltip;
+    th.appendChild(dot);
     th.title = "Clicca per vedere il dettaglio del giorno";
     th.style.cursor = "pointer";
     th.addEventListener("click", () => openDayModal(di));
@@ -598,6 +616,8 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels }) {
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   activeModalEl = overlay;
+  _escKeyHandler = (e) => { if (e.key === "Escape") closeModal(); };
+  document.addEventListener("keydown", _escKeyHandler);
 
   const localAssigned = {};
   ROLES.forEach(role => {
@@ -607,6 +627,33 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels }) {
   });
 
   let openDropdownRole = null;
+
+  function getAssignedElsewhere() {
+    const elsewhere = new Set();
+    computeTimeSegments(weekKey).forEach(otherSeg => {
+      if (otherSeg.id === seg.id) return;
+      const otherLabels = segmentToSlots(otherSeg);
+      ROLES.forEach(r => unionAssignedOverLabels(weekKey, dayIndex, r, otherLabels).forEach(id => elsewhere.add(String(id))));
+    });
+    return elsewhere;
+  }
+
+  function quickAddEmployee(empId) {
+    const deficit = getSquadDeficitForSlot(weekKey, dayIndex, seg);
+    const missingRoles = ROLES.filter(r => {
+      const d = deficit[r];
+      return d && d.required > 0 && (localAssigned[r].size < d.required) && !localAssigned[r].has(empId);
+    });
+    if (missingRoles.length === 1) {
+      localAssigned[missingRoles[0]].add(empId);
+      openDropdownRole = null;
+    } else {
+      openDropdownRole = missingRoles.length > 1
+        ? missingRoles[0]
+        : (ROLES.find(r => !localAssigned[r].has(empId)) || ROLES[0]);
+    }
+    renderBody();
+  }
 
   function renderBody() {
     body.innerHTML = "";
@@ -631,8 +678,8 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels }) {
     ROLES.forEach(role => {
       const d           = deficit[role];
       const hasNeed     = d && d.required > 0;
-      const isMissing   = hasNeed && d.deficit > 0;
       const assignedIds = Array.from(localAssigned[role]);
+      const isMissing   = hasNeed && (assignedIds.length < d.required);
 
       // Riga ruolo
       const tr = document.createElement("tr");
@@ -708,30 +755,41 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels }) {
         sel.className = "sm-dropdown-select";
         sel.innerHTML = `<option value="">— Seleziona dipendente —</option>`;
 
-        const avForRole = available.filter(av => av.empId && !localAssigned[role].has(String(av.empId)));
+        const assignedElsewhere = getAssignedElsewhere();
+        const avForRole = available
+          .filter(av => av.empId && !localAssigned[role].has(String(av.empId)))
+          .map(av => {
+            const emp = employees.find(e => String(e.id) === String(av.empId));
+            return { ...av, skill: Number(emp?.skills?.[role] || 0) };
+          })
+          .sort((a, b) => b.skill - a.skill);
+
         if (avForRole.length > 0) {
           const grp = document.createElement("optgroup");
           grp.label = "Disponibili in questo slot";
           avForRole.forEach(av => {
             const opt = document.createElement("option");
             opt.value = av.empId;
-            opt.textContent = `${av.name}  (${av.range})`;
+            const alreadyStr = assignedElsewhere.has(String(av.empId)) ? " · già in turno" : "";
+            opt.textContent = `${av.name}  (${av.range})${alreadyStr}  ★${av.skill}`;
             grp.appendChild(opt);
           });
           sel.appendChild(grp);
         }
 
-        const others = employees.filter(e =>
-          !localAssigned[role].has(String(e.id)) &&
-          !avForRole.find(av => String(av.empId) === String(e.id))
-        );
+        const others = employees
+          .filter(e => !localAssigned[role].has(String(e.id)) && !avForRole.find(av => String(av.empId) === String(e.id)))
+          .map(e => ({ ...e, skill: Number(e.skills?.[role] || 0) }))
+          .sort((a, b) => b.skill - a.skill);
+
         if (others.length > 0) {
           const grp = document.createElement("optgroup");
           grp.label = "Altri dipendenti";
           others.forEach(e => {
             const opt = document.createElement("option");
             opt.value = e.id;
-            opt.textContent = e.label;
+            const alreadyStr = assignedElsewhere.has(String(e.id)) ? " · già in turno" : "";
+            opt.textContent = `${e.label}${alreadyStr}  ★${e.skill}`;
             grp.appendChild(opt);
           });
           sel.appendChild(grp);
@@ -754,17 +812,20 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels }) {
     table.appendChild(tbody);
     body.appendChild(table);
 
-    // Disponibili non inseriti — riga compatta in fondo
+    // Disponibili non inseriti — cliccabili per aggiunta rapida
     const notInserted = available.filter(av => av.empId && !allInserted.has(String(av.empId)));
     if (notInserted.length > 0) {
       const bar = document.createElement("div");
       bar.className = "sm-available-bar";
-      bar.innerHTML = `<span class="sm-available-label">Disponibili non assegnati</span>`;
+      bar.innerHTML = `<span class="sm-available-label">Disponibili liberi</span>`;
       notInserted.forEach((av, i) => {
         if (i > 0) { const sep = document.createElement("span"); sep.className = "sm-available-sep"; sep.textContent = "·"; bar.appendChild(sep); }
-        const span = document.createElement("span");
-        span.innerHTML = `<span class="sm-available-name">${av.name}</span> <span class="sm-available-range">${av.range}</span>`;
-        bar.appendChild(span);
+        const btn = document.createElement("button");
+        btn.className = "sm-available-quick-btn";
+        btn.title = `Aggiungi ${av.name} al turno`;
+        btn.innerHTML = `${av.name} <span class="sm-available-range">${av.range}</span>`;
+        btn.addEventListener("click", () => quickAddEmployee(String(av.empId)));
+        bar.appendChild(btn);
       });
       body.appendChild(bar);
     }
@@ -784,16 +845,26 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels }) {
     btnSave.addEventListener("click", async () => {
       btnSave.disabled = true;
       btnSave.textContent = "Salvataggio...";
-      for (const role of ROLES) {
-        const idsArr = Array.from(localAssigned[role]).map(Number).filter(Boolean);
-        for (const t of timeLabels) {
-          setAssignedIdsFor(weekKey, dayIndex, role, t, idsArr);
-          await saveSlotOverrideToDb(weekKey, dayIndex, role, t, idsArr);
+      try {
+        const roleIds = {};
+        for (const role of ROLES) {
+          const idsArr = Array.from(localAssigned[role]).map(Number).filter(Boolean);
+          roleIds[role] = idsArr;
+          for (const t of timeLabels) {
+            setAssignedIdsFor(weekKey, dayIndex, role, t, idsArr);
+          }
         }
+        await apiCall("overrides_save_slot", weekKey, dayIndex, timeLabels, roleIds);
+        recalcSegmentsFromAssignments(weekKey);
+        closeModal();
+        renderCalendar();
+        window.chatAiUpdateContext?.();
+        showToast("Turno salvato");
+      } catch (err) {
+        btnSave.disabled = false;
+        btnSave.textContent = "Salva turno";
+        showToast("Errore nel salvataggio", "err");
       }
-      recalcSegmentsFromAssignments(weekKey);
-      closeModal();
-      renderCalendar();
     });
     foot.appendChild(btnCancel);
     foot.appendChild(btnSave);
@@ -817,13 +888,58 @@ function getWeekSquad(weekKey){
   return squads.get(weekKey);
 }
 
+/* ---------- COPERTURA GIORNO (semaforo colonna calendario) ---------- */
+function computeDayTrafficLight(weekKey, dayIndex) {
+  const squadData = squads.get(weekKey);
+  if (!squadData) return { color: "neutral", tooltip: "Nessun fabbisogno" };
+
+  const daySquad = squadData[dayIndex] || { morning: {}, evening: {} };
+  let totalRequired = 0, totalCovered = 0;
+  const missing = [];
+
+  for (const shift of ["morning", "evening"]) {
+    const shiftNeeded = daySquad[shift] || {};
+    const shiftLabels = HALF_HOURS.filter(t => {
+      const h = parseInt(t.split(":")[0]);
+      return shift === "morning" ? h < 16 : h >= 16;
+    });
+    ROLES.forEach(role => {
+      const req = parseInt(shiftNeeded[role] || 0);
+      if (req <= 0) return;
+      totalRequired += req;
+      const assigned = unionAssignedOverLabels(weekKey, dayIndex, role, shiftLabels).length;
+      const covered = Math.min(assigned, req);
+      totalCovered += covered;
+      if (covered < req) missing.push(`${role} ${covered}/${req}`);
+    });
+  }
+
+  if (totalRequired === 0) return { color: "neutral", tooltip: "Nessun fabbisogno" };
+  const ratio = totalCovered / totalRequired;
+  const pct = Math.round(ratio * 100);
+  const color = ratio >= 0.9 ? "green" : ratio >= 0.5 ? "yellow" : "red";
+  const tooltip = missing.length
+    ? `Copertura: ${pct}%\nScoperti: ${missing.join(", ")}`
+    : `Copertura: ${pct}% — tutto ok`;
+  return { color, tooltip };
+}
+
 /* ---------- INIT HOME ---------- */
 async function initHome(){
   initAccordions();
 
-  if (!currentWeekStart) currentWeekStart = getNextWeekMonday(new Date());
+  if (!currentWeekStart) {
+    let saved = localStorage.getItem('lastWeekKey');
+    if (!saved) {
+      saved = await apiCall('settings_get', 'lastWeekKey');
+    }
+    currentWeekStart = saved ? mondayDateFromWeekKey(saved) : getNextWeekMonday(new Date());
+    console.log(`[Boot] settimana ripristinata: ${saved || 'default (prossimo lunedì)'}`);
+  }
   const wk = weekKeyOf(currentWeekStart);
   window.currentWeekKey = wk;
+  localStorage.setItem('lastWeekKey', wk);
+  apiCall('settings_set', 'lastWeekKey', wk);
 
   await retryUntil(
     async () => { await loadEmployeesFromDb(); },
@@ -836,6 +952,7 @@ async function initHome(){
   renderEmployees();
   renderWeekLabel();
   renderCalendar();
+  window.chatAiUpdateContext?.();
   renderDaySummary();
 
   await window.renderCsvFilePanel?.();
@@ -868,25 +985,36 @@ async function initHome(){
   document.getElementById("dayModalBackdrop")?.addEventListener("mousedown", (e) => {
     if (e.target === document.getElementById("dayModalBackdrop")) closeDayModal();
   });
+  if (!window._dayModalEscBound) {
+    window._dayModalEscBound = true;
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape" || activeModalEl) return;
+      const bd = document.getElementById("dayModalBackdrop");
+      if (bd && bd.style.display !== "none") closeDayModal();
+    });
+  }
 
   // Navigazione settimana
   const navWeek = async (delta) => {
     currentWeekStart.setDate(currentWeekStart.getDate() + delta);
     const wk2 = weekKeyOf(currentWeekStart);
     window.currentWeekKey = wk2;
+    localStorage.setItem('lastWeekKey', wk2);
+    apiCall('settings_set', 'lastWeekKey', wk2);
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
+    window.chatAiUpdateContext?.();
     await renderDaySummary();
   };
   document.getElementById("btnPrevWeek")?.addEventListener("click", () => navWeek(-7));
   document.getElementById("btnNextWeek")?.addEventListener("click", () => navWeek(+7));
   document.getElementById("btnToday")?.addEventListener("click", async () => {
-    currentWeekStart = getNextWeekMonday(new Date());
+    currentWeekStart = getMondayOfCurrentWeek(new Date());
     await navWeek(0);
   });
   document.getElementById("btnTodayTop")?.addEventListener("click", async () => {
-    currentWeekStart = getNextWeekMonday(new Date());
+    currentWeekStart = getMondayOfCurrentWeek(new Date());
     await navWeek(0);
   });
   document.getElementById("btnClear")?.addEventListener("click", async () => {
@@ -895,9 +1023,432 @@ async function initHome(){
     await clearWeekOverridesOnDb(wk2);
     recalcSegmentsFromAssignments(wk2);
     renderCalendar();
+    window.chatAiUpdateContext?.();
     await renderDaySummary();
   });
   document.getElementById("btnPermManage")?.addEventListener("click", () => openPermanentModal?.());
+
+  initQuickInsert();
+
+  document.getElementById("btnCopyPrevWeek")?.addEventListener("click", async () => {
+    const prev = new Date(currentWeekStart);
+    prev.setDate(prev.getDate() - 7);
+    const prevKey = weekKeyOf(prev);
+    const curKey = weekKeyOf(currentWeekStart);
+    if (!confirm(`Copiare i turni della settimana ${prevKey} su ${curKey}?\nI turni esistenti verranno sovrascritti.`)) return;
+    const res = await apiCall("overrides_copy_week", prevKey, curKey);
+    if (res?.ok) {
+      await loadWeekFromDb(curKey);
+      renderCalendar();
+      window.chatAiUpdateContext?.();
+      showToast(`Copiati ${res.copied} slot dalla settimana precedente`);
+    } else {
+      showToast("Errore nella copia", "err");
+    }
+  });
+}
+
+/* ---------- INSERIMENTO RAPIDO ---------- */
+function initQuickInsert() {
+  const backdrop = document.getElementById("qiModalBackdrop");
+  if (!backdrop) return;
+
+  // Popola select orari personalizzati una volta sola
+  function _buildTimeOpts(startH, endH, includeClosing) {
+    const opts = [];
+    for (let h = startH; h < endH; h++) {
+      opts.push(`${String(h).padStart(2,'0')}:00`);
+      opts.push(`${String(h).padStart(2,'0')}:30`);
+    }
+    if (includeClosing) opts.push("24:00");
+    return opts;
+  }
+  const startSel = document.getElementById("qiTimeStart");
+  const endSel   = document.getElementById("qiTimeEnd");
+  _buildTimeOpts(8, 24, false).forEach(t => {
+    const o = document.createElement("option"); o.value = t; o.textContent = t;
+    startSel?.appendChild(o);
+  });
+  _buildTimeOpts(8, 24, true).filter(t => t !== "08:00").forEach(t => {
+    const o = document.createElement("option"); o.value = t; o.textContent = t;
+    endSel?.appendChild(o);
+  });
+  if (startSel) startSel.value = "08:00";
+  if (endSel)   endSel.value   = "16:00";
+
+  let _qiShift = null;
+
+  /* -------- STEP LOCK / UNLOCK -------- */
+  function _setStep(n, locked) {
+    document.getElementById(`qiStep${n}`)?.classList.toggle("qi-step--locked", locked);
+    if (n === 2) { const el = document.getElementById("qiRole"); if (el) el.disabled = locked; }
+    if (n === 3) { const el = document.getElementById("qiEmployee"); if (el) el.disabled = locked; }
+    if (n === 4) backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.disabled = locked; });
+  }
+
+  /* -------- COVERAGE BADGE -------- */
+  function _updateCoverage(dayIdx, role) {
+    const el = document.getElementById("qiCoverage");
+    if (!el) return;
+    const weekKey = weekKeyOf(currentWeekStart);
+    const sq = squads.get(weekKey);
+    if (!sq || !role) { el.textContent = ""; el.className = "qi-coverage"; return; }
+    const daySquad = sq[dayIdx] || { morning: {}, evening: {} };
+    const mReq = parseInt(daySquad.morning?.[role] || 0);
+    const eReq = parseInt(daySquad.evening?.[role] || 0);
+    const totalReq = mReq + eReq;
+    if (totalReq === 0) { el.textContent = ""; el.className = "qi-coverage"; return; }
+
+    const mSet = new Set(), eSet = new Set();
+    for (let h = 8; h < 24; h++) {
+      for (const m of ["00","30"]) {
+        const tl = `${String(h).padStart(2,'0')}:${m}`;
+        const ids = assignments.get(keyOf(weekKey, dayIdx, role, tl)) || [];
+        ids.forEach(id => (h < 16 ? mSet : eSet).add(String(id)));
+      }
+    }
+    const covered = Math.min(mSet.size, mReq) + Math.min(eSet.size, eReq);
+    el.textContent = `${covered}/${totalReq} coperti`;
+    el.className = `qi-coverage qi-coverage--${covered >= totalReq ? "ok" : "bad"}`;
+  }
+
+  /* -------- EMPLOYEE DROPDOWN -------- */
+  function _rebuildEmpDropdown(dayIdx, role) {
+    const sel = document.getElementById("qiEmployee");
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— seleziona dipendente —</option>';
+
+    const weekKey  = weekKeyOf(currentWeekStart);
+    const preview  = window._lastAvailabilityPreview;
+    const dayAvail = preview?.days?.find(d => d.day_index === dayIdx);
+
+    // "Già in turno" oggi: empId → range stringa "H1–H2"
+    const alreadyMap = new Map();
+    for (let h = 8; h < 24; h++) {
+      for (const m of ["00","30"]) {
+        const tl = `${String(h).padStart(2,'0')}:${m}`;
+        ROLES.forEach(r => {
+          (assignments.get(keyOf(weekKey, dayIdx, r, tl)) || []).forEach(id => {
+            const k = String(id);
+            if (!alreadyMap.has(k)) alreadyMap.set(k, []);
+            alreadyMap.get(k).push(h + (m === "30" ? 0.5 : 0));
+          });
+        });
+      }
+    }
+    const alreadyRange = (k) => {
+      const slots = alreadyMap.get(k);
+      if (!slots) return "";
+      const minH = Math.floor(Math.min(...slots));
+      const maxH = Math.floor(Math.max(...slots)) + 1;
+      return ` · già in turno ${minH}–${maxH >= 24 ? "ch" : maxH}`;
+    };
+
+    // Gruppo 1: disponibili da CSV
+    const availEmps = [];
+    if (dayAvail) {
+      (dayAvail.items || []).forEach(item => {
+        const emp = (employees || []).find(e => e.label.toUpperCase() === (item.name || "").toUpperCase());
+        if (emp) availEmps.push({ id: emp.id, label: emp.label, range: item.range, skill: Number(emp.skills?.[role] || 0) });
+      });
+      availEmps.sort((a, b) => b.skill - a.skill);
+    }
+    const availIds = new Set(availEmps.map(e => String(e.id)));
+
+    if (availEmps.length > 0) {
+      const grp = document.createElement("optgroup");
+      grp.label = "✓ Disponibili (CSV)";
+      availEmps.forEach(e => {
+        const opt = document.createElement("option");
+        opt.value = e.id;
+        opt.textContent = `${e.label}  (${e.range})${alreadyRange(String(e.id))}  ★${e.skill}`;
+        grp.appendChild(opt);
+      });
+      sel.appendChild(grp);
+    }
+
+    // Gruppo 2: altri
+    const others = (employees || [])
+      .filter(e => !availIds.has(String(e.id)))
+      .map(e => ({ ...e, skill: Number(e.skills?.[role] || 0) }))
+      .sort((a, b) => b.skill - a.skill);
+
+    if (others.length > 0) {
+      const grp = document.createElement("optgroup");
+      grp.label = "Altri dipendenti";
+      others.forEach(e => {
+        const opt = document.createElement("option");
+        opt.value = e.id;
+        opt.textContent = `${e.label}${alreadyRange(String(e.id))}  ★${e.skill}`;
+        grp.appendChild(opt);
+      });
+      sel.appendChild(grp);
+    }
+  }
+
+  /* -------- EMPLOYEE INFO PANEL -------- */
+  function _showEmpInfo(empId, dayIdx) {
+    const el = document.getElementById("qiEmpInfo");
+    if (!el || !empId) { if (el) el.innerHTML = ""; return; }
+    const emp = (employees || []).find(e => String(e.id) === String(empId));
+    if (!emp) { el.innerHTML = ""; return; }
+
+    const preview  = window._lastAvailabilityPreview;
+    const dayAvail = preview?.days?.find(d => d.day_index === dayIdx);
+    const avItem   = dayAvail?.items?.find(i => i.name?.toUpperCase() === emp.label.toUpperCase());
+    const avRange  = avItem?.range ?? null;
+
+    // Ore già lavorate questa settimana
+    const weekKey = weekKeyOf(currentWeekStart);
+    const slotSet = new Set();
+    for (let d = 0; d < 7; d++) {
+      for (const r of ROLES) {
+        for (let h = 8; h < 24; h++) {
+          for (const m of ["00","30"]) {
+            const tl = `${String(h).padStart(2,'0')}:${m}`;
+            if ((assignments.get(keyOf(weekKey, d, r, tl)) || []).map(String).includes(String(empId)))
+              slotSet.add(`${d}|${tl}`);
+          }
+        }
+      }
+    }
+    const weekH = (slotSet.size * 0.5).toFixed(1);
+
+    el.innerHTML = `
+      <div class="qi-emp-detail">
+        <span class="qi-emp-detail-item">📅 ${avRange ? `Disponibile ${avRange}` : "Nessuna disponibilità CSV"}</span>
+        <span class="qi-emp-detail-sep">·</span>
+        <span class="qi-emp-detail-item">⏱ ${Number(weekH) > 0 ? weekH + "h questa sett." : "Nessun turno questa sett."}</span>
+      </div>`;
+  }
+
+  /* -------- AUTO-SELECT SHIFT -------- */
+  function _autoSelectShift(empId, dayIdx) {
+    const preview  = window._lastAvailabilityPreview;
+    const dayAvail = preview?.days?.find(d => d.day_index === dayIdx);
+    const emp      = (employees || []).find(e => String(e.id) === String(empId));
+    const avItem   = dayAvail?.items?.find(i => i.name?.toUpperCase() === emp?.label.toUpperCase());
+
+    const morningBtn = backdrop.querySelector('[data-shift="morning"]');
+    const eveningBtn = backdrop.querySelector('[data-shift="evening"]');
+
+    // Reset disable state first
+    backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.disabled = false; b.title = ""; });
+
+    if (!avItem) return; // nessun dato CSV → tutti i pulsanti abilitati, nessuna selezione automatica
+
+    const parts = (avItem.range || "").split("-").map(Number);
+    if (parts.length < 2) return;
+    const [avS, avE] = parts;
+    const hasMorning = avS < 16 && avE > 8;
+    const hasEvening = avS < 24 && avE > 16;
+
+    if (morningBtn && !hasMorning) { morningBtn.disabled = true; morningBtn.title = "Non disponibile"; }
+    if (eveningBtn && !hasEvening) { eveningBtn.disabled = true; eveningBtn.title = "Non disponibile"; }
+
+    // Preseleziona se solo una opzione disponibile
+    if (hasMorning && !hasEvening)  _selectShift("morning");
+    else if (hasEvening && !hasMorning) _selectShift("evening");
+  }
+
+  function _selectShift(shift) {
+    backdrop.querySelectorAll(".qi-shift-btn").forEach(b => b.classList.toggle("active", b.dataset.shift === shift));
+    _qiShift = shift;
+    document.getElementById("qiCustomTimes").style.display = shift === "custom" ? "block" : "none";
+    document.getElementById("qiModalSave").disabled = false;
+    _qiShowBanner("", "");
+  }
+
+  /* -------- EVENTS -------- */
+  document.getElementById("qiDay")?.addEventListener("change", () => {
+    const dayIdx = parseInt(document.getElementById("qiDay").value);
+    const role   = document.getElementById("qiRole")?.value;
+    // reset step 3+4
+    document.getElementById("qiEmployee").value = "";
+    document.getElementById("qiEmpInfo").innerHTML = "";
+    _qiShift = null;
+    document.getElementById("qiModalSave").disabled = true;
+    backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.classList.remove("active"); b.disabled = false; b.title = ""; });
+    document.getElementById("qiCustomTimes").style.display = "none";
+    _qiShowBanner("", "");
+    _setStep(4, true);
+    // step 3 rimane sbloccato, aggiorna dropdown e copertura
+    _updateCoverage(dayIdx, role);
+    _rebuildEmpDropdown(dayIdx, role);
+  });
+
+  document.getElementById("qiRole")?.addEventListener("change", () => {
+    const dayIdx = parseInt(document.getElementById("qiDay").value);
+    const role   = document.getElementById("qiRole").value;
+    // reset step 3+4
+    document.getElementById("qiEmployee").value = "";
+    document.getElementById("qiEmpInfo").innerHTML = "";
+    _qiShift = null;
+    document.getElementById("qiModalSave").disabled = true;
+    backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.classList.remove("active"); b.disabled = false; b.title = ""; });
+    document.getElementById("qiCustomTimes").style.display = "none";
+    _qiShowBanner("", "");
+    _setStep(4, true);
+    _updateCoverage(dayIdx, role);
+    _rebuildEmpDropdown(dayIdx, role);
+  });
+
+  document.getElementById("qiEmployee")?.addEventListener("change", () => {
+    const empId  = document.getElementById("qiEmployee").value;
+    const dayIdx = parseInt(document.getElementById("qiDay").value);
+    _qiShift = null;
+    document.getElementById("qiModalSave").disabled = true;
+    backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.classList.remove("active"); b.disabled = false; b.title = ""; });
+    document.getElementById("qiCustomTimes").style.display = "none";
+    _qiShowBanner("", "");
+    if (!empId) { _setStep(4, true); document.getElementById("qiEmpInfo").innerHTML = ""; return; }
+    _setStep(4, false);
+    _showEmpInfo(empId, dayIdx);
+    _autoSelectShift(empId, dayIdx);
+  });
+
+  backdrop.querySelectorAll(".qi-shift-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.disabled) return;
+      _selectShift(btn.dataset.shift);
+    });
+  });
+
+  startSel?.addEventListener("change", () => {
+    if (endSel && parseFloat(startSel.value) >= parseFloat(endSel.value)) {
+      const idx = [...endSel.options].findIndex(o => parseFloat(o.value) > parseFloat(startSel.value));
+      if (idx >= 0) endSel.selectedIndex = idx;
+    }
+  });
+
+  /* -------- OPEN / CLOSE -------- */
+  function openQiModal() {
+    // Imposta giorno corrente
+    const today = new Date();
+    const dayEl = document.getElementById("qiDay");
+    if (dayEl && currentWeekStart) {
+      const diff = Math.floor((today - currentWeekStart) / 86400000);
+      dayEl.value = (diff >= 0 && diff <= 6) ? String(diff) : "0";
+    }
+
+    // Reset completo
+    document.getElementById("qiRole").value = "Cassa";
+    document.getElementById("qiEmployee").value = "";
+    document.getElementById("qiEmpInfo").innerHTML = "";
+    document.getElementById("qiCoverage").textContent = "";
+    document.getElementById("qiCoverage").className = "qi-coverage";
+    _qiShift = null;
+    backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.classList.remove("active"); b.disabled = false; b.title = ""; });
+    document.getElementById("qiCustomTimes").style.display = "none";
+    document.getElementById("qiModalSave").disabled = true;
+    _qiShowBanner("", "");
+
+    // Step 1+2 subito aperti; step 3 sbloccato e popolato; step 4 locked
+    _setStep(2, false);
+    _setStep(3, false);
+    _setStep(4, true);
+
+    const dayIdx = parseInt(dayEl?.value ?? "0");
+    _updateCoverage(dayIdx, "Cassa");
+    _rebuildEmpDropdown(dayIdx, "Cassa");
+
+    backdrop.style.display = "flex";
+  }
+
+  function closeQiModal() { backdrop.style.display = "none"; }
+
+  /* -------- BANNER -------- */
+  function _qiShowBanner(msg, kind) {
+    const b = document.getElementById("qiBanner");
+    if (!b) return;
+    if (!msg) { b.style.display = "none"; b.textContent = ""; return; }
+    b.style.display = "block";
+    b.textContent = msg;
+    b.className = `qi-banner qi-banner--${kind}`;
+  }
+
+  /* -------- SAVE -------- */
+  async function saveQiModal() {
+    const empId  = document.getElementById("qiEmployee")?.value;
+    const dayIdx = parseInt(document.getElementById("qiDay")?.value ?? "0");
+    const role   = document.getElementById("qiRole")?.value;
+
+    if (!empId)    { _qiShowBanner("Seleziona un dipendente.", "error"); return; }
+    if (!_qiShift) { _qiShowBanner("Seleziona la fascia oraria.", "error"); return; }
+
+    function parseTimeToHalf(t) {
+      if (t === "24:00") return 24;
+      const [h, m] = t.split(":").map(Number);
+      return h + (m === 30 ? 0.5 : 0);
+    }
+
+    let startHalf = 8, endHalf = 16;
+    if (_qiShift === "evening") { startHalf = 16; endHalf = 24; }
+    if (_qiShift === "custom") {
+      startHalf = parseTimeToHalf(document.getElementById("qiTimeStart")?.value || "08:00");
+      endHalf   = parseTimeToHalf(document.getElementById("qiTimeEnd")?.value   || "16:00");
+      if (startHalf >= endHalf) { _qiShowBanner("L'ora di fine deve essere dopo l'inizio.", "error"); return; }
+    }
+
+    const timeLabels = [];
+    for (let cur = startHalf; cur < endHalf; cur += 0.5) {
+      const h = Math.floor(cur), m = (cur % 1 !== 0) ? 30 : 0;
+      timeLabels.push(`${String(h).padStart(2,'0')}:${m === 0 ? "00" : "30"}`);
+    }
+    if (!timeLabels.length) { _qiShowBanner("Nessuno slot nel range.", "error"); return; }
+
+    const weekKey = weekKeyOf(currentWeekStart);
+    const saveBtn = document.getElementById("qiModalSave");
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Salvataggio..."; }
+
+    try {
+      const ovList = await apiCall("overrides_get_week", weekKey) || [];
+      const items  = timeLabels.map(tl => {
+        const existing = ovList.find(o => o.day_index === dayIdx && o.role === role && o.time_label === tl);
+        const ids = [...(existing?.employee_ids || [])];
+        if (!ids.map(String).includes(String(empId))) ids.push(Number(empId));
+        return { time_label: tl, employee_ids: ids };
+      });
+
+      await apiCall("overrides_set_many", weekKey, dayIdx, role, items);
+      items.forEach(({ time_label, employee_ids }) => {
+        assignments.set(keyOf(weekKey, dayIdx, role, time_label), employee_ids);
+      });
+      recalcSegmentsFromAssignments(weekKey);
+      renderCalendar();
+      window.chatAiUpdateContext?.();
+
+      const empName   = (employees || []).find(e => String(e.id) === String(empId))?.label || String(empId);
+      const shiftLbl  = _qiShift === "morning" ? "Mattina" : _qiShift === "evening" ? "Pomeriggio"
+                        : `${timeLabels[0]}–${timeLabels[timeLabels.length-1].slice(0,2)}`;
+      showToast(`✓ ${empName} — ${DAYS[dayIdx]} ${shiftLbl} (${role})`);
+
+      // Resetta solo step 3+4, mantieni giorno e ruolo
+      _qiShift = null;
+      document.getElementById("qiEmployee").value = "";
+      document.getElementById("qiEmpInfo").innerHTML = "";
+      backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.classList.remove("active"); b.disabled = false; b.title = ""; });
+      document.getElementById("qiCustomTimes").style.display = "none";
+      _setStep(4, true);
+      document.getElementById("qiModalSave").disabled = true;
+      _qiShowBanner("", "");
+
+      // Aggiorna copertura e dropdown con le nuove assegnazioni
+      _updateCoverage(dayIdx, role);
+      _rebuildEmpDropdown(dayIdx, role);
+
+    } catch (err) {
+      _qiShowBanner("Errore: " + err.message, "error");
+    } finally {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "✓ Aggiungi"; }
+    }
+  }
+
+  document.getElementById("btnQuickInsert")?.addEventListener("click", openQiModal);
+  document.getElementById("qiModalClose")?.addEventListener("click", closeQiModal);
+  document.getElementById("qiModalClose2")?.addEventListener("click", closeQiModal);
+  backdrop.addEventListener("mousedown", e => { if (e.target === backdrop) closeQiModal(); });
+  document.getElementById("qiModalSave")?.addEventListener("click", saveQiModal);
 }
 
 /* ---------- NAV ---------- */

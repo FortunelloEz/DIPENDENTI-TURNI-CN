@@ -177,20 +177,7 @@
   background: rgba(239,68,68,.18);
 }
 
-/* Opzionale: disabilitiamo i controlli settimana (restano in UI ma "spenti") */
 /* ====== Modal ====== */
-.modal-backdrop{
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-.modal-backdrop.hidden{ display: none; }
-
 .modal-card{
   width: min(420px, calc(100vw - 32px));
   background: #fff;
@@ -207,7 +194,7 @@
   align-items: center;
 }
 
-.modal-card .modal-title{ font-weight: 700; }
+.modal-card .modal-title{ font-weight: 900; }
 
 .modal-card .modal-close{
   border: none;
@@ -292,15 +279,17 @@
    ========================= */
 .day-types-card {
   flex: 0 0 auto;
+  max-height: 300px;
+  overflow: hidden;
   margin-top: 0;
 }
 
-.day-types-body {
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.day-types-card .calendar-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
+
 /* BOX singolo giorno (come tabella sopra) */
 .dt-day-box {
   border: 1px solid rgba(0,0,0,.06);
@@ -502,5 +491,25 @@
 .squads-fabbisogni-card .calendar-wrap {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  overflow: auto;
+}
+
+/* =========================
+   RESPONSIVE — Squadre
+   ========================= */
+
+/* 900px: nasconde il separatore verticale che rompe il flex-wrap */
+@media (max-width: 900px) {
+  .squads-action-sep { display: none; }
+  .squads-select { min-width: 140px; }
+  .squads-header-actions { gap: 10px; }
+}
+
+/* 700px: riduce min-width colonne tabella per restare nei 628px dopo sidebar collapse */
+@media (max-width: 700px) {
+  .squad-table tbody td.col-day  { min-width: 72px; }
+  .squad-table tbody td.col-band { min-width: 64px; }
+  .sq-stepper { gap: 4px; }
+  .sq-step { width: 22px; height: 22px; font-size: 14px; }
+  .sq-val  { min-width: 18px; font-size: 13px; }
 }

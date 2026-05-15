@@ -13,12 +13,12 @@
             </div>
             <div class="home-actions-sep"></div>
             <div class="home-actions-group">
+                <button class="btn btn-ghost" id="btnCopyPrevWeek">📋 Copia settimana precedente</button>
                 <button class="btn btn-ghost" id="btnTodayTop">📅 Settimana corrente</button>
                 <button class="btn btn-ghost" id="btnClear">🗑 Svuota</button>
             </div>
         </div>
 
-        <div id="availabilityActions"></div>
     </header>
 
     <div class="home-main-layout">
@@ -32,6 +32,7 @@
             <div class="csv-file-list" id="csvFileList">
                 <div class="csv-empty-hint">Nessun file caricato</div>
             </div>
+            <div id="availabilityActions"></div>
         </aside>
 
         <!-- AREA DESTRA -->
@@ -46,6 +47,10 @@
                             <button class="btn btn-small btn-ghost" id="btnNextWeek">→</button>
                             <button class="btn btn-small" id="btnToday">Oggi</button>
                         </div>
+                    </div>
+                    <div class="calendar-right">
+                        <button class="btn btn-small qi-open-btn" id="btnQuickInsert" title="Aggiungi un dipendente a un turno su più slot in una volta">➕ Aggiungi turno</button>
+                        <!--<button class="btn btn-small btn-ghost" id="btnQuickRemove" title="Rimuovi un dipendente da tutti gli slot di una fascia">➖ Rimuovi turno</button>-->
                     </div>
                 </div>
 
@@ -72,6 +77,186 @@
                 </div>
                 <div class="day-summary-body" id="daySummaryBody"></div>
             </section>
+        </div>
+    </div>
+</div>
+
+<!-- ====== MODAL: INSERIMENTO RAPIDO ====== -->
+<div class="modal-backdrop" id="qiModalBackdrop" style="display:none">
+    <div class="modal qi-modal">
+        <div class="modal-head">
+            <div>
+                <div class="modal-title">Aggiungi turno</div>
+                <div class="qi-modal-sub">Segui i passaggi per assegnare un turno</div>
+            </div>
+            <button class="modal-close" id="qiModalClose">✕</button>
+        </div>
+        <div class="modal-body qi-modal-body">
+            <div class="qi-steps">
+
+                <!-- STEP 1: GIORNO -->
+                <div class="qi-step" id="qiStep1">
+                    <div class="qi-step-rail"><span class="qi-step-num">1</span></div>
+                    <div class="qi-step-content">
+                        <div class="qi-step-hd"><span class="qi-step-lbl">Giorno</span></div>
+                        <select id="qiDay" class="qi-select">
+                            <option value="0">Lunedì</option>
+                            <option value="1">Martedì</option>
+                            <option value="2">Mercoledì</option>
+                            <option value="3">Giovedì</option>
+                            <option value="4">Venerdì</option>
+                            <option value="5">Sabato</option>
+                            <option value="6">Domenica</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- STEP 2: RUOLO -->
+                <div class="qi-step qi-step--locked" id="qiStep2">
+                    <div class="qi-step-rail"><span class="qi-step-num">2</span></div>
+                    <div class="qi-step-content">
+                        <div class="qi-step-hd">
+                            <span class="qi-step-lbl">Ruolo</span>
+                            <span class="qi-coverage" id="qiCoverage"></span>
+                        </div>
+                        <select id="qiRole" class="qi-select" disabled>
+                            <option value="Cassa">Cassa</option>
+                            <option value="Runner">Runner</option>
+                            <option value="Bar">Bar</option>
+                            <option value="Comande">Comande</option>
+                            <option value="Accoglienza">Accoglienza</option>
+                            <option value="Jolly">Jolly</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- STEP 3: DIPENDENTE -->
+                <div class="qi-step qi-step--locked" id="qiStep3">
+                    <div class="qi-step-rail"><span class="qi-step-num">3</span></div>
+                    <div class="qi-step-content">
+                        <div class="qi-step-hd"><span class="qi-step-lbl">Dipendente</span></div>
+                        <select id="qiEmployee" class="qi-select qi-select--wide" disabled>
+                            <option value="">— seleziona dipendente —</option>
+                        </select>
+                        <div class="qi-emp-info" id="qiEmpInfo"></div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: FASCIA ORARIA -->
+                <div class="qi-step qi-step--locked qi-step--last" id="qiStep4">
+                    <div class="qi-step-rail"><span class="qi-step-num">4</span></div>
+                    <div class="qi-step-content">
+                        <div class="qi-step-hd"><span class="qi-step-lbl">Fascia oraria</span></div>
+                        <div class="qi-shift-btns">
+                            <button class="qi-shift-btn" data-shift="morning" disabled>
+                                <span class="qi-shift-icon">☀️</span>
+                                <span class="qi-shift-name">Mattina</span>
+                                <span class="qi-shift-sub">08:00 – 16:00</span>
+                            </button>
+                            <button class="qi-shift-btn" data-shift="evening" disabled>
+                                <span class="qi-shift-icon">🌙</span>
+                                <span class="qi-shift-name">Pomeriggio</span>
+                                <span class="qi-shift-sub">16:00 – 24:00</span>
+                            </button>
+                            <button class="qi-shift-btn" data-shift="custom" disabled>
+                                <span class="qi-shift-icon">🕐</span>
+                                <span class="qi-shift-name">Personalizzata</span>
+                                <span class="qi-shift-sub">orario libero</span>
+                            </button>
+                        </div>
+                        <div class="qi-custom-times" id="qiCustomTimes" style="display:none">
+                            <div class="qi-custom-row">
+                                <label class="qi-label-sm">Dalle</label>
+                                <select id="qiTimeStart" class="qi-select qi-select--time"></select>
+                                <label class="qi-label-sm">alle</label>
+                                <select id="qiTimeEnd" class="qi-select qi-select--time"></select>
+                            </div>
+                        </div>
+                        <div id="qiBanner" class="qi-banner" style="display:none"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" id="qiModalClose2">Chiudi</button>
+            <button class="btn primary" id="qiModalSave" disabled>✓ Aggiungi</button>
+        </div>
+    </div>
+</div>
+
+<!-- ====== MODAL: RIMOZIONE RAPIDA ====== -->
+<div class="modal-backdrop" id="rmModalBackdrop" style="display:none">
+    <div class="modal qi-modal">
+        <div class="modal-head">
+            <div>
+                <div class="modal-title">Rimuovi turno</div>
+                <div class="qi-modal-sub">Seleziona dipendente e fascia da rimuovere</div>
+            </div>
+            <button class="modal-close" id="rmModalClose">✕</button>
+        </div>
+        <div class="modal-body qi-modal-body">
+            <div class="qi-steps">
+
+                <!-- STEP 1: GIORNO -->
+                <div class="qi-step" id="rmStep1">
+                    <div class="qi-step-rail"><span class="qi-step-num">1</span></div>
+                    <div class="qi-step-content">
+                        <div class="qi-step-hd"><span class="qi-step-lbl">Giorno</span></div>
+                        <select id="rmDay" class="qi-select">
+                            <option value="0">Lunedì</option>
+                            <option value="1">Martedì</option>
+                            <option value="2">Mercoledì</option>
+                            <option value="3">Giovedì</option>
+                            <option value="4">Venerdì</option>
+                            <option value="5">Sabato</option>
+                            <option value="6">Domenica</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- STEP 2: DIPENDENTE -->
+                <div class="qi-step qi-step--locked" id="rmStep2">
+                    <div class="qi-step-rail"><span class="qi-step-num">2</span></div>
+                    <div class="qi-step-content">
+                        <div class="qi-step-hd"><span class="qi-step-lbl">Dipendente</span></div>
+                        <select id="rmEmployee" class="qi-select qi-select--wide" disabled>
+                            <option value="">— seleziona dipendente —</option>
+                        </select>
+                        <div class="qi-emp-info" id="rmEmpInfo"></div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: FASCIA ORARIA -->
+                <div class="qi-step qi-step--locked qi-step--last" id="rmStep3">
+                    <div class="qi-step-rail"><span class="qi-step-num">3</span></div>
+                    <div class="qi-step-content">
+                        <div class="qi-step-hd"><span class="qi-step-lbl">Fascia da rimuovere</span></div>
+                        <div class="qi-shift-btns">
+                            <button class="qi-shift-btn" data-rmshift="morning" disabled>
+                                <span class="qi-shift-icon">☀️</span>
+                                <span class="qi-shift-name">Mattina</span>
+                                <span class="qi-shift-sub">08:00 – 16:00</span>
+                            </button>
+                            <button class="qi-shift-btn" data-rmshift="evening" disabled>
+                                <span class="qi-shift-icon">🌙</span>
+                                <span class="qi-shift-name">Pomeriggio</span>
+                                <span class="qi-shift-sub">16:00 – 24:00</span>
+                            </button>
+                            <button class="qi-shift-btn" data-rmshift="both" disabled>
+                                <span class="qi-shift-icon">🔄</span>
+                                <span class="qi-shift-name">Entrambe</span>
+                                <span class="qi-shift-sub">tutto il giorno</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" id="rmModalClose2">Chiudi</button>
+            <button class="btn btn-danger" id="rmModalSave" disabled>✕ Rimuovi</button>
         </div>
     </div>
 </div>

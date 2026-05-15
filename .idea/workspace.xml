@@ -8,14 +8,22 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cn_turni/api.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/api.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cn_turni/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/db.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cn_turni/services/export_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/export_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/services/import_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/import_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/availability_viewer.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/availability_viewer.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/db_adapter.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/db_adapter.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/employees.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/employees.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/import_availability.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/import_availability.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/customization/app.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/app.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/customization/availability_viewer.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/availability_viewer.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/customization/calendar.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/calendar.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/customization/employees.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/employees.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/customization/squad.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/squad.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/views/employees.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/employees.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/views/squads.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/squads.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/views/export.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/export.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/views/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/home.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -284,7 +292,15 @@
       <option name="project" value="LOCAL" />
       <updated>1778276650568</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="update finale">
+      <option name="closed" value="true" />
+      <created>1778703821304</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1778703821304</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -304,17 +320,17 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/cn_turni/db.py</url>
-          <line>23</line>
+          <line>45</line>
           <option name="timeStamp" value="2" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/cn_turni/services/auto_scheduler.py</url>
-          <line>405</line>
+          <line>411</line>
           <option name="timeStamp" value="4" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/cn_turni/services/auto_scheduler.py</url>
-          <line>279</line>
+          <line>285</line>
           <option name="timeStamp" value="7" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -324,12 +340,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/cn_turni/services/auto_scheduler.py</url>
-          <line>73</line>
+          <line>74</line>
           <option name="timeStamp" value="10" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/cn_turni/services/auto_scheduler.py</url>
-          <line>74</line>
+          <line>75</line>
           <option name="timeStamp" value="11" />
         </line-breakpoint>
       </breakpoints>

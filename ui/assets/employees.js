@@ -49,6 +49,7 @@
       inpAlias: $("empAlias"),
       workDaysGrid: $("empWorkDaysGrid"),
       inpMaxDailyHours: $("empMaxDailyHours"),
+      inpWeeklyHours: $("empWeeklyHours"),
 
       bulkModal: $("empBulkModal"),
       btnBulkClose: $("empBulkClose"),
@@ -291,6 +292,9 @@
     if (E.inpMaxDailyHours) {
       E.inpMaxDailyHours.value = (emp?.max_daily_hours != null) ? String(emp.max_daily_hours) : "";
     }
+    if (E.inpWeeklyHours) {
+      E.inpWeeklyHours.value = (emp?.weekly_hours_target != null) ? String(emp.weekly_hours_target) : "";
+    }
     showModalBanner(E, "", "");
 
   }
@@ -475,7 +479,8 @@
           slot_evening: E.chkEvening.checked ? 1 : 0,
           skills: readSkillsFromGrid(E),
           work_days: readWorkDays(E),
-            max_daily_hours: E.inpMaxDailyHours?.value !== "" ? Number(E.inpMaxDailyHours.value) : null,
+          max_daily_hours: E.inpMaxDailyHours?.value !== "" ? Number(E.inpMaxDailyHours.value) : null,
+          weekly_hours_target: E.inpWeeklyHours?.value !== "" ? Number(E.inpWeeklyHours.value) : null,
           };
 
     if (!payload.slot_morning && !payload.slot_evening) {

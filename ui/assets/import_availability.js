@@ -84,6 +84,11 @@ async function _runImport(csvText, filename, filePath, forceWeekKey) {
     const wk = res.week_key_used || weekKey;
     if (typeof mondayDateFromWeekKey === "function") currentWeekStart = mondayDateFromWeekKey(wk);
     window.currentWeekKey = wk;
+    localStorage.setItem('lastWeekKey', wk);
+    apiCall('settings_set', 'lastWeekKey', wk);
+
+    const defCount = Array.isArray(res.deficits) ? res.deficits.length : 0;
+    console.log(`[Import] AutoSchedule completato → settimana=${wk}, deficit=${defCount}`);
 
     // Salva metadati in DB solo se è un import nuovo (filePath presente).
     // Se è una ri-elaborazione di file già in lista, il record esiste già.

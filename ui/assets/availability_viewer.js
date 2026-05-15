@@ -116,18 +116,18 @@ function avRenderButtons(){
   if (host.dataset.built === "1") return;
   host.dataset.built = "1";
 
+  host.className = "av-csv-section";
   host.innerHTML = `
-    <div class="av-toolbar">
-      <div class="av-toolbar-title">Vedi disponibilità:</div>
-      <div class="av-toolbar-btns" id="avBtns"></div>
-    </div>
+    <div class="av-csv-title">👁 Vedi disponibilità</div>
+    <div class="av-csv-days" id="avBtns"></div>
   `;
 
   const btns = host.querySelector("#avBtns");
   AV_DAYS.forEach((d, i) => {
     const b = document.createElement("button");
-    b.className = "btn btn-small btn-ghost av-btn";
+    b.className = "av-day-pill";
     b.textContent = d;
+    b.title = `Disponibilità ${d}`;
     b.addEventListener("click", () => avOpenDay(i));
     btns.appendChild(b);
   });

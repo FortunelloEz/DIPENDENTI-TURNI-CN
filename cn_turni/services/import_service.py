@@ -131,7 +131,7 @@ class ImportService:
                 end_last = lab_sorted[-1]    # es "23:30"
                 end_h = int(end_last.split(":")[0])
                 end_m = int(end_last.split(":")[1])
-                end = (end_h + 1) if end_m == 30 else end_h
+                end = end_h + 1
                 start_h = int(start.split(":")[0])
 
                 items.append({"name": name, "range": f"{start_h:02d}-{end:02d}"})
@@ -294,8 +294,12 @@ class ImportService:
                     availability.setdefault(csv_name, {})[iso_day] = DayAvailability(set())
                     continue
 
-                start_h = int(it.get("start_hour"))
-                end_h = int(it.get("end_hour"))  # 24 = CHIUSURA
+                start_h = it.get("start_hour")
+                end_h = it.get("end_hour")  # 24 = CHIUSURA
+                if start_h is None or end_h is None:
+                    continue
+                start_h = int(start_h)
+                end_h = int(end_h)
                 labels = set(_half_hours(start_h, end_h))
                 availability.setdefault(csv_name, {})[iso_day] = DayAvailability(labels)
 
@@ -311,6 +315,7 @@ class ImportService:
                 skills=r.get("skills") or {},
                 work_days=str(r.get("work_days") or ""),
                 max_daily_hours=r.get("max_daily_hours"),
+                weekly_hours_target=int(r["weekly_hours_target"]) if r.get("weekly_hours_target") is not None else None,
             )
             for r in emp_rows
         ]
@@ -326,6 +331,7 @@ class ImportService:
             )
             for r in perm_rows
         ]
+        perm_ids_set = {p.employee_id for p in perm_settings}
 
         # 9) squads need (USA week_id)
         squads_need = self.db.squads_week_get(week_id)
@@ -342,11 +348,11 @@ class ImportService:
             squads_need=squads_need,
         )
 
-        # 10) salva overrides (calendario)
-        self.db.overrides_clear_week(week_id)
-
+        # 10) salva overrides in un'unica transazione atomica
         MORNING_LABELS = _half_hours(8, 16)
         EVENING_LABELS = _half_hours(16, 24)
+
+        all_override_items: list[dict] = []
 
         for day_index, slots in (plan or {}).items():
             iso_day = week_days_iso[int(day_index)]
@@ -359,8 +365,6 @@ class ImportService:
                     emp_ids = list(dict.fromkeys(emp_ids or []))
 
                     # pre-calcola quante mezz'ore max per dipendente in questo giorno/slot
-                    # max_daily_hours -> numero di mezz'ore = max_daily_hours * 2
-                    # le mezz'ore partono sempre dall'inizio dello slot
                     emp_max_halfhours: dict[int, int] = {}
                     for eid in emp_ids:
                         emp = emp_by_id.get(int(eid))
@@ -368,51 +372,48 @@ class ImportService:
                             emp_max_halfhours[emp.id] = round(emp.max_daily_hours * 2)
 
                     # trova la prima mezz'ora disponibile nel CSV per ogni dipendente
-                    # (da lì parte il conteggio del limite)
                     emp_first_available: dict[int, Optional[str]] = {}
                     for eid in emp_ids:
                         emp = emp_by_id.get(int(eid))
                         if not emp or emp.id not in emp_max_halfhours:
                             continue
                         for t in labels:
-                            if self._is_available_label(availability_for_sched, emp.name, iso_day, t, emp.is_permanent):
+                            if self._is_available_label(availability_for_sched, emp.name, iso_day, t, emp.is_permanent or emp.id in perm_ids_set):
                                 emp_first_available[emp.id] = t
                                 break
 
-                    # contatore mezz'ore assegnate per dipendente da quando è iniziato il suo turno
                     emp_halfhour_count: dict[int, int] = {}
 
-                    items = []
                     for t in labels:
                         filtered: list[int] = []
                         for eid in emp_ids:
                             emp = emp_by_id.get(int(eid))
                             if not emp:
                                 continue
-                            # check limite ore: conta solo da quando il dipendente
-                            # è disponibile per la prima volta in questo slot
                             if emp.id in emp_max_halfhours:
                                 first = emp_first_available.get(emp.id)
                                 if first is None:
-                                    continue  # non disponibile in nessuna mezz'ora: salta
-                                # prima della sua prima mezz'ora disponibile: non assegnare
+                                    continue
                                 if labels.index(t) < labels.index(first):
                                     continue
                                 used = emp_halfhour_count.get(emp.id, 0)
                                 if used >= emp_max_halfhours[emp.id]:
                                     continue
-                            if self._is_available_label(availability_for_sched, emp.name, iso_day, t, emp.is_permanent):
+                            if self._is_available_label(availability_for_sched, emp.name, iso_day, t, emp.is_permanent or emp.id in perm_ids_set):
                                 filtered.append(emp.id)
                                 if emp.id in emp_max_halfhours:
                                     emp_halfhour_count[emp.id] = emp_halfhour_count.get(emp.id, 0) + 1
 
-                        items.append({"time_label": t, "employee_ids": filtered})
-                    self.db.overrides_set_many(
-                        week_id=week_id,
-                        day_index=int(day_index),
-                        role=str(role),
-                        items=items,
-                    )
+                        if filtered:
+                            all_override_items.append({
+                                "day_index": int(day_index),
+                                "role": str(role),
+                                "time_label": t,
+                                "employee_ids": filtered,
+                            })
+
+        saved_count = self.db.overrides_bulk_save(week_id, all_override_items)
+        print(f"[AutoSchedule] Salvati {saved_count} slot → week_id={week_id} (week_key={week_key})", flush=True)
 
         availability_preview = self._build_availability_preview(
             availability=availability_for_sched,

@@ -1,12 +1,34 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import os
+import platform
 import sqlite3
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from cn_turni.paths import paths
+
+# ---------- Cifratura API key (XOR + SHA-256 machine-specific) ----------
+
+def _machine_key() -> bytes:
+    """Chiave derivata da dati della macchina corrente — non trasportabile."""
+    seed = platform.node() + os.getenv("USERNAME", "") + os.getenv("COMPUTERNAME", "") + "turni_cn_v1"
+    return hashlib.sha256(seed.encode("utf-8", errors="replace")).digest()
+
+def _encrypt_value(plaintext: str) -> str:
+    data = plaintext.encode("utf-8")
+    key  = _machine_key()
+    enc  = bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
+    return base64.b64encode(enc).decode("ascii")
+
+def _decrypt_value(ciphertext: str) -> str:
+    enc  = base64.b64decode(ciphertext.encode("ascii"))
+    key  = _machine_key()
+    data = bytes(b ^ key[i % len(key)] for i, b in enumerate(enc))
+    return data.decode("utf-8")
 
 # Singleton DB (semplice e robusto per MVP)
 _DB: Optional["Db"] = None
@@ -147,10 +169,15 @@ class Db:
 
                 CREATE TABLE IF NOT EXISTS imported_files (
                     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    filename    TEXT NOT NULL UNIQUE,
+                    filename    TEXT NOT NULL,
                     file_path   TEXT NOT NULL DEFAULT '',
                     week_key    TEXT NOT NULL,
                     imported_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
+                CREATE TABLE IF NOT EXISTS settings (
+                    key   TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_override_week ON schedule_override(week_id);
@@ -170,7 +197,70 @@ class Db:
             self._ensure_column(conn, "employees", "slot_evening", "slot_evening INTEGER NOT NULL DEFAULT 1")
             self._ensure_column(conn, "employees", "work_days", "work_days TEXT NULL")
             self._ensure_column(conn, "employees", "max_daily_hours", "max_daily_hours INTEGER NULL")
+            self._ensure_column(conn, "employees", "weekly_hours_target", "weekly_hours_target INTEGER NULL")
             self._ensure_column(conn, "imported_files", "file_path", "file_path TEXT NOT NULL DEFAULT ''")
+            # Migration: rimuove UNIQUE su imported_files.filename (unico per filename+week_key)
+            row = conn.execute(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='imported_files'"
+            ).fetchone()
+            if row and "UNIQUE" in (row["sql"] or ""):
+                conn.executescript("""
+                    ALTER TABLE imported_files RENAME TO _imported_files_bak;
+                    CREATE TABLE imported_files (
+                        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                        filename    TEXT NOT NULL,
+                        file_path   TEXT NOT NULL DEFAULT '',
+                        week_key    TEXT NOT NULL,
+                        imported_at TEXT NOT NULL DEFAULT (datetime('now'))
+                    );
+                    INSERT INTO imported_files SELECT * FROM _imported_files_bak;
+                    DROP TABLE _imported_files_bak;
+                    CREATE INDEX IF NOT EXISTS idx_imported_files_week ON imported_files(week_key);
+                """)
+    # ---------- Settings generici ----------
+    def _setting_get(self, key: str) -> Optional[str]:
+        with self._connect() as conn:
+            row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+            return row["value"] if row else None
+
+    def _setting_set(self, key: str, value: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO settings(key, value) VALUES (?,?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (key, value),
+            )
+
+    def _setting_delete(self, key: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM settings WHERE key=?", (key,))
+
+    # ---------- Settings pubblici (generico, non cifrato) ----------
+    def settings_get(self, key: str) -> Optional[str]:
+        return self._setting_get(key)
+
+    def settings_set(self, key: str, value: str) -> None:
+        self._setting_set(key, value)
+
+    def settings_delete(self, key: str) -> None:
+        self._setting_delete(key)
+
+    # ---------- Gemini API key (cifrata) ----------
+    def gemini_key_get(self) -> Optional[str]:
+        encrypted = self._setting_get("gemini_api_key")
+        if not encrypted:
+            return None
+        try:
+            return _decrypt_value(encrypted)
+        except Exception:
+            return None
+
+    def gemini_key_set(self, api_key: str) -> None:
+        self._setting_set("gemini_api_key", _encrypt_value(api_key))
+
+    def gemini_key_delete(self) -> None:
+        self._setting_delete("gemini_api_key")
+
     # ---------- Retention ----------
     def purge_old_weeks(self, months: int = 6) -> int:
         cutoff = date.today() - timedelta(days=int(30.5 * months))
@@ -181,6 +271,9 @@ class Db:
                 cur = conn.execute(f"SELECT COUNT(*) as n FROM {table} WHERE week_id < ?", (cutoff_iso,))
                 n += int(cur.fetchone()["n"])
                 conn.execute(f"DELETE FROM {table} WHERE week_id < ?", (cutoff_iso,))
+            cur = conn.execute("SELECT COUNT(*) as n FROM imported_files WHERE week_key < ?", (cutoff_iso,))
+            n += int(cur.fetchone()["n"])
+            conn.execute("DELETE FROM imported_files WHERE week_key < ?", (cutoff_iso,))
             return n
 
     # ---------- Imported Files ----------
@@ -196,24 +289,19 @@ class Db:
 
     def imported_files_add(self, filename: str, file_path: str, week_key: str) -> int:
         with self._connect() as conn:
-            # Controlla se esiste già un record con lo stesso filename
+            # Unico per (filename, week_key): stesso file stesso settimana = aggiorna path
             existing = conn.execute(
-                "SELECT id FROM imported_files WHERE filename=?", (str(filename),)
+                "SELECT id FROM imported_files WHERE filename=? AND week_key=?",
+                (str(filename), str(week_key)),
             ).fetchone()
 
             if existing:
-                # Aggiorna path e week_key del record esistente
                 conn.execute(
-                    """
-                    UPDATE imported_files
-                    SET file_path=?, week_key=?, imported_at=datetime('now')
-                    WHERE filename=?
-                    """,
-                    (str(file_path), str(week_key), str(filename)),
+                    "UPDATE imported_files SET file_path=?, imported_at=datetime('now') WHERE id=?",
+                    (str(file_path), int(existing["id"])),
                 )
                 return int(existing["id"])
             else:
-                # Inserisce nuovo record
                 cur = conn.execute(
                     "INSERT INTO imported_files(filename, file_path, week_key) VALUES (?, ?, ?)",
                     (str(filename), str(file_path), str(week_key)),
@@ -268,6 +356,7 @@ class Db:
                         aliases=r["aliases"] or "",
                         work_days=r["work_days"] or "",
                         max_daily_hours=float(r["max_daily_hours"]) if r["max_daily_hours"] is not None else None,
+                        weekly_hours_target=int(r["weekly_hours_target"]) if r["weekly_hours_target"] is not None else None,
                     )
                 )
             return out
@@ -289,9 +378,11 @@ class Db:
                 work_days = (payload.get("work_days") or "").strip()
                 max_daily_hours = payload.get("max_daily_hours")
                 max_daily_hours = float(max_daily_hours) if max_daily_hours not in (None, "", "null") else None
+                weekly_hours_target = payload.get("weekly_hours_target")
+                weekly_hours_target = int(weekly_hours_target) if weekly_hours_target not in (None, "", "null") else None
                 cur = conn.execute(
-                    "INSERT INTO employees(name,is_permanent,preferred_role,slot_morning,slot_evening,aliases,work_days,max_daily_hours) VALUES (?,?,?,?,?,?,?,?)",
-                    (name, is_perm, pref, slot_morning, slot_evening, aliases, work_days, max_daily_hours),
+                    "INSERT INTO employees(name,is_permanent,preferred_role,slot_morning,slot_evening,aliases,work_days,max_daily_hours,weekly_hours_target) VALUES (?,?,?,?,?,?,?,?,?)",
+                    (name, is_perm, pref, slot_morning, slot_evening, aliases, work_days, max_daily_hours, weekly_hours_target),
                 )
                 emp_id = int(cur.lastrowid)
 
@@ -324,9 +415,11 @@ class Db:
             work_days = (payload.get("work_days") or "").strip()
             max_daily_hours = payload.get("max_daily_hours")
             max_daily_hours = float(max_daily_hours) if max_daily_hours not in (None, "", "null") else None
+            weekly_hours_target = payload.get("weekly_hours_target")
+            weekly_hours_target = int(weekly_hours_target) if weekly_hours_target not in (None, "", "null") else None
             conn.execute(
-                "UPDATE employees SET name=?, is_permanent=?, preferred_role=?, slot_morning=?, slot_evening=?, aliases=?, work_days=?, max_daily_hours=? WHERE id=?",
-                (name, is_perm, pref, slot_morning, slot_evening, aliases, work_days, max_daily_hours, emp_id),
+                "UPDATE employees SET name=?, is_permanent=?, preferred_role=?, slot_morning=?, slot_evening=?, aliases=?, work_days=?, max_daily_hours=?, weekly_hours_target=? WHERE id=?",
+                (name, is_perm, pref, slot_morning, slot_evening, aliases, work_days, max_daily_hours, weekly_hours_target, emp_id),
             )
             conn.execute("DELETE FROM employee_skills WHERE employee_id=?", (emp_id,))
             for role, rank in skills.items():
@@ -433,6 +526,65 @@ class Db:
     def overrides_clear_week(self, week_id: str) -> None:
         with self._connect() as conn:
             conn.execute("DELETE FROM schedule_override WHERE week_id=?", (week_id,))
+
+    def overrides_bulk_save(self, week_id: str, items: list) -> int:
+        """
+        Atomic: cancella la settimana e reinserisce tutti i record in un'unica transazione.
+        items: [{"day_index": int, "role": str, "time_label": str, "employee_ids": list}, ...]
+        Restituisce il numero di righe inserite.
+        """
+        count = 0
+        with self._connect() as conn:
+            conn.execute("DELETE FROM schedule_override WHERE week_id=?", (week_id,))
+            for it in items:
+                ids = it.get("employee_ids") or []
+                if not ids:
+                    continue
+                conn.execute(
+                    "INSERT INTO schedule_override(week_id, day_index, role, time_label, employee_ids) "
+                    "VALUES (?,?,?,?,?)",
+                    (week_id, int(it["day_index"]), str(it["role"]), str(it["time_label"]), json.dumps(ids)),
+                )
+                count += 1
+        return count
+
+    def overrides_save_slot(self, week_id: str, day_index: int, time_labels: list, role_ids: dict) -> None:
+        """
+        Salva atomicamente tutti i ruoli per tutti i time_labels di uno slot.
+        role_ids: {role: [employee_id, ...]}
+        """
+        with self._connect() as conn:
+            for role, ids in (role_ids or {}).items():
+                for t in (time_labels or []):
+                    if not ids:
+                        conn.execute(
+                            "DELETE FROM schedule_override WHERE week_id=? AND day_index=? AND role=? AND time_label=?",
+                            (week_id, int(day_index), str(role), str(t)),
+                        )
+                    else:
+                        conn.execute(
+                            "INSERT INTO schedule_override(week_id, day_index, role, time_label, employee_ids) "
+                            "VALUES (?,?,?,?,?) "
+                            "ON CONFLICT(week_id, day_index, role, time_label) DO UPDATE SET "
+                            "employee_ids=excluded.employee_ids, updated_at=datetime('now')",
+                            (week_id, int(day_index), str(role), str(t), json.dumps(ids)),
+                        )
+
+    def overrides_copy_week(self, from_week_id: str, to_week_id: str) -> int:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT day_index, role, time_label, employee_ids "
+                "FROM schedule_override WHERE week_id=?",
+                (from_week_id,),
+            ).fetchall()
+            conn.execute("DELETE FROM schedule_override WHERE week_id=?", (to_week_id,))
+            for r in rows:
+                conn.execute(
+                    "INSERT INTO schedule_override(week_id, day_index, role, time_label, employee_ids) "
+                    "VALUES (?,?,?,?,?)",
+                    (to_week_id, r["day_index"], r["role"], r["time_label"], r["employee_ids"]),
+                )
+            return len(rows)
 
     # ---------- Squads / fabbisogni ----------
     def squads_week_get(self, week_id: str) -> Dict[str, Any]:

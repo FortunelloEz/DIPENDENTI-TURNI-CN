@@ -725,3 +725,26 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================
+   RESPONSIVE — Dipendenti
+   ========================= */
+
+/* 900px: la tabella scorre orizzontalmente, l'header wrappa */
+@media (max-width: 900px) {
+  .employees-page .page-header { flex-wrap: wrap; gap: 10px; }
+  .emp-td-name { min-width: 140px; }
+}
+
+/* 620px: le griglie del modal diventano a colonna singola */
+@media (max-width: 620px) {
+  .emp-modal-row2 { grid-template-columns: 1fr; }
+  .emp-modal-row3 { grid-template-columns: 1fr; }
+  .emp-bulk-modal-grid { grid-template-columns: 1fr; }
+
+  /* modal body scrollabile se l'altezza è ridotta */
+  #empModalBackdrop .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}

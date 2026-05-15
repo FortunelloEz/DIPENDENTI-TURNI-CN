@@ -33,10 +33,16 @@ async function loadEmployeesFromDb(){
 
 /* ---------- Week: overrides + squads ---------- */
 async function loadWeekFromDb(weekKey){
-  const ovs = await apiCall("overrides_get_week", weekKey);
+  console.log(`[DB] loadWeekFromDb → ${weekKey}`);
+
+  const [ovs, sq] = await Promise.all([
+    apiCall("overrides_get_week", weekKey),
+    apiCall("squads_get_week", weekKey),
+  ]);
 
   Array.from(assignments.keys()).forEach(k => { if (k.startsWith(weekKey + "|")) assignments.delete(k); });
 
+  let loaded = 0;
   if (Array.isArray(ovs)){
     ovs.forEach(o => {
       const d = Number(o.day_index ?? o.dayIndex);
@@ -44,19 +50,17 @@ async function loadWeekFromDb(weekKey){
       const t = o.time_label ?? o.timeLabel;
       const ids = Array.isArray(o.employee_ids) ? o.employee_ids : (o.employeeIds || []);
       setAssignedIdsFor(weekKey, d, role, t, ids);
+      loaded++;
     });
   }
+  console.log(`[DB] loadWeekFromDb ← ${weekKey}: ${loaded} slot caricati`);
 
-  const sq = await apiCall("squads_get_week", weekKey);
   if (sq && typeof sq === "object"){
     const base = {};
     DAYS.forEach((_, i) => base[i] = defaultSquadDay());
-
     Object.keys(sq).forEach(dayKey => {
-      const d = Number(dayKey);
-      base[d] = sq[dayKey] || defaultSquadDay();
+      base[Number(dayKey)] = sq[dayKey] || defaultSquadDay();
     });
-
     squads.set(weekKey, base);
   }
 
@@ -64,20 +68,6 @@ async function loadWeekFromDb(weekKey){
 }
 
 /* ---------- Overrides SAVE helpers ---------- */
-async function saveSlotOverrideToDb(weekKey, dayIndex, role, timeLabel, ids){
-  const items = [{ time_label: timeLabel, employee_ids: ids || [] }];
-  await apiCall("overrides_set_many", weekKey, dayIndex, role, items);
-}
-
-async function saveDayRoleOverridesToDb(weekKey, dayIndex, role){
-  const items = [];
-  HALF_HOURS.forEach(t => {
-    if (timeToMin(t) < 8*60 || timeToMin(t) >= 24*60) return;
-    items.push({ time_label: t, employee_ids: getAssignedIdsFor(weekKey, dayIndex, role, t) });
-  });
-  await apiCall("overrides_set_many", weekKey, dayIndex, role, items);
-}
-
 async function clearWeekOverridesOnDb(weekKey){
   await apiCall("overrides_clear_week", weekKey);
 }

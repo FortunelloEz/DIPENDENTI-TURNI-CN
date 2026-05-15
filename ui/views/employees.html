@@ -1,6 +1,6 @@
 <div class="page employees-page">
     <div class="page-header">
-        <h2>Dipendenti</h2>
+        <h1>Dipendenti</h1>
         <div class="row gap">
             <button id="btnEmpBulkSkill" class="btn btn-ghost">⚙ Aggiornamento massivo skill</button>
             <button id="btnEmpNew" class="btn primary">+ Aggiungi</button>
@@ -119,6 +119,16 @@
                             max="16"
                             step="0.5"
                             placeholder="Vuoto = nessun limite"
+                            class="emp-max-hours-input"
+                    />
+                    <label class="emp-max-hours-label" style="margin-left:16px">Ore settimanali</label>
+                    <input
+                            id="empWeeklyHours"
+                            type="number"
+                            min="1"
+                            max="60"
+                            step="1"
+                            placeholder="Es. 20, 30, 40"
                             class="emp-max-hours-input"
                     />
                 </div>

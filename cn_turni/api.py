@@ -36,6 +36,31 @@ class Api:
 
     def ping(self) -> Dict[str, Any]:
         return {"ok": True}
+
+    # =========================
+    # Gemini API Key (cifrata in DB)
+    # =========================
+    def gemini_key_get(self) -> Optional[str]:
+        return self.db.gemini_key_get()
+
+    def gemini_key_set(self, api_key: str) -> Dict[str, Any]:
+        self.db.gemini_key_set(str(api_key))
+        return {"ok": True}
+
+    def gemini_key_delete(self) -> Dict[str, Any]:
+        self.db.gemini_key_delete()
+        return {"ok": True}
+
+    # =========================
+    # Settings generici (non cifrati)
+    # =========================
+    def settings_get(self, key: str) -> Optional[str]:
+        return self.db.settings_get(str(key))
+
+    def settings_set(self, key: str, value: str) -> Dict[str, Any]:
+        self.db.settings_set(str(key), str(value))
+        return {"ok": True}
+
     def import_availability_and_autofill(
             self,
             week_key: str,
@@ -89,6 +114,17 @@ class Api:
     def overrides_clear_week(self, week_key: str) -> None:
         week_id = week_id_from_ui_weekkey(week_key)
         self.db.overrides_clear_week(week_id)
+
+    def overrides_copy_week(self, from_week_key: str, to_week_key: str) -> dict:
+        from_week_id = week_id_from_ui_weekkey(from_week_key)
+        to_week_id = week_id_from_ui_weekkey(to_week_key)
+        count = self.db.overrides_copy_week(from_week_id, to_week_id)
+        return {"ok": True, "copied": count}
+
+    def overrides_save_slot(self, week_key: str, day_index: int, time_labels, role_ids) -> Dict[str, Any]:
+        week_id = week_id_from_ui_weekkey(week_key)
+        self.db.overrides_save_slot(week_id, int(day_index), list(time_labels or []), dict(role_ids or {}))
+        return {"ok": True}
 
     # =========================
     # Squadre (Fabbisogni)
