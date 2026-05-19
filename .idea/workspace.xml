@@ -7,13 +7,17 @@
     <list default="true" id="07257b00-7490-4583-b715-83f38d4dd07b" name="Changes" comment="update finale">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cn_turni/api.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cn_turni/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/auto_scheduler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/services/export_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/export_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cn_turni/services/import_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/import_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cn_turni/services/pdf_export.py" beforeDir="false" afterPath="$PROJECT_DIR$/cn_turni/services/pdf_export.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/assets/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/app.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/assets/db_adapter.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/db_adapter.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/assets/import_availability.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/import_availability.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/views/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/home.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/assets/export.js" beforeDir="false" afterPath="$PROJECT_DIR$/ui/assets/export.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/customization/calendar.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/calendar.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/customization/export.css" beforeDir="false" afterPath="$PROJECT_DIR$/ui/customization/export.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/views/export.html" beforeDir="false" afterPath="$PROJECT_DIR$/ui/views/export.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -298,7 +302,15 @@
       <option name="project" value="LOCAL" />
       <updated>1778835659688</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="update finale">
+      <option name="closed" value="true" />
+      <created>1778858179004</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1778858179004</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -323,12 +335,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/cn_turni/services/auto_scheduler.py</url>
-          <line>545</line>
+          <line>502</line>
           <option name="timeStamp" value="4" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/cn_turni/services/auto_scheduler.py</url>
-          <line>407</line>
+          <line>364</line>
           <option name="timeStamp" value="7" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">

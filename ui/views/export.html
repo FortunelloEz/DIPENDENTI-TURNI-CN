@@ -5,7 +5,15 @@
         </div>
 
         <div class="page-actions export-toolbar">
-            <button class="btn" id="btnExportPdf">Esporta in PDF</button>
+            <label class="export-format-label">
+                Formato
+                <select id="exportFormat" class="export-format-select">
+                    <option value="pdf">PDF</option>
+                    <option value="excel">Excel</option>
+                </select>
+            </label>
+            <button class="btn" id="btnExportFull">Esporta completo</button>
+            <button class="btn btn-secondary" id="btnExportSimple">Esporta semplificato</button>
         </div>
     </header>
 

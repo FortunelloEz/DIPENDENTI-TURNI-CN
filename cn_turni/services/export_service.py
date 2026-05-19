@@ -28,7 +28,7 @@ def _labels_to_range(labels: list[str]) -> Optional[str]:
     last = labels[-1]
     end_h = int(last.split(":")[0])
     end_m = int(last.split(":")[1])
-    end = end_h + (1 if end_m == 30 else 0)
+    end = end_h + 1
     if end >= 24:
         return f"{start_h}-ch"
     return f"{start_h}-{end}"
@@ -70,6 +70,81 @@ def _iter_overrides_rows(db: Any, week_id: str):
             }
         )
     return rows
+
+
+def _labels_to_full_range(labels: list[str]) -> Optional[str]:
+    """Come _labels_to_range ma prende tutte le labels del giorno (ignora slot) e restituisce il range complessivo."""
+    if not labels:
+        return None
+    labels = sorted(labels)
+    start_h = int(labels[0].split(":")[0])
+    last = labels[-1]
+    end_h = int(last.split(":")[0]) + 1
+    if end_h >= 24:
+        return f"{start_h}-ch"
+    return f"{start_h}-{end_h}"
+
+
+def build_week_export_simple(db: Any, week_key: str) -> dict:
+    """Versione semplificata: 1 colonna per giorno (niente split mattina/sera).
+    Mostra il range orario complessivo del dipendente per ogni giorno."""
+    week_id = week_id_from_ui_weekkey(week_key)
+    days_iso = _week_days_iso(week_key)
+
+    emp_rows = db.employees_list()
+    id_to_name = {int(r["id"]): str(r["name"]).strip() for r in emp_rows}
+
+    # grid[eid][day_index] = {role: set_of_time_labels}
+    grid: Dict[int, Dict[int, Dict[str, set]]] = {}
+
+    overrides = _iter_overrides_rows(db, week_id)
+    for r in overrides:
+        day_index = int(r["day_index"])
+        time_label = str(r["time_label"])
+        role = str(r.get("role") or "")
+
+        eids = r.get("employee_ids")
+        if isinstance(eids, str):
+            s = eids.strip()
+            if s.startswith("["):
+                eids = json.loads(s)
+            elif s == "":
+                eids = []
+            else:
+                eids = [int(x) for x in s.split(",") if x.strip().isdigit()]
+
+        for eid in (eids or []):
+            eid = int(eid)
+            by_role = grid.setdefault(eid, {}).setdefault(day_index, {})
+            by_role.setdefault(role, set()).add(time_label)
+
+    day_indices = [1, 2, 3, 4, 5, 6]
+    headers = []
+    for di in day_indices:
+        iso = days_iso[di]
+        headers.append({"iso": iso, "label": _day_label_it(iso)})
+
+    rows = []
+    for eid, by_day in grid.items():
+        name = id_to_name.get(eid, f"ID {eid}")
+        cells: List[str] = []
+        roles: List[str] = []
+        any_cell = False
+        for di in day_indices:
+            by_role = by_day.get(di, {})
+            all_labels = sorted({lbl for lbls in by_role.values() for lbl in lbls})
+            rng = _labels_to_full_range(all_labels)
+            # ruolo dominante = quello con più mezz'ore
+            dominant_role = max(by_role, key=lambda r: len(by_role[r]), default="") if rng else ""
+            cells.append(rng or "")
+            roles.append(dominant_role)
+            if rng:
+                any_cell = True
+        if any_cell:
+            rows.append({"name": name, "cells": cells, "roles": roles})
+
+    rows.sort(key=lambda r: r["name"].lower())
+    return {"week_key": week_key, "week_id": week_id, "headers": headers, "rows": rows}
 
 
 def build_week_export(db: Any, week_key: str) -> dict:

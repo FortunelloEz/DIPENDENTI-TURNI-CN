@@ -19,6 +19,79 @@ ROLE_COLORS = {
 }
 ROLE_ORDER = ["Cassa", "Runner", "Bar", "Comande", "Accoglienza", "Jolly"]
 
+def build_pdf_from_export_simple(export: Dict[str, Any]) -> bytes:
+    """PDF semplificato: 1 colonna per giorno, nessuno split mattina/sera."""
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=landscape(A4),
+        leftMargin=18, rightMargin=18, topMargin=18, bottomMargin=18,
+    )
+    styles = getSampleStyleSheet()
+    title = Paragraph(f"Turni semplificati — settimana: {export.get('week_key','')}", styles["Title"])
+
+    from reportlab.platypus import HRFlowable
+    legend_items = []
+    for role in ROLE_ORDER:
+        c = ROLE_COLORS.get(role)
+        if c:
+            r_int = int(c.red * 255)
+            g_int = int(c.green * 255)
+            b_int = int(c.blue * 255)
+            legend_items.append(
+                Paragraph(
+                    f'<font color="#{r_int:02x}{g_int:02x}{b_int:02x}">■</font> {role}',
+                    styles["Normal"]
+                )
+            )
+    from reportlab.platypus import Table as RLTable
+    legend_data = [legend_items]
+    legend_tbl = RLTable(legend_data, hAlign="LEFT")
+    legend_tbl.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+    ]))
+
+    # Unica riga header: [nome, giorno1, ..., giorno6, nome]
+    header_row = [""] + [h["label"] for h in export["headers"]] + [""]
+    data: List[List[str]] = [header_row]
+    for r in export["rows"]:
+        data.append([r["name"]] + r["cells"] + [r["name"]])
+
+    tbl = Table(data, repeatRows=1)
+    style_cmds = [
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (-1, 0), 8),
+        ("FONTSIZE", (0, 1), (-1, -1), 8),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.Color(0.93, 0.94, 0.97)),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("ALIGN", (0, 1), (0, -1), "LEFT"),
+        ("ALIGN", (-1, 1), (-1, -1), "LEFT"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.Color(0.75, 0.78, 0.85)),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.Color(0.97, 0.97, 0.99)]),
+    ]
+
+    for row_idx, r in enumerate(export["rows"]):
+        pdf_row = row_idx + 1
+        roles = r.get("roles", [""] * len(r["cells"]))
+        for col_idx, role in enumerate(roles):
+            if role and role in ROLE_COLORS:
+                pdf_col = col_idx + 1
+                style_cmds.append(
+                    ("BACKGROUND", (pdf_col, pdf_row), (pdf_col, pdf_row), ROLE_COLORS[role])
+                )
+
+    tbl.setStyle(TableStyle(style_cmds))
+    story = [title, Spacer(1, 4), legend_tbl, Spacer(1, 8), tbl]
+    doc.build(story)
+    return buf.getvalue()
+
+
 def build_pdf_from_export(export: Dict[str, Any]) -> bytes:
     buf = BytesIO()
     doc = SimpleDocTemplate(

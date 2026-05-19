@@ -361,49 +361,6 @@ def _compute_balance_warnings(
     return warnings
 
 
-def _choose_slot_for_permanent(availability: dict, emp: Employee, iso_day: str, plan: Plan = None, squads_need: dict = None, day: int = None) -> Optional[str]:
-    """
-    Sceglie lo slot per i permanenti:
-    - Se nel CSV ha SOLO mattina => morning
-    - Se nel CSV ha SOLO sera    => evening
-    - Se ha entrambe (indifferente) => slot più scoperto (se plan/squads_need disponibili), altrimenti morning
-    - Se non è nel CSV => morning (default)
-    Poi applica vincoli anagrafica (slot_morning/slot_evening).
-    """
-    labels = _day_labels(availability, emp.name, iso_day)
-
-    slot = "morning"
-
-    if labels is not None:
-        hm = _has_morning(labels)
-        he = _has_evening(labels)
-        if hm and not he:
-            slot = "morning"
-        elif he and not hm:
-            slot = "evening"
-        elif hm and he:
-            # Indifferente: usa il bilanciamento se abbiamo i dati
-            if plan is not None and squads_need is not None and day is not None:
-                balanced = _choose_slot_for_indifferent(plan, squads_need, emp, day)
-                if balanced:
-                    slot = balanced
-            else:
-                slot = "morning"
-
-    # Rispetta profilo
-    if slot == "morning" and not emp.slot_morning and emp.slot_evening:
-        slot = "evening"
-    if slot == "evening" and not emp.slot_evening and emp.slot_morning:
-        slot = "morning"
-
-    if not emp.slot_morning and not emp.slot_evening:
-        return None
-
-    if not _is_available_slot(availability, emp, iso_day, slot):
-        return None
-
-    return slot
-
 
 def build_plan(
         *,
@@ -475,7 +432,7 @@ def build_plan(
                         and perm_dayoff.get(emp.id) != d
                         and not perm_used_day.get((emp.id, d))
                         and not indiff_used_slot.get((emp.id, d, slot))
-                        and (perm_hours.get(emp.id, 0) + _effective_slot_hours(emp) <= perm_targets.get(emp.id, 40))
+                        and (perm_hours.get(emp.id, 0) + _effective_available_slot_hours(emp, availability, iso, slot) <= perm_targets.get(emp.id, 40))
                     ),
                     -int(need.get(r, 0) or 0)
                 )
@@ -603,39 +560,11 @@ def build_plan(
 
                 candidates: List[Employee] = []
                 for emp in temps:
-                    if role == "Runner":
-                        print(
-                            "[DEBUG RUNNER]",
-                            {
-                                "emp": emp.name,
-                                "id": emp.id,
-                                "day": d,
-                                "iso": iso,
-                                "slot": slot,
-                                "skill_runner": _raw_skill(emp, "Runner"),
-                                "used_this_slot": emp.id in used_this_slot,
-                                "temp_used_slot": temp_used_slot.get((emp.id, d, slot)),
-                                "is_indifferent": _is_indifferent_day(availability, emp.name, iso),
-                                "allowed_profile": _allowed_by_profile(emp, slot),
-                                "allowed_work_days": _allowed_by_work_days(emp, d),
-                                "available_slot": _is_available_slot(availability, emp, iso, slot, perm_ids),
-                                "can_cover_runner": _can_cover_role(emp, "Runner"),
-                                "slot_hours": _effective_available_slot_hours(emp, availability, iso, slot),
-                                "weekly_target": emp.weekly_hours_target,
-                                "temp_hours": temp_hours.get(emp.id, 0),
-                            },
-                            flush=True
-                        )
                     if emp.id in used_this_slot:
                         continue
                     # Già usato in questo slot specifico
                     if temp_used_slot.get((emp.id, d, slot)):
                         continue
-                        # INDIFFERENTE = può coprire i buchi nello slot corrente se è disponibile.
-                    # Non lo blocchiamo più a priori su morning/evening.
-                    if _is_indifferent_day(availability, emp.name, iso):
-                        if temp_used_slot.get((emp.id, d, slot)):
-                            continue
                     if not _allowed_by_profile(emp, slot):
                         continue
                     if not _allowed_by_work_days(emp, d):
@@ -665,7 +594,6 @@ def build_plan(
                     ),
                     reverse=True
                 )
-
                 for emp in candidates[:missing]:
                     current.append(emp.id)
                     used_this_slot.add(emp.id)

@@ -4,8 +4,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 from cn_turni.services.import_service import ImportService
 from cn_turni.db import Db, default_db_path, week_id_from_ui_weekkey
-from cn_turni.services.export_service import build_week_export
-from cn_turni.services.pdf_export import build_pdf_from_export
+from cn_turni.services.export_service import build_week_export, build_week_export_simple
+from cn_turni.services.pdf_export import build_pdf_from_export, build_pdf_from_export_simple
+from cn_turni.services.excel_export import build_excel_from_export, build_excel_from_export_simple
 from tkinter import Tk, filedialog
 import base64
 import os
@@ -211,6 +212,78 @@ class Api:
 
         with open(path, "wb") as f:
             f.write(pdf_bytes)
+
+        return {"saved": True, "path": path}
+
+    def export_week_simple_pdf_save_dialog(self, week_key: str) -> dict:
+        export = build_week_export_simple(self.db, week_key)
+        pdf_bytes = build_pdf_from_export_simple(export)
+
+        root = Tk()
+        root.withdraw()
+
+        path = filedialog.asksaveasfilename(
+            title="Salva PDF semplificato",
+            defaultextension=".pdf",
+            filetypes=[("PDF files", "*.pdf")],
+            initialfile=f"Export_semplificato_{week_key}.pdf"
+        )
+
+        root.destroy()
+
+        if not path:
+            return {"saved": False}
+
+        with open(path, "wb") as f:
+            f.write(pdf_bytes)
+
+        return {"saved": True, "path": path}
+
+    def export_week_excel_save_dialog(self, week_key: str) -> dict:
+        export = build_week_export(self.db, week_key)
+        xlsx_bytes = build_excel_from_export(export)
+
+        root = Tk()
+        root.withdraw()
+
+        path = filedialog.asksaveasfilename(
+            title="Salva Excel settimana",
+            defaultextension=".xlsx",
+            filetypes=[("Excel files", "*.xlsx")],
+            initialfile=f"Export_{week_key}.xlsx"
+        )
+
+        root.destroy()
+
+        if not path:
+            return {"saved": False}
+
+        with open(path, "wb") as f:
+            f.write(xlsx_bytes)
+
+        return {"saved": True, "path": path}
+
+    def export_week_simple_excel_save_dialog(self, week_key: str) -> dict:
+        export = build_week_export_simple(self.db, week_key)
+        xlsx_bytes = build_excel_from_export_simple(export)
+
+        root = Tk()
+        root.withdraw()
+
+        path = filedialog.asksaveasfilename(
+            title="Salva Excel semplificato",
+            defaultextension=".xlsx",
+            filetypes=[("Excel files", "*.xlsx")],
+            initialfile=f"Export_semplificato_{week_key}.xlsx"
+        )
+
+        root.destroy()
+
+        if not path:
+            return {"saved": False}
+
+        with open(path, "wb") as f:
+            f.write(xlsx_bytes)
 
         return {"saved": True, "path": path}
     # =========================

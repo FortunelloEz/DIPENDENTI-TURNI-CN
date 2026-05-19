@@ -559,7 +559,7 @@ function openDayModal(dayIndex){
       const di       = Number(btn.dataset.day);
       const seg      = { startMin, endMin, id: `${startMin}-${endMin}`, label: bandLabel(startMin, endMin) };
       closeDayModal();
-      openSlotManageModal({ weekKey, dayIndex: di, seg, timeLabels: segmentToSlots(seg) });
+      openSlotManageModal({ weekKey, dayIndex: di, seg, timeLabels: segmentToSlots(seg), fromDay: true });
     });
   });
 
@@ -579,7 +579,7 @@ function closeDayModal(){
 /* ===========================================
    MODAL UNIFICATO: GESTIONE TURNO — tabella scura
    =========================================== */
-function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels }) {
+function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = false }) {
   closeModal();
 
   const ROLE_BADGE_CLASS = {
@@ -596,6 +596,15 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels }) {
 
   const head = document.createElement("div");
   head.className = "modal-head";
+
+  if (fromDay) {
+    const backBtn = document.createElement("button");
+    backBtn.className = "modal-back-btn";
+    backBtn.textContent = "← Giorno";
+    backBtn.addEventListener("click", () => { closeModal(); openDayModal(dayIndex); });
+    head.appendChild(backBtn);
+  }
+
   const titleEl = document.createElement("div");
   titleEl.className = "modal-title";
   const date = new Date(currentWeekStart);
@@ -1077,7 +1086,8 @@ function initQuickInsert() {
   if (startSel) startSel.value = "08:00";
   if (endSel)   endSel.value   = "16:00";
 
-  let _qiShift = null;
+  let _qiShift   = null;
+  let _qiAvRange = null;  // { start: number, end: number } | null — disponibilità CSV employee corrente
 
   /* -------- STEP LOCK / UNLOCK -------- */
   function _setStep(n, locked) {
@@ -1236,11 +1246,12 @@ function initQuickInsert() {
     // Reset disable state first
     backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.disabled = false; b.title = ""; });
 
-    if (!avItem) return; // nessun dato CSV → tutti i pulsanti abilitati, nessuna selezione automatica
+    if (!avItem) { _qiAvRange = null; return; } // nessun dato CSV → tutti i pulsanti abilitati, nessuna selezione automatica
 
     const parts = (avItem.range || "").split("-").map(Number);
-    if (parts.length < 2) return;
+    if (parts.length < 2) { _qiAvRange = null; return; }
     const [avS, avE] = parts;
+    _qiAvRange = { start: avS, end: avE };
     const hasMorning = avS < 16 && avE > 8;
     const hasEvening = avS < 24 && avE > 16;
 
@@ -1256,6 +1267,12 @@ function initQuickInsert() {
     backdrop.querySelectorAll(".qi-shift-btn").forEach(b => b.classList.toggle("active", b.dataset.shift === shift));
     _qiShift = shift;
     document.getElementById("qiCustomTimes").style.display = shift === "custom" ? "block" : "none";
+    if (shift === "custom" && _qiAvRange) {
+      const s = `${String(_qiAvRange.start).padStart(2,'0')}:00`;
+      const e = `${String(_qiAvRange.end).padStart(2,'0')}:00`;
+      if (startSel && [...startSel.options].some(o => o.value === s)) startSel.value = s;
+      if (endSel   && [...endSel.options].some(o => o.value === e))   endSel.value   = e;
+    }
     document.getElementById("qiModalSave").disabled = false;
     _qiShowBanner("", "");
   }
@@ -1268,6 +1285,7 @@ function initQuickInsert() {
     document.getElementById("qiEmployee").value = "";
     document.getElementById("qiEmpInfo").innerHTML = "";
     _qiShift = null;
+    _qiAvRange = null;
     document.getElementById("qiModalSave").disabled = true;
     backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.classList.remove("active"); b.disabled = false; b.title = ""; });
     document.getElementById("qiCustomTimes").style.display = "none";
@@ -1285,6 +1303,7 @@ function initQuickInsert() {
     document.getElementById("qiEmployee").value = "";
     document.getElementById("qiEmpInfo").innerHTML = "";
     _qiShift = null;
+    _qiAvRange = null;
     document.getElementById("qiModalSave").disabled = true;
     backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.classList.remove("active"); b.disabled = false; b.title = ""; });
     document.getElementById("qiCustomTimes").style.display = "none";
@@ -1298,6 +1317,7 @@ function initQuickInsert() {
     const empId  = document.getElementById("qiEmployee").value;
     const dayIdx = parseInt(document.getElementById("qiDay").value);
     _qiShift = null;
+    _qiAvRange = null;
     document.getElementById("qiModalSave").disabled = true;
     backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.classList.remove("active"); b.disabled = false; b.title = ""; });
     document.getElementById("qiCustomTimes").style.display = "none";
@@ -1339,8 +1359,11 @@ function initQuickInsert() {
     document.getElementById("qiCoverage").textContent = "";
     document.getElementById("qiCoverage").className = "qi-coverage";
     _qiShift = null;
+    _qiAvRange = null;
     backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.classList.remove("active"); b.disabled = false; b.title = ""; });
     document.getElementById("qiCustomTimes").style.display = "none";
+    if (startSel) startSel.value = "08:00";
+    if (endSel)   endSel.value   = "16:00";
     document.getElementById("qiModalSave").disabled = true;
     _qiShowBanner("", "");
 
@@ -1426,6 +1449,7 @@ function initQuickInsert() {
 
       // Resetta solo step 3+4, mantieni giorno e ruolo
       _qiShift = null;
+      _qiAvRange = null;
       document.getElementById("qiEmployee").value = "";
       document.getElementById("qiEmpInfo").innerHTML = "";
       backdrop.querySelectorAll(".qi-shift-btn").forEach(b => { b.classList.remove("active"); b.disabled = false; b.title = ""; });

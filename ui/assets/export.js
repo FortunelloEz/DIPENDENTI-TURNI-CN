@@ -116,31 +116,47 @@ function _escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
-async function downloadExportPdf() {
+const _EXPORT_API = {
+  pdf:   { full: "export_week_pdf_save_dialog",        simple: "export_week_simple_pdf_save_dialog"   },
+  excel: { full: "export_week_excel_save_dialog",      simple: "export_week_simple_excel_save_dialog" },
+};
+
+function _exportFormat() {
+  return document.getElementById("exportFormat")?.value || "pdf";
+}
+
+async function _doExport(type) {
   const wk = window.lastWeekKey;
-  if (!wk) {
-    alert("Prima elabora una settimana dalla Home.");
-    return;
-  }
-  const res = await window.pywebview.api.export_week_pdf_save_dialog(wk);
-  if (res?.saved) {
-    alert("PDF salvato correttamente.");
+  if (!wk) { alert("Prima elabora una settimana dalla Home."); return; }
+  const fmt    = _exportFormat();
+  const method = _EXPORT_API[fmt]?.[type];
+  if (!method) return;
+
+  const btnId  = type === "full" ? "btnExportFull" : "btnExportSimple";
+  const btn    = document.getElementById(btnId);
+  const origTx = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = "Esportazione…"; }
+
+  try {
+    const res = await window.pywebview.api[method](wk);
+    if (res?.saved) alert("File salvato correttamente.");
+  } catch (err) {
+    console.error(err);
+    alert("Errore durante l'esportazione. Controlla la console.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = origTx; }
   }
 }
 
 function initExportView() {
   renderExportTable(window.lastExportData);
 
-  const btn = document.getElementById("btnExportPdf");
-  if (btn) {
+  for (const [id, type] of [["btnExportFull", "full"], ["btnExportSimple", "simple"]]) {
+    const btn = document.getElementById(id);
+    if (!btn) continue;
     const clone = btn.cloneNode(true);
     btn.parentNode.replaceChild(clone, btn);
-    clone.addEventListener("click", () => {
-      downloadExportPdf().catch(err => {
-        console.error(err);
-        alert("Errore export PDF. Controlla console.");
-      });
-    });
+    clone.addEventListener("click", () => _doExport(type));
   }
 }
 

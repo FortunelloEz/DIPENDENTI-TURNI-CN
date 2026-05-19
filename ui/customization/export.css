@@ -10,6 +10,29 @@
   align-items: center;
 }
 
+.export-format-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.export-format-select {
+  border: 1px solid rgba(15,23,42,.18);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 13px;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+}
+
+.export-format-select:focus {
+  border-color: var(--accent, #6366f1);
+}
+
 /* wrapper scroll: orizz + vert */
 .export-table-wrap {
   width: 100%;

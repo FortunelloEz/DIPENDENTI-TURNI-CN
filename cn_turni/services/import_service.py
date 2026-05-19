@@ -8,8 +8,9 @@ from typing import Any, Optional
 import re
 
 from cn_turni.db import week_id_from_ui_weekkey
-from .auto_scheduler import Employee, PermanentSettings, BalanceWarning, build_plan, ROLES
+from .auto_scheduler import Employee, PermanentSettings, BalanceWarning, build_plan, ROLES, _allowed_by_work_days
 from .csv_availability import DayAvailability, norm_name, parse_availability_csv
+from .swap_optimizer import two_opt_swap
 
 
 def _monday_of_iso(iso_day: str) -> str:
@@ -333,8 +334,8 @@ class ImportService:
         ]
         perm_ids_set = {p.employee_id for p in perm_settings}
 
-        # 9) squads need (USA week_id)
-        squads_need = self.db.squads_week_get(week_id)
+        # 9) squads need (USA week_id) — chiavi normalizzate a int per coerenza con enumerate()
+        squads_need = {int(k): v for k, v in (self.db.squads_week_get(week_id) or {}).items()}
         # FIX: il CSV può partire da martedì.
         # Non schedulare giorni che non esistono nel CSV, altrimenti i permanenti
         # vengono usati su giorni fantasma e consumano ore prima del weekend.
@@ -453,6 +454,9 @@ class ImportService:
             if slot_name == "evening" and not emp.slot_evening:
                 return False
 
+            if not _allowed_by_work_days(emp, d):
+                return False
+
             if not self._is_available_label(
                     availability_for_sched,
                     emp.name,
@@ -470,52 +474,102 @@ class ImportService:
                 if daily_halfhours.get((emp.id, d), 0) >= max_halfhours:
                     return False
 
+            if emp.weekly_hours_target is not None:
+                weekly_hh = sum(daily_halfhours.get((emp.id, dd), 0) for dd in range(7))
+                if weekly_hh / 2.0 >= emp.weekly_hours_target:
+                    return False
+
             return True
 
-        def _candidate_score(emp: Employee, role_name: str, d: int) -> tuple:
-            return (
-                _role_skill(emp, role_name),
-                1 if emp.preferred_role == role_name else 0,
-                -daily_halfhours.get((emp.id, d), 0),
-                -(emp.id or 0),
-            )
+        # ── RIEMPIMENTO con scoring a costo opportunità ──
+        # Per ogni (day, time_label), i ruoli scoperti vengono assegnati in ordine
+        # di scarsità (meno candidati disponibili → precedenza più alta).
+        # Il candidato viene scelto con preservation_margin:
+        #   margin = skill sul ruolo corrente − miglior skill sui ruoli ancora scoperti
+        # I forti finiscono dove sono più insostituibili; i deboli coprono i buchi rimanenti.
 
         for d, iso_day in enumerate(week_days_iso):
             day_need = squads_need.get(d, {}) or {}
 
-            for slot_name, labels in {
-                "morning": MORNING_LABELS,
-                "evening": EVENING_LABELS,
-            }.items():
+            for slot_name, labels in [("morning", MORNING_LABELS), ("evening", EVENING_LABELS)]:
                 slot_need = day_need.get(slot_name, {}) or {}
 
-                for role in ROLES:
-                    required = int(slot_need.get(role, 0) or 0)
-                    if required <= 0:
+                for t in labels:
+                    open_roles: dict[str, int] = {}
+                    for role in ROLES:
+                        required = int(slot_need.get(role, 0) or 0)
+                        if required <= 0:
+                            continue
+                        still = required - len(by_cell.get((d, t, role), []))
+                        if still > 0:
+                            open_roles[role] = still
+
+                    if not open_roles:
                         continue
 
-                    for t in labels:
-                        key = (d, t, role)
-                        current_ids = by_cell.setdefault(key, [])
-                        missing = required - len(current_ids)
+                    # conta candidati validi per ogni ruolo (snapshot iniziale per la scarsità)
+                    role_cand_count: dict[str, int] = {
+                        role: sum(
+                            1 for emp in employees
+                            if _can_use_on_time(emp, d, iso_day, slot_name, role, t)
+                            and emp.id not in by_cell.get((d, t, role), [])
+                        )
+                        for role in open_roles
+                    }
 
-                        if missing <= 0:
+                    # ordina: prima i ruoli con meno candidati, poi quelli più urgenti (required alto)
+                    roles_sorted = sorted(
+                        open_roles.keys(),
+                        key=lambda r: (role_cand_count.get(r, 0), -open_roles[r]),
+                    )
+
+                    for role in roles_sorted:
+                        still_needed = open_roles.get(role, 0)
+                        if still_needed <= 0:
                             continue
 
+                        # candidati aggiornati: rispetta busy modificato dalle assegnazioni precedenti in questo t
                         candidates = [
                             emp for emp in employees
                             if _can_use_on_time(emp, d, iso_day, slot_name, role, t)
+                            and emp.id not in by_cell.get((d, t, role), [])
                         ]
 
-                        candidates.sort(
-                            key=lambda emp: _candidate_score(emp, role, d),
-                            reverse=True,
-                        )
+                        other_open = [r for r in open_roles if r != role and open_roles[r] > 0]
 
-                        for emp in candidates[:missing]:
-                            current_ids.append(emp.id)
+                        def _opp_score(emp: Employee, _role=role, _other=other_open, _t=t) -> tuple:
+                            rs = _role_skill(emp, _role)
+                            best_other = max((_role_skill(emp, r) for r in _other), default=0)
+                            margin = rs - best_other
+                            # continuità adiacente: quante delle due mezz'ore vicine (prima/dopo)
+                            # l'emp è già assegnato sullo stesso ruolo/giorno.
+                            # Vale 0-2; favorisce chi *estende* un blocco continuo, non chi è sparso.
+                            h, m = map(int, _t.split(':'))
+                            hidx = h * 2 + (1 if m == 30 else 0)
+                            def _hl(i: int) -> str:
+                                return f"{i // 2:02d}:{'30' if i % 2 else '00'}"
+                            extends_back = hidx > 16 and emp.id in by_cell.get((d, _hl(hidx - 1), _role), [])
+                            extends_fwd  = hidx < 47 and emp.id in by_cell.get((d, _hl(hidx + 1), _role), [])
+                            continuity = int(extends_back) + int(extends_fwd)
+                            preferred = 1 if emp.preferred_role == _role else 0
+                            weekly_hh = sum(daily_halfhours.get((emp.id, dd), 0) for dd in range(7))
+                            daily_hh = daily_halfhours.get((emp.id, d), 0)
+                            return (margin, rs, continuity, preferred, -weekly_hh, -daily_hh)
+
+                        candidates.sort(key=_opp_score, reverse=True)
+
+                        for emp in candidates[:still_needed]:
+                            cell = by_cell.setdefault((d, t, role), [])
+                            if emp.id not in cell:
+                                cell.append(emp.id)
                             busy_by_time.setdefault((d, t), set()).add(emp.id)
                             daily_halfhours[(emp.id, d)] = daily_halfhours.get((emp.id, d), 0) + 1
+                            open_roles[role] = max(0, open_roles[role] - 1)
+
+        # ── 2-opt swap post-assegnazione ──
+        _swap_count, _swap_gain = two_opt_swap(by_cell=by_cell, emp_by_id=emp_by_id)
+        if _swap_count:
+            print(f"[2-opt] {_swap_count} swap applicati, guadagno skill totale={_swap_gain:.0f}", flush=True)
 
         all_override_items = [
             {
@@ -527,11 +581,6 @@ class ImportService:
             for (d, t, role), ids in by_cell.items()
             if ids
         ]
-        print("[CHECK FIX 10B] all_override_items prima del salvataggio:", len(all_override_items), flush=True)
-
-        for item in all_override_items:
-            if item["day_index"] == 2 and item["time_label"] in ("16:00", "16:30", "17:00", "17:30") and item["role"] == "Runner":
-                print("[CHECK RUNNER 16-18]", item, flush=True)
         saved_count = self.db.overrides_bulk_save(week_id, all_override_items)
         print(f"[AutoSchedule] Salvati {saved_count} slot -> week_id={week_id} (week_key={week_key})", flush=True)
 
