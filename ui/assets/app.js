@@ -228,6 +228,30 @@ function recalcSegmentsFromAssignments(weekKey){
   weekSegments.set(weekKey, computeTimeSegments(weekKey));
 }
 
+function computeTimeSegmentsForDay(weekKey, dayIndex){
+  const segs = [];
+  let segStartMin = 8*60;
+  let prevSig = null;
+  for (let i = 0; i < HALF_HOURS.length; i++){
+    const t = HALF_HOURS[i];
+    const m = timeToMin(t);
+    if (m < 8*60) continue;
+    if (m >= 24*60) break;
+    const sig = ROLES.map(r =>
+      (getAssignedIdsFor(weekKey, dayIndex, r, t) || []).slice().sort().join(",")
+    ).join("|");
+    if (prevSig === null){ prevSig = sig; segStartMin = m; continue; }
+    if (sig !== prevSig){
+      segs.push({ startMin: segStartMin, endMin: m, id: `${segStartMin}-${m}`, label: bandLabel(segStartMin, m) });
+      segStartMin = m;
+      prevSig = sig;
+    }
+  }
+  segs.push({ startMin: segStartMin, endMin: 24*60, id: `${segStartMin}-${24*60}`, label: bandLabel(segStartMin, 24*60) });
+  if (segs.length === 1 && segs[0].startMin === 8*60 && segs[0].endMin === 24*60) return baseSegments();
+  return segs;
+}
+
 /* ---------- DISPONIBILITÀ HELPER ---------- */
 /**
  * Dato il preview disponibilità e un dayIndex+seg, restituisce:
@@ -448,7 +472,7 @@ function openDayModal(dayIndex){
   const DAY_FULL = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
   titleEl.textContent = `${DAY_FULL[dayIndex]} ${formatDate(date)}`;
 
-  const segments = computeTimeSegments(weekKey);
+  const segments = computeTimeSegmentsForDay(weekKey, dayIndex);
   bodyEl.innerHTML = "";
 
   segments.forEach(seg => {
