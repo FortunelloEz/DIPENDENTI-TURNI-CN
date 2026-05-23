@@ -11,6 +11,7 @@ from cn_turni.db import week_id_from_ui_weekkey
 from .auto_scheduler import Employee, PermanentSettings, BalanceWarning, build_plan, ROLES, _allowed_by_work_days
 from .csv_availability import DayAvailability, norm_name, parse_availability_csv
 from .swap_optimizer import two_opt_swap
+from .skill_upgrade import skill_upgrade_pass
 
 
 def _monday_of_iso(iso_day: str) -> str:
@@ -565,6 +566,40 @@ class ImportService:
                             busy_by_time.setdefault((d, t), set()).add(emp.id)
                             daily_halfhours[(emp.id, d)] = daily_halfhours.get((emp.id, d), 0) + 1
                             open_roles[role] = max(0, open_roles[role] - 1)
+
+        # ── Skill-upgrade pass ──
+        def _is_avail_for_upgrade(emp: Employee, d: int, t: str) -> bool:
+            slot_name = "morning" if int(t.split(":")[0]) < 16 else "evening"
+            if slot_name == "morning" and not emp.slot_morning:
+                return False
+            if slot_name == "evening" and not emp.slot_evening:
+                return False
+            if not _allowed_by_work_days(emp, d):
+                return False
+            if not self._is_available_label(
+                    availability_for_sched, emp.name, week_days_iso[d], t,
+                    emp.is_permanent or emp.id in perm_ids_set):
+                return False
+            if emp.max_daily_hours is not None:
+                if daily_halfhours.get((emp.id, d), 0) >= round(float(emp.max_daily_hours) * 2):
+                    return False
+            if emp.weekly_hours_target is not None:
+                weekly_hh = sum(daily_halfhours.get((emp.id, dd), 0) for dd in range(7))
+                if weekly_hh / 2.0 >= emp.weekly_hours_target:
+                    return False
+            return True
+
+        _upgrade_count = skill_upgrade_pass(
+            by_cell=by_cell,
+            emp_by_id=emp_by_id,
+            employees=employees,
+            busy_by_time=busy_by_time,
+            daily_halfhours=daily_halfhours,
+            squads_need=squads_need,
+            is_available=_is_avail_for_upgrade,
+        )
+        if _upgrade_count:
+            print(f"[SkillUpgrade] {_upgrade_count} rimpiazzi di qualità applicati", flush=True)
 
         # ── 2-opt swap post-assegnazione ──
         _swap_count, _swap_gain = two_opt_swap(by_cell=by_cell, emp_by_id=emp_by_id)
