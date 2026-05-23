@@ -480,6 +480,9 @@ function openDayModal(dayIndex){
     const deficit    = getSquadDeficitForSlot(weekKey, dayIndex, seg);
     const missingRoles = ROLES.filter(r => deficit[r]?.deficit > 0);
     const hasNeed      = ROLES.some(r => (deficit[r]?.required || 0) > 0);
+    const hasAnyone    = ROLES.some(r => unionAssignedOverLabels(weekKey, dayIndex, r, timeLabels).length > 0);
+    if (!hasNeed && !hasAnyone) return;
+
     const allCovered   = hasNeed && missingRoles.length === 0;
     const someMissing  = missingRoles.length > 0;
 

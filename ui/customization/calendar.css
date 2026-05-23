@@ -488,6 +488,10 @@
   outline: 2px solid rgba(37,99,235,.20);
   outline-offset: -2px;
 }
+.tl-row:hover .tl-time {
+  color: var(--accent);
+  font-weight: 700;
+}
 
 /* Colori leggeri per colonne */
 .tl-cell.day-col-0 { background: rgba(16,185,129,.04); }
@@ -651,10 +655,6 @@
   border-top: 1px solid rgba(15,23,42,.10);
   background: #f8fafc;
 }
-
-/* ---------- DAY MODAL legacy (classi rimosse, ora dm-card) ---------- */
-.day-modal-seg, .day-modal-seg-head, .day-modal-role-row,
-.day-modal-role-name, .day-modal-names, .day-modal-empty { display: none; }
 
 /* ---------- PICKER MODALE ---------- */
 .picker-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -853,7 +853,7 @@
 }
 
 /* Corpo card: righe ruolo */
-.dm-card-body { padding: 6px 0; max-height: 160px; overflow-y: auto; }
+.dm-card-body { padding: 6px 0; max-height: 220px; overflow-y: auto; }
 
 .dm-role-row {
   display: flex;
