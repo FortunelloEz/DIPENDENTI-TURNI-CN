@@ -7,7 +7,6 @@ from cn_turni.db import Db, default_db_path, week_id_from_ui_weekkey
 from cn_turni.services.export_service import build_week_export, build_week_export_simple
 from cn_turni.services.pdf_export import build_pdf_from_export, build_pdf_from_export_simple
 from cn_turni.services.excel_export import build_excel_from_export, build_excel_from_export_simple
-from tkinter import Tk, filedialog
 import webview
 import base64
 import os
@@ -246,18 +245,13 @@ class Api:
         return self.db.imported_files_list()
 
     def imported_files_open_dialog(self) -> dict:
-        """Apre il picker Windows e restituisce path + filename. Nessun salvataggio ancora."""
-        root = Tk()
-        root.withdraw()
-        root.lift()
-        root.attributes("-topmost", True)
-        path = filedialog.askopenfilename(
-            title="Seleziona file CSV disponibilità",
-            filetypes=[("CSV files", "*.csv"), ("Tutti i file", "*.*")]
+        result = webview.windows[0].create_file_dialog(
+            webview.OPEN_DIALOG,
+            file_types=("CSV (*.csv)", "Tutti i file (*.*)")
         )
-        root.destroy()
-        if not path:
+        if not result:
             return {"ok": False, "cancelled": True}
+        path = result[0]
         return {"ok": True, "path": path, "filename": os.path.basename(path)}
 
     def imported_files_add(self, filename: str, file_path: str, week_key: str) -> int:
