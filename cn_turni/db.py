@@ -657,6 +657,9 @@ class Db:
                 "FROM schedule_override WHERE week_id=?",
                 (from_week_id,),
             ).fetchall()
+            if not rows:
+                # Settimana sorgente vuota: non cancellare i turni della destinazione.
+                return 0
             conn.execute("DELETE FROM schedule_override WHERE week_id=?", (to_week_id,))
             for r in rows:
                 conn.execute(

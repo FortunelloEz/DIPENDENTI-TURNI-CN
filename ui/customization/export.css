@@ -201,11 +201,11 @@
   line-height: 1.6;
 }
 
-/* ===== Colonna nome finale (destra) ===== */
+/* ===== Colonna nome finale (destra) =====
+   NON sticky: fissata a destra copriva le colonne della Domenica
+   (e la sua intestazione non era fissata, quindi i titoli non corrispondevano). */
 .export-td-name--right {
-  position: sticky;
-  right: 0;
-  z-index: 4;
+  position: static;
   background: #fff;
   border-left: 2px solid rgba(0,0,0,.10);
   border-right: none;

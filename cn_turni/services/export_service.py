@@ -20,18 +20,32 @@ def _day_label_it(iso_day: str) -> str:
     return f"{giorni[d.weekday()]} {d.day:02d} {mesi[d.month-1]}"
 
 
+def _hh_index(label: str) -> int:
+    """ "12:30" -> 25 (indice di mezz'ora)."""
+    h, m = label.split(":")
+    return int(h) * 2 + (1 if int(m) >= 30 else 0)
+
+
+def _fmt_hh(idx: int) -> str:
+    """Indice di mezz'ora -> "8", "12:30" (ore intere senza minuti, come prima)."""
+    h, half = divmod(idx, 2)
+    return f"{h}:30" if half else f"{h}"
+
+
 def _labels_to_range(labels: list[str]) -> Optional[str]:
+    """
+    Range del turno da etichette di mezz'ora, con precisione di 30 minuti.
+    {"12:30",...,"15:30"} -> "12:30-16";  {"08:00",...,"15:00"} -> "8-15:30";
+    fine a mezzanotte -> "ch" (chiusura), es. "16-ch".
+    """
     if not labels:
         return None
-    labels = sorted(labels)
-    start_h = int(labels[0].split(":")[0])
-    last = labels[-1]
-    end_h = int(last.split(":")[0])
-    end_m = int(last.split(":")[1])
-    end = end_h + 1
-    if end >= 24:
-        return f"{start_h}-ch"
-    return f"{start_h}-{end}"
+    idxs = sorted(_hh_index(t) for t in labels)
+    start = _fmt_hh(idxs[0])
+    end_idx = idxs[-1] + 1  # l'ultima mezz'ora finisce 30 minuti dopo
+    if end_idx >= 48:
+        return f"{start}-ch"
+    return f"{start}-{_fmt_hh(end_idx)}"
 
 
 def _slot_of_time(t: str) -> str:
@@ -74,15 +88,7 @@ def _iter_overrides_rows(db: Any, week_id: str):
 
 def _labels_to_full_range(labels: list[str]) -> Optional[str]:
     """Come _labels_to_range ma prende tutte le labels del giorno (ignora slot) e restituisce il range complessivo."""
-    if not labels:
-        return None
-    labels = sorted(labels)
-    start_h = int(labels[0].split(":")[0])
-    last = labels[-1]
-    end_h = int(last.split(":")[0]) + 1
-    if end_h >= 24:
-        return f"{start_h}-ch"
-    return f"{start_h}-{end_h}"
+    return _labels_to_range(labels)
 
 
 def build_week_export_simple(db: Any, week_key: str) -> dict:

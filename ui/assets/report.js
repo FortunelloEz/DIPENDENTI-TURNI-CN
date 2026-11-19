@@ -210,11 +210,12 @@ function _rptBuildTurni(empId, dayOvMap) {
 
     Object.entries(shiftRoleLabels).forEach(([key, labels]) => {
       const [shift, role] = key.split("|");
-      const sorted  = labels.slice().sort();
-      const startH  = parseInt(sorted[0].split(":")[0]);
-      const lastLbl = sorted[sorted.length - 1];
-      const endH    = parseInt(lastLbl.split(":")[0]) + 1;
-      const range   = endH >= 24 ? `${startH}–ch` : `${startH}–${endH}`;
+      // Precisione di mezz'ora (come l'export): "12:30–16", "8–15:30", "16–ch"
+      const idx = l => { const [h, m] = l.split(":").map(Number); return h * 2 + (m >= 30 ? 1 : 0); };
+      const fmt = i => (i % 2 ? `${Math.floor(i / 2)}:30` : `${i / 2}`);
+      const idxs  = labels.map(idx).sort((a, b) => a - b);
+      const endI  = idxs[idxs.length - 1] + 1;
+      const range = endI >= 48 ? `${fmt(idxs[0])}–ch` : `${fmt(idxs[0])}–${fmt(endI)}`;
       turni.push({ dayIndex: di, shift, role, range });
     });
   }

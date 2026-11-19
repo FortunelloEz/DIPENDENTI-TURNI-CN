@@ -1143,6 +1143,8 @@ async function initHome(){
   });
   document.getElementById("btnClear")?.addEventListener("click", async () => {
     const wk2 = weekKeyOf(currentWeekStart);
+    // Operazione irreversibile: cancella tutti i turni della settimana dal DB.
+    if (!confirm("Svuotare tutti i turni di questa settimana?\nL'operazione non si può annullare.")) return;
     Array.from(assignments.keys()).forEach(k => { if (k.startsWith(wk2 + "|")) assignments.delete(k); });
     await clearWeekOverridesOnDb(wk2);
     recalcSegmentsFromAssignments(wk2);
@@ -1162,6 +1164,10 @@ async function initHome(){
     const curKey = weekKeyOf(currentWeekStart);
     if (!confirm(`Copiare i turni della settimana ${prevKey} su ${curKey}?\nI turni esistenti verranno sovrascritti.`)) return;
     const res = await apiCall("overrides_copy_week", prevKey, curKey);
+    if (res?.ok && res.copied === 0) {
+      showToast("La settimana precedente non ha turni: niente da copiare", "err");
+      return;
+    }
     if (res?.ok) {
       await loadWeekFromDb(curKey);
       renderCalendar();

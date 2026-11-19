@@ -102,3 +102,12 @@ def test_alias_merge_does_not_mutate_original(tmp_path):
 
     assert out["LUCA ROSSI"]["2026-05-05"].labels == {"10:00", "18:00"}
     assert a.labels == {"10:00"} and b.labels == {"18:00"}
+
+
+def test_copy_from_empty_week_keeps_destination(tmp_path):
+    db = _db(tmp_path)
+    db.overrides_bulk_save("2026-05-12", [
+        {"day_index": 1, "role": "Cassa", "time_label": "10:00", "employee_ids": [1]},
+    ])
+    assert db.overrides_copy_week("2026-05-05", "2026-05-12") == 0
+    assert len(db.overrides_week_get("2026-05-12")) == 1

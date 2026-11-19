@@ -25,7 +25,7 @@ function renderExportTable(exportData, wrapId = "exportTableWrap") {
   if (!wrap) return;
 
   if (!exportData || !exportData.headers || !exportData.rows) {
-    wrap.innerHTML = `<div class="export-empty">Nessun export generato.<br>Vai in Home e clicca "Elabora settimana".</div>`;
+    wrap.innerHTML = `<div class="export-empty">Nessun export generato.<br>Vai in Home e clicca "Elabora tabella Export".</div>`;
     return;
   }
 

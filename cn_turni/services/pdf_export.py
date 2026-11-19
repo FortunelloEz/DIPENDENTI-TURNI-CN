@@ -19,6 +19,17 @@ ROLE_COLORS = {
 }
 ROLE_ORDER = ["Cassa", "Runner", "Bar", "Comande", "Accoglienza", "Jolly"]
 
+
+def _week_range_label(export: Dict[str, Any]) -> str:
+    """Periodo leggibile dai giorni esportati, es. "26/05/2026 – 31/05/2026" (fallback: week_key)."""
+    isos = [h.get("iso") for h in (export.get("headers") or []) if h.get("iso")]
+    if not isos:
+        return str(export.get("week_key", ""))
+    def fmt(iso: str) -> str:
+        y, m, d = iso.split("-")
+        return f"{d}/{m}/{y}"
+    return f"{fmt(isos[0])} – {fmt(isos[-1])}"
+
 def build_pdf_from_export_simple(export: Dict[str, Any]) -> bytes:
     """PDF semplificato: 1 colonna per giorno, nessuno split mattina/sera."""
     buf = BytesIO()
@@ -28,7 +39,7 @@ def build_pdf_from_export_simple(export: Dict[str, Any]) -> bytes:
         leftMargin=18, rightMargin=18, topMargin=18, bottomMargin=18,
     )
     styles = getSampleStyleSheet()
-    title = Paragraph(f"Turni semplificati — settimana: {export.get('week_key','')}", styles["Title"])
+    title = Paragraph(f"Turni semplificati — settimana {_week_range_label(export)}", styles["Title"])
 
     from reportlab.platypus import HRFlowable
     legend_items = []
@@ -104,7 +115,7 @@ def build_pdf_from_export(export: Dict[str, Any]) -> bytes:
     )
     styles = getSampleStyleSheet()
 
-    title = Paragraph(f"Export settimana: {export.get('week_key','')}", styles["Title"])
+    title = Paragraph(f"Turni settimana {_week_range_label(export)}", styles["Title"])
 
     # Legenda ruoli
     from reportlab.platypus import HRFlowable

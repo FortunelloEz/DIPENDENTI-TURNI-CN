@@ -149,8 +149,8 @@
           <div class="guide-step">
             <div class="guide-step-num">2</div>
             <div class="guide-step-body">
-              <div class="guide-step-title">Clicca "+ Nuovo dipendente"</div>
-              <div class="guide-step-desc">Si apre il form nella barra destra. Inserisci nome e cognome esattamente come appaiono nel CSV delle disponibilità.</div>
+              <div class="guide-step-title">Clicca "+ Aggiungi"</div>
+              <div class="guide-step-desc">Si apre la scheda del dipendente. Inserisci nome e cognome; se nel CSV delle disponibilità la persona compare con un nome diverso (es. un soprannome), scrivilo in <strong>Alias CSV</strong>.</div>
             </div>
           </div>
           <div class="guide-step">
@@ -164,7 +164,7 @@
             <div class="guide-step-num">4</div>
             <div class="guide-step-body">
               <div class="guide-step-title">Imposta le ore settimanali target</div>
-              <div class="guide-step-desc">Indica quante ore settimanali dovrebbe lavorare. L'algoritmo usa questo dato per distribuire equamente il carico.</div>
+              <div class="guide-step-desc">In <strong>Ore settimanali</strong> indica il massimo di ore che la persona può fare nella settimana: l'algoritmo non la assegna oltre questo limite. Vuoto = nessun limite. Per gli indeterminati le ore della settimana si impostano con il pulsante <strong>"Indeterminati"</strong>.</div>
             </div>
           </div>
           <div class="guide-step">
@@ -426,8 +426,8 @@
         <span class="guide-callout-icon">💡</span>
         <div class="guide-callout-body">
           <div class="guide-callout-title">Indeterminati</div>
-          Con il pulsante <strong>"Indeterminati"</strong> puoi configurare per la settimana i dipendenti a tempo indeterminato,
-          specificando i giorni fissi in cui lavorano. Questi vengono pre-assegnati automaticamente dall'algoritmo.
+          Nella pagina <strong>Dipendenti</strong>, con il pulsante <strong>"Indeterminati"</strong> imposti per la settimana selezionata
+          il giorno di riposo e le ore settimanali di ogni dipendente a tempo indeterminato. Gli indeterminati vengono assegnati per primi dall'algoritmo.
         </div>
       </div>
     </section>
@@ -462,8 +462,8 @@
           <div class="guide-step">
             <div class="guide-step-num">3</div>
             <div class="guide-step-body">
-              <div class="guide-step-title">Elabora settimana</div>
-              <div class="guide-step-desc">Clicca <strong>"Elabora settimana"</strong>. L'algoritmo assegna automaticamente i dipendenti ai turni sulla base di disponibilità, skill e fabbisogno.</div>
+              <div class="guide-step-title">Generazione automatica dei turni</div>
+              <div class="guide-step-desc">Appena l'import è completato, l'algoritmo assegna automaticamente i dipendenti ai turni sulla base di disponibilità, skill e fabbisogno. Per rigenerare una settimana da un file già caricato, selezionalo nella lista e clicca <strong>"Elabora file selezionato"</strong>: i turni della settimana vengono ricalcolati e sostituiti, comprese le modifiche manuali.</div>
             </div>
           </div>
           <div class="guide-step">
@@ -540,7 +540,7 @@
             <div class="guide-step-num">1</div>
             <div class="guide-step-body">
               <div class="guide-step-title">Elabora la settimana</div>
-              <div class="guide-step-desc">Prima di poter esportare, assicurati di aver cliccato "Elabora settimana" in Home. I turni devono essere presenti nel calendario.</div>
+              <div class="guide-step-desc">Prima di poter esportare, clicca <strong>"Elabora tabella Export"</strong> in Home sulla settimana che vuoi esportare. I turni devono essere presenti nel calendario.</div>
             </div>
           </div>
           <div class="guide-step">

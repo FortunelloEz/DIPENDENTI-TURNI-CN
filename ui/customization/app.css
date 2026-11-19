@@ -108,7 +108,32 @@ body{
   border-color: rgba(106,166,255,.35);
 }
 
+/* Pagine lunghe che scorrono: spazio in fondo così il pulsante fisso
+   "AI Assistente" non copre l'ultima riga (es. Modifica/Elimina dell'ultimo dipendente). */
+.employees-page::after,
+.report-page::after{
+  content: "";
+  display: block;
+  flex: 0 0 auto;
+  height: 72px;
+}
+
 .sidebar-footer{ margin-top:auto; }
+/* Il fondo della sidebar è blu scuro (gradiente): testo chiaro per restare leggibile */
+.sidebar-footer .nav-item{
+  color:#e6ecff;
+  border-color: rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+}
+.sidebar-footer .nav-item:hover{ background: rgba(255,255,255,.10); }
+.sidebar-footer .nav-item.active{
+  background: rgba(106,166,255,.22);
+  border-color: rgba(106,166,255,.55);
+}
+.sidebar-footer .chip{
+  color: rgba(230,236,255,.75);
+  border-color: rgba(255,255,255,.16);
+}
 .chip{
   display:inline-block;
   padding:6px 10px;

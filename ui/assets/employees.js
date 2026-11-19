@@ -426,9 +426,12 @@
       if (typeof window.loadPermanentWeekFromDb === "function" &&
           typeof window.weekKeyOf === "function") {
 
+        // currentWeekStart è un `let` globale di app.js: NON è window.currentWeekStart.
+        // Prima la settimana selezionata, poi quella dell'ultima modifica indeterminati.
+        const curStart = (typeof currentWeekStart !== "undefined") ? currentWeekStart : null;
         const weekKey =
-          window._permWeekKey ||
-          (window.currentWeekStart ? window.weekKeyOf(window.currentWeekStart) : null);
+          (curStart ? window.weekKeyOf(curStart) : null) ||
+          window._permWeekKey;
 
         if (!weekKey) throw new Error("Week non disponibile (currentWeekStart non inizializzato).");
 
