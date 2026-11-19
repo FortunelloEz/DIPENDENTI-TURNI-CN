@@ -31,6 +31,7 @@ cn_turni/
   db.py                classe Db (schema SQLite + queries)
   paths.py             singleton Paths (root, data_dir, db_path)
   services/
+    assistant.py       assistente locale: risposte dal DB, modifiche con anteprima + apply atomico
     auto_scheduler.py  build_plan: scheduling macro-slot morning/evening
     import_service.py  orchestrazione CSV → build_plan → fill-gap → swap → salva overrides
     csv_availability.py  parsing CSV disponibilità
@@ -52,7 +53,7 @@ ui/
     availability_viewer.js   visualizzatore disponibilità post-import
     export.js          view export + PDF download (normale e semplificato)
     db_adapter.js      apiCall (letture, null se errore) + funzioni di load/save (le save usano apiWrite)
-    chat_ai.js         Chat AI Gemini (pannello fisso, context builder)
+    assistant.js       Assistente locale (pannello, anteprima e conferma delle modifiche)
     report.js          Scheda Report (settimana + storico)
   views/ + customization/   HTML e CSS per ogni sezione
   customization/ui_kit.css  DESIGN SYSTEM, caricato per ultimo: token slate/blue-600, pulsanti, campi,
@@ -83,7 +84,7 @@ Lint UI: `npx eslint ui/assets` (eslint.config.mjs ricava le globali condivise d
 | `day_type_presets/assignments` | tipo giornata per giorno |
 | `imported_files` | storico CSV: filename, file_path, week_key |
 | `availability_cache` | cache CSV disponibilità (week_id, riga sentinella `_preview`) |
-| `settings` | chiave/valore generici (es. `lastWeekKey`, `gemini_api_key`) |
+| `settings` | chiave/valore generici (es. `lastWeekKey`; `gemini_api_key` è un residuo non più usato) |
 
 ---
 
@@ -170,13 +171,22 @@ Best-improvement local search, max 50 iterazioni. Per ogni coppia `(emp_a@role_A
 
 ---
 
-## Chat AI Gemini (`chat_ai.js`)
+## Assistente locale (`assistant.py` + `assistant.js`) — sostituisce la chat Gemini (2026-11-19)
 
-- Pannello `position:fixed` bottom-right, chiama direttamente `generativelanguage.googleapis.com`
-- API key salvata in DB (`settings`), mai inviata al backend Python
-- `_chatBuildContext()`: assembla contesto JSON con `ore_settimana` per dipendente, `disponibilita_dettagliata` array, `slot_scoperti` raggruppati per range consecutivi
-- Sliding window: max 12 coppie user+model nel payload
-- Azioni turno: blocco `---ACTION---` nella risposta → card "Applica" → `overrides_set_many`
+- Nessun modello di linguaggio, nessuna rete, nessuna chiave. Motore in `cn_turni/services/assistant.py`,
+  esposto da `Api.assistant_ask(week_key, text)` e `Api.assistant_apply(week_key, action)`.
+- Capisce un insieme chiuso di richieste (scoperti, chi lavora, chi è libero, ore di una persona, giorno critico,
+  riepilogo; sostituisci / aggiungi / togli). Riconoscimento: testo normalizzato (minuscolo, senza accenti),
+  nomi per nome completo/alias → parola del nome → inizio di parola («leo»); parole comuni (es. «della») valgono
+  come nome solo se non c'è un nome più sicuro; nomi ambigui → chiede quale.
+- `ask` non scrive mai: per le modifiche restituisce anteprima + avvisi + `action.params` già risolti.
+  `apply` ricalcola il piano sul DB attuale e scrive con `Db.overrides_set_cells` (una transazione).
+  Rifiuta: persona non disponibile secondo il CSV, doppio ruolo nello stesso orario.
+- UI: pannello costruito da `ui/assets/assistant.js` (stile `assistant.css`), aggiornato dal calendario con
+  `window.assistantRefresh()`. Test: `tests/test_assistant.py`.
+- La vecchia chiave Gemini eventualmente salvata resta nella tabella `settings` (`gemini_api_key`) ma non è più usata.
+
+---ACTION---` nella risposta → card "Applica" → `overrides_set_many`
 
 ---
 
@@ -200,3 +210,4 @@ Best-improvement local search, max 50 iterazioni. Per ogni coppia `(emp_a@role_A
 | 2026-11-19 | Controllo completo: parser mezz'ore/Capodanno, vincoli indeterminati nel fill-gap, alias senza perdita dati, backup prima della retention, connessioni SQLite chiuse, export con mezz'ore, Domenica non più coperta nell'export, pulsante «Indeterminati» ripristinato, conferme su Svuota/Copia/Import |
 | 2026-11-19 | Design system premium (`ui_kit.css`/`ui_kit.js`): sidebar nuova con icone e stato ridotto, gerarchia pulsanti, finestre e notifiche dell'app al posto di alert/confirm, icone (i) con spiegazioni, stati vuoti/caricamento/errore, `apiWrite` per tutte le scritture con riallineamento al DB, finestre import (nomi e orari) rifatte, Indeterminati senza rischio di cancellazione, Squadre lette sempre dalla tabella unica, media ore del Report corretta, guida in-app allineata all'app reale |
 | 2026-11-19 | Rifinitura finestre interne: dettaglio giorno con riepilogo copertura (scoperti per fascia), gestione turno e scheda dipendente con conferma se si chiude senza salvare, preset tipi giornata con bozza unica (niente perdite cambiando scheda), Aggiungi/Rimuovi turno con icone SVG, giorno proposto utile e "già in turno: Ruolo orario", Disponibilità rifatta (gruppi libero/in turno, niente listener persi), eliminazione dipendente che libera i turni futuri e lascia lo storico come «Ex dipendente» (`employee_usage`/`employee_delete`), Esc chiude ogni finestra, X accessibili |
+| 2026-11-19 | Chat Gemini sostituita da un assistente locale senza rete né chiavi (`assistant.py`/`assistant.js`): informazioni dal DB e modifiche con anteprima, conferma e scrittura atomica (`overrides_set_cells`); rimosso il codice Gemini (API chiave, cifratura, `chat_ai.*`) |

@@ -182,7 +182,7 @@ async function resyncWeekFromDb(weekKey){
   await loadWeekFromDb(weekKey);
   recalcSegmentsFromAssignments(weekKey);
   if (weekKey === weekKeyOf(currentWeekStart)) renderCalendar();
-  window.chatAiUpdateContext?.();
+  window.assistantRefresh?.();
 }
 
 /* ---------- ASSIGNMENTS HELPERS ---------- */
@@ -1034,7 +1034,7 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = fal
         recalcSegmentsFromAssignments(weekKey);
         closeModal();
         renderCalendar();
-        window.chatAiUpdateContext?.();
+        window.assistantRefresh?.();
         showToast("Turno salvato");
       } catch (err) {
         btnSave.disabled = false;
@@ -1129,7 +1129,7 @@ async function initHome(){
   renderWeekLabel();
   renderCalendar();
   bindTimelineFilter();
-  window.chatAiUpdateContext?.();
+  window.assistantRefresh?.();
   renderDaySummary();
 
   await window.renderCsvFilePanel?.();
@@ -1189,7 +1189,7 @@ async function initHome(){
     await loadWeekFromDb(wk2);
     renderWeekLabel();
     renderCalendar();
-    window.chatAiUpdateContext?.();
+    window.assistantRefresh?.();
     await renderDaySummary();
   };
   document.getElementById("btnPrevWeek")?.addEventListener("click", () => navWeek(-7));
@@ -1654,7 +1654,7 @@ function initQuickInsert() {
       });
       recalcSegmentsFromAssignments(weekKey);
       renderCalendar();
-      window.chatAiUpdateContext?.();
+      window.assistantRefresh?.();
 
       const empName   = employeeLabel(empId);
       // fine turno = inizio dell'ultima mezz'ora + 30 minuti (es. ultima "15:30" -> "16:00")
@@ -1953,7 +1953,7 @@ function initQuickRemove() {
 
       recalcSegmentsFromAssignments(weekKey);
       renderCalendar();
-      window.chatAiUpdateContext?.();
+      window.assistantRefresh?.();
 
       const empName = employeeLabel(empId);
       showToast(`${empName} rimosso — ${DAYS[dayIdx]} ${shiftLbl}`);

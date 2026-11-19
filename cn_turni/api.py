@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 from cn_turni.services.import_service import ImportService
+from cn_turni.services.assistant import Assistant
 from cn_turni.db import Db, default_db_path, week_id_from_ui_weekkey
 from cn_turni.services.export_service import build_week_export, build_week_export_simple
 from cn_turni.services.pdf_export import build_pdf_from_export, build_pdf_from_export_simple
@@ -19,6 +20,7 @@ class Api:
         # retention safety (anche se la fai in main non rompe)
         self.db.purge_old_weeks(months=6)
         self.import_service = ImportService(self.db)
+        self.assistant = Assistant(self.db)
     # =========================
     # Day Type Presets
     # =========================
@@ -44,18 +46,15 @@ class Api:
         return __version__
 
     # =========================
-    # Gemini API Key (cifrata in DB)
+    # Assistente locale (nessuna rete, nessuna chiave)
     # =========================
-    def gemini_key_get(self) -> Optional[str]:
-        return self.db.gemini_key_get()
+    def assistant_ask(self, week_key: str, text: str) -> Dict[str, Any]:
+        """Risposta o anteprima di modifica: non scrive mai nel DB."""
+        return self.assistant.ask(str(week_key), str(text or ""))
 
-    def gemini_key_set(self, api_key: str) -> Dict[str, Any]:
-        self.db.gemini_key_set(str(api_key))
-        return {"ok": True}
-
-    def gemini_key_delete(self) -> Dict[str, Any]:
-        self.db.gemini_key_delete()
-        return {"ok": True}
+    def assistant_apply(self, week_key: str, action: Dict[str, Any]) -> Dict[str, Any]:
+        """Ricalcola la modifica confermata sul DB attuale e la scrive in una transazione."""
+        return self.assistant.apply(str(week_key), dict(action or {}))
 
     # =========================
     # Settings generici (non cifrati)

@@ -160,7 +160,7 @@ async function _runImport(csvText, filename, filePath, forceWeekKey) {
     renderEmployees();
     renderWeekLabel();
     renderCalendar();
-    window.chatAiUpdateContext?.();
+    window.assistantRefresh?.();
     window.bindAvailabilityViewer?.();
     await window.renderCsvFilePanel?.();
     await renderDaySummary?.();

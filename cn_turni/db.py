@@ -1,35 +1,13 @@
 from __future__ import annotations
 
-import base64
-import hashlib
 import json
 import os
-import platform
 import sqlite3
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
 from cn_turni.paths import paths
-
-# ---------- Cifratura API key (XOR + SHA-256 machine-specific) ----------
-
-def _machine_key() -> bytes:
-    """Chiave derivata da dati della macchina corrente — non trasportabile."""
-    seed = platform.node() + os.getenv("USERNAME", "") + os.getenv("COMPUTERNAME", "") + "turni_cn_v1"
-    return hashlib.sha256(seed.encode("utf-8", errors="replace")).digest()
-
-def _encrypt_value(plaintext: str) -> str:
-    data = plaintext.encode("utf-8")
-    key  = _machine_key()
-    enc  = bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
-    return base64.b64encode(enc).decode("ascii")
-
-def _decrypt_value(ciphertext: str) -> str:
-    enc  = base64.b64decode(ciphertext.encode("ascii"))
-    key  = _machine_key()
-    data = bytes(b ^ key[i % len(key)] for i, b in enumerate(enc))
-    return data.decode("utf-8")
 
 # Singleton DB (semplice e robusto per MVP)
 _DB: Optional["Db"] = None
@@ -286,22 +264,6 @@ class Db:
 
     def settings_delete(self, key: str) -> None:
         self._setting_delete(key)
-
-    # ---------- Gemini API key (cifrata) ----------
-    def gemini_key_get(self) -> Optional[str]:
-        encrypted = self._setting_get("gemini_api_key")
-        if not encrypted:
-            return None
-        try:
-            return _decrypt_value(encrypted)
-        except Exception:
-            return None
-
-    def gemini_key_set(self, api_key: str) -> None:
-        self._setting_set("gemini_api_key", _encrypt_value(api_key))
-
-    def gemini_key_delete(self) -> None:
-        self._setting_delete("gemini_api_key")
 
     # ---------- Availability cache ----------
     def availability_save(self, week_id: str, preview_json: str) -> None:
@@ -705,6 +667,31 @@ class Db:
                             "employee_ids=excluded.employee_ids, updated_at=datetime('now')",
                             (week_id, int(day_index), str(role), str(t), json.dumps(ids)),
                         )
+
+    def overrides_set_cells(self, week_id: str, items: List[Dict[str, Any]]) -> int:
+        """
+        Scrive più celle (giorno, ruolo, mezz'ora) in UNA sola transazione: o tutte o nessuna.
+        items: [{"day_index", "role", "time_label", "employee_ids"}]; lista vuota = cella cancellata.
+        Usata dall'assistente per sostituzioni/aggiunte/rimozioni su più ruoli e orari.
+        """
+        with self._connect() as conn:
+            for it in items:
+                key = (week_id, int(it["day_index"]), str(it["role"]), str(it["time_label"]))
+                ids = [int(x) for x in (it.get("employee_ids") or [])]
+                if ids:
+                    conn.execute(
+                        "INSERT INTO schedule_override(week_id, day_index, role, time_label, employee_ids) "
+                        "VALUES (?,?,?,?,?) "
+                        "ON CONFLICT(week_id, day_index, role, time_label) DO UPDATE SET "
+                        "employee_ids=excluded.employee_ids, updated_at=datetime('now')",
+                        (*key, json.dumps(ids)),
+                    )
+                else:
+                    conn.execute(
+                        "DELETE FROM schedule_override WHERE week_id=? AND day_index=? AND role=? AND time_label=?",
+                        key,
+                    )
+        return len(items)
 
     def overrides_copy_week(self, from_week_id: str, to_week_id: str) -> int:
         with self._connect() as conn:

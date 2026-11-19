@@ -25,7 +25,7 @@
       <span class="guide-toc-icon">📊</span> Report
     </a>
     <a class="guide-toc-item" href="#chat" onclick="guideTo('chat',this)">
-      <span class="guide-toc-icon">🤖</span> Chat AI
+      <span class="guide-toc-icon">✦</span> Assistente
     </a>
     <a class="guide-toc-item" href="#glossario" onclick="guideTo('glossario',this)">
       <span class="guide-toc-icon">📖</span> Glossario
@@ -651,76 +651,49 @@
       </div>
     </section>
 
-    <!-- ═══════════════ CHAT AI ═══════════════ -->
+    <!-- ═══════════════ ASSISTENTE ═══════════════ -->
     <section class="guide-section" id="chat">
       <div class="guide-section-header">
-        <div class="guide-section-icon purple">🤖</div>
+        <div class="guide-section-icon purple">✦</div>
         <div>
-          <div class="guide-section-title">Chat AI (Gemini)</div>
-          <div class="guide-section-sub">Assistente intelligente per analisi e consigli sui turni</div>
+          <div class="guide-section-title">Assistente turni</div>
+          <div class="guide-section-sub">Domande e piccole modifiche, sul tuo PC e senza internet</div>
         </div>
       </div>
-
       <div class="guide-card">
-        <div class="guide-card-title">Cos'è la Chat AI</div>
+        <div class="guide-card-title">Cos'è</div>
         <p style="font-size:13px;color:#475569;line-height:1.65;margin:0">
-          La Chat AI è un assistente basato su Google Gemini che conosce il contesto dei turni della settimana corrente.
-          Puoi fargli domande in linguaggio naturale su assegnazioni, coperture, dipendenti disponibili e molto altro.
-          La chat mantiene la memoria delle ultime 12 domande e risposte.
+          Il pulsante <strong>Assistente</strong> in basso a destra apre un pannello in cui scrivere domande sulla settimana
+          aperta in Home. L'assistente lavora sul tuo PC, senza internet e senza chiavi: legge i dati salvati e risponde solo
+          con quelli. Se un dato manca te lo dice, non inventa. Capisce un insieme di richieste precise, scritte anche
+          in modo libero, abbreviate o senza accenti (es. «sab», «leo» per Leonardo).
         </p>
       </div>
-
       <div class="guide-card">
-        <div class="guide-card-title">Configurazione — API Key Gemini</div>
-        <div class="guide-steps">
-          <div class="guide-step">
-            <div class="guide-step-num">1</div>
-            <div class="guide-step-body">
-              <div class="guide-step-title">Ottieni una API Key gratuita</div>
-              <div class="guide-step-desc">Vai su Google AI Studio (aistudio.google.com) e crea una API key gratuita per Gemini.</div>
-            </div>
-          </div>
-          <div class="guide-step">
-            <div class="guide-step-num">2</div>
-            <div class="guide-step-body">
-              <div class="guide-step-title">Inserisci la chiave nell'app</div>
-              <div class="guide-step-desc">Nella sezione Chat AI, clicca l'icona ingranaggio (⚙️) in alto a destra e incolla la tua API key. Viene salvata in modo sicuro nel database locale.</div>
-            </div>
-          </div>
-          <div class="guide-step">
-            <div class="guide-step-num">3</div>
-            <div class="guide-step-body">
-              <div class="guide-step-title">Inizia a chattare</div>
-              <div class="guide-step-desc">Scrivi la tua domanda nel campo di testo e premi Invio o il pulsante Invia.</div>
-            </div>
-          </div>
-        </div>
+        <div class="guide-card-title">Cosa puoi chiedere</div>
+        <table class="guide-table">
+          <thead><tr><th>Esempio</th><th>Risposta</th></tr></thead>
+          <tbody>
+            <tr><td>Cosa manca sabato? · Ci sono buchi?</td><td>Ruoli scoperti per giorno e fascia, rispetto alle Squadre</td></tr>
+            <tr><td>Chi lavora sabato sera?</td><td>Chi è in turno, con ruolo e orario</td></tr>
+            <tr><td>Chi è libero domenica sera?</td><td>Chi ha dato disponibilità nel CSV e non è ancora in turno, con le sue skill migliori</td></tr>
+            <tr><td>Quante ore fa Simone?</td><td>Ore della settimana e turni giorno per giorno</td></tr>
+            <tr><td>Qual è il giorno più critico? · Riepilogo</td><td>Il giorno meno coperto, oppure la copertura dell'intera settimana</td></tr>
+          </tbody>
+        </table>
       </div>
-
       <div class="guide-card">
-        <div class="guide-card-title">Esempi di domande utili</div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:13px;color:#374151">
-            "Chi lavora sabato sera come Runner?"
-          </div>
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:13px;color:#374151">
-            "Quali turni sono scoperti questa settimana?"
-          </div>
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:13px;color:#374151">
-            "Mario Rossi quante ore ha questa settimana?"
-          </div>
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:13px;color:#374151">
-            "Chi è disponibile domenica mattina ma non è ancora assegnato?"
-          </div>
-        </div>
-      </div>
-
-      <div class="guide-callout note">
-        <span class="guide-callout-icon">📝</span>
-        <div class="guide-callout-body">
-          <div class="guide-callout-title">Nota sulla privacy</div>
-          I dati dei turni (nomi dipendenti, orari, ruoli) vengono inviati a Google Gemini per generare la risposta. Non vengono inviati dati sensibili come email, stipendi o informazioni personali.
-        </div>
+        <div class="guide-card-title">Modifiche <span class="gtag gtag-orange">Sempre con conferma</span></div>
+        <p style="font-size:13px;color:#475569;line-height:1.65;margin:0 0 8px">
+          «Sostituisci Simone con Della sabato sera», «Aggiungi Matteo in cassa domenica mattina», «Togli Leonardo da domenica».
+          L'assistente mostra un'<strong>anteprima</strong> con eventuali avvisi (es. skill mancante o persona non disponibile
+          secondo il CSV): niente viene salvato finché non premi il pulsante di conferma. Al momento della conferma la modifica
+          viene ricalcolata sui dati attuali e salvata tutta insieme; il calendario si aggiorna subito.
+        </p>
+        <p style="font-size:13px;color:#475569;line-height:1.65;margin:0">
+          Per sicurezza l'assistente non inserisce una persona dove il CSV dice che non è disponibile e non la mette in due ruoli
+          nello stesso momento: in quei casi usa «Aggiungi turno» o la gestione della cella.
+        </p>
       </div>
     </section>
 
