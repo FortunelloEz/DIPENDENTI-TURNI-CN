@@ -7,7 +7,7 @@
 .emp-page{
   border:1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(255,255,255,.03);
+  background: #fff;
   box-shadow: var(--shadow);
   overflow: hidden;
 }
@@ -41,7 +41,7 @@
 .emp-page th{
   color: var(--muted);
   font-weight: 600;
-  background: rgba(255,255,255,.02);
+  background: var(--slate-50);
 }
 
 .emp-page td.actions{
@@ -94,7 +94,7 @@
   padding: 10px 10px;
   border-radius: 10px;
   border:1px solid var(--line);
-  background: rgba(255,255,255,.04);
+  background: #fff;
   color: var(--text);
   outline: none;
 }
@@ -118,7 +118,7 @@
   padding: 8px 10px;
   border:1px solid var(--line);
   border-radius: 10px;
-  background: rgba(255,255,255,.03);
+  background: #fff;
   color: var(--text);
   cursor: pointer;
   user-select:none;

@@ -18,7 +18,7 @@
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(255,255,255,.03);
+  background: #fff;
   box-shadow: var(--shadow);
   min-height: 0;
   overflow: hidden;
@@ -29,7 +29,7 @@
   justify-content: space-between;
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
-  background: rgba(255,255,255,.04);
+  background: var(--slate-50);
   flex-shrink: 0;
 }
 .csv-panel-title {
@@ -49,41 +49,79 @@
   gap: 6px;
 }
 .csv-empty-hint {
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--slate-500);
+  font-size: 12.5px;
+  line-height: 1.5;
   text-align: center;
-  padding: 20px 10px;
-  opacity: .7;
+  padding: 22px 12px;
 }
+.csv-empty-title { font-weight: 700; color: var(--slate-700); margin-bottom: 4px; }
 .csv-file-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
+  gap: 6px;
+  padding: 4px 4px 4px 0;
+  border: 1px solid var(--slate-200);
   border-radius: 10px;
-  background: rgba(255,255,255,.03);
-  cursor: pointer;
-  transition: background .12s ease, border-color .12s ease;
+  background: #fff;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
 }
-.csv-file-item:hover { background: rgba(106,166,255,.08); border-color: rgba(106,166,255,.25); }
-.csv-file-item.selected { background: rgba(37,99,235,.12); border-color: rgba(37,99,235,.40); }
-.csv-file-info { flex: 1; min-width: 0; }
-.csv-file-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.csv-file-meta { font-size: 10px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.csv-file-item:hover { background: var(--slate-50); border-color: var(--slate-300); }
+.csv-file-item.selected {
+  background: var(--blue-50);
+  border-color: var(--blue-200);
+  box-shadow: inset 3px 0 0 var(--blue-600);
+}
+/* la parte cliccabile è un <button>: reset dell'aspetto nativo */
+.csv-file-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 40px;
+  padding: 4px 4px 4px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.csv-file-name { max-width: 100%; font-size: 12.5px; font-weight: 650; color: var(--slate-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.csv-file-meta { max-width: 100%; font-size: 11px; color: var(--slate-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .csv-file-delete {
   flex-shrink: 0;
-  width: 22px; height: 22px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  width: 32px; height: 32px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: transparent;
-  color: var(--muted);
+  color: var(--slate-400);
   cursor: pointer;
-  font-size: 11px;
-  display: flex; align-items: center; justify-content: center;
-  transition: background .1s, color .1s;
+  font-size: 12px;
+  display: grid; place-items: center;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease), border-color var(--fast) var(--ease);
 }
-.csv-file-delete:hover { background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.35); color: #ef4444; }
+.csv-file-delete:hover { background: var(--red-50); border-color: var(--red-200); color: var(--red-600); }
+
+/* import in corso: calendario attenuato (spinner dei pulsanti in ui_kit.css) */
+.timeline-wrap { position: relative; }
+.timeline-wrap.is-loading { pointer-events: none; }
+.timeline-wrap.is-loading::after {
+  content: "Generazione dei turni in corso…";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, .72);
+  backdrop-filter: blur(1px);
+  color: var(--slate-600);
+  font-weight: 650;
+  font-size: 13px;
+  animation: uiFadeIn var(--med) var(--ease);
+}
 
 /* ---------- AREA DESTRA ---------- */
 .home-right-area {
@@ -98,7 +136,7 @@
 .calendar-card {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(255,255,255,.03);
+  background: #fff;
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
@@ -367,7 +405,6 @@
   color: #065f46;
 }
 
-.qi-open-btn { font-weight: 700; }
 
 /* ---------- LEGENDA RUOLI ---------- */
 .role-legend {
@@ -376,7 +413,7 @@
   gap: 10px;
   padding: 8px 14px;
   border-bottom: 1px solid var(--line);
-  background: rgba(255,255,255,.02);
+  background: var(--slate-50);
   flex-wrap: wrap;
   flex-shrink: 0;
 }
@@ -552,8 +589,8 @@
   padding: 8px 12px;
   margin-bottom: 8px;
   border-radius: 8px;
-  background: var(--card-2, rgba(255,255,255,.03));
-  border: 1px solid var(--border, rgba(255,255,255,.08));
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
 }
 .tl-filter-label { font-size: 12px; font-weight: 700; color: var(--muted); }
 .tl-filter-input,
@@ -584,7 +621,7 @@
   padding: 6px 10px;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,.04);
+  background: #fff;
   color: var(--text);
   cursor: pointer;
   font-size: 12px;
@@ -612,7 +649,7 @@
   min-width: 0;
 }
 .ds-item:last-child { border-right: none; }
-.ds-item--set { background: rgba(255,255,255,.04); }
+.ds-item--set { background: #fff; }
 .ds-item-head { display: flex; align-items: baseline; gap: 5px; }
 .ds-item-day { font-weight: 800; font-size: 12px; }
 .ds-item-date { font-size: 10px; opacity: .55; }
@@ -704,7 +741,7 @@
 .picker-list { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
 .picker-item {
   padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
-  background: rgba(255,255,255,.04); cursor: pointer; font-size: 13px; transition: background .1s;
+  background: #fff; cursor: pointer; font-size: 13px; transition: background .1s;
 }
 .picker-item:hover { background: rgba(37,99,235,.08); }
 .picker-item.selected { background: rgba(37,99,235,.14); border-color: rgba(37,99,235,.35); font-weight: 600; }
@@ -759,12 +796,6 @@
 .modal-hint { font-size: 13px; color: var(--muted); padding: 4px 0 8px; }
 
 /* ---------- SIDEBAR COLLAPSE ---------- */
-.sidebar.collapsed { width: 72px; padding: 12px 10px; }
-.sidebar.collapsed .brand-text, .sidebar.collapsed .nav-item,
-.sidebar.collapsed .chip, .sidebar.collapsed .sidebar-footer { display: none; }
-.sidebar.collapsed .accordion { justify-content: center; }
-.sidebar.collapsed .acc-txt { display: none; }
-.sidebar.collapsed .brand { justify-content: center; }
 .acc-ic { width: 24px; display: inline-flex; justify-content: center; }
 
 /* ---------- MODAL GIORNO: card per fascia ---------- */
@@ -1180,30 +1211,7 @@
 }
 .sm-available-sep { color: var(--line); }
 
-/* ---------- TOAST NOTIFICHE ---------- */
-.toast {
-  position: fixed;
-  bottom: 28px;
-  right: 28px;
-  padding: 10px 18px;
-  border-radius: 12px;
-  background: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  z-index: 99999;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity .2s ease, transform .2s ease;
-  box-shadow: 0 8px 24px rgba(0,0,0,.14);
-  border: 1px solid var(--line);
-  pointer-events: none;
-}
-.toast-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-.toast-ok  { border-color: rgba(16,185,129,.40); color: #065f46; }
-.toast-err { border-color: rgba(239,68,68,.40);  color: #dc2626; }
+/* Notifiche: vedi ui_kit.css (.ui-toast) */
 
 /* ---------- LEGACY (mantenuto per compatibilità) ---------- */
 /* .calendar-grid { display: none; } */
@@ -1266,3 +1274,18 @@
   /* modal slot manage: riduce le colonne tabella */
   .sm-table col.col-role { width: 110px; }
 }
+/* settimana senza turni */
+.tl-empty {
+  margin: 18px auto 8px;
+  max-width: 460px;
+  padding: 18px 20px;
+  border: 1px dashed var(--slate-300);
+  border-radius: 12px;
+  background: var(--slate-50);
+  text-align: center;
+  color: var(--slate-500);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.tl-empty-title { font-size: 14.5px; font-weight: 700; color: var(--slate-800); margin-bottom: 2px; }
+.tl-empty strong { color: var(--slate-700); }

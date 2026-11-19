@@ -22,13 +22,13 @@ function avCloseOverlay(){
 function avOpenDay(dayIndex){
   const preview = window._lastAvailabilityPreview;
   if (!preview || !Array.isArray(preview.days) || !preview.days.length){
-    alert("Nessuna disponibilità disponibile. Importa prima un CSV.");
+    uiAlert({ title: "Nessuna disponibilità", message: "Per questa settimana non ci sono disponibilità importate. Usa «Importa CSV» in alto." });
     return;
   }
 
   const day = preview.days.find(d => Number(d.day_index) === Number(dayIndex));
   if (!day){
-    alert("Giorno non trovato nella preview disponibilità.");
+    uiAlert({ title: "Nessuna disponibilità", message: "Il CSV importato non contiene questo giorno." });
     return;
   }
 

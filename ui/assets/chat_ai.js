@@ -261,7 +261,7 @@ async function _chatCallGemini(userText) {
     data = await resp.json();
   } catch (netErr) {
     _chatHistory.pop();
-    throw new Error('Errore di rete: ' + netErr.message);
+    throw new Error('Connessione a internet non riuscita: ' + netErr.message, { cause: netErr });
   }
 
   if (!resp.ok) {
@@ -624,15 +624,16 @@ async function _chatApplyAction(action, wrapEl) {
       return { time_label: ov.time_label, employee_ids: ids };
     });
 
-    await apiCall('overrides_set_many', weekKey, action.day, action.role, items);
+    await apiWrite('overrides_set_many', weekKey, action.day, action.role, items);
 
-    if (typeof loadWeekFromDb === 'function') await loadWeekFromDb(weekKey);
+    // ricarica dal DB E ridisegna il calendario (prima veniva solo ricaricato: a schermo restava il turno vecchio)
+    await resyncWeekFromDb(weekKey);
 
     if (btn) { btn.textContent = '✓ Modificato'; btn.classList.add('chat-action-btn--done'); }
-    if (typeof showToast === 'function') showToast('Turno modificato dall\'AI ✓', 'ok');
+    showToast('Turno modificato come suggerito dall\'assistente', 'ok');
   } catch (err) {
     if (btn) { btn.disabled = false; btn.textContent = '✅ Applica questa modifica'; }
-    if (typeof showToast === 'function') showToast('Errore: ' + err.message, 'err');
+    showToast(err.message, 'err');
   }
 }
 
@@ -750,19 +751,36 @@ function _chatBindEvents() {
     const inp = document.getElementById('chatAiKeyInput');
     const val = inp?.value?.trim();
     if (!val || val.startsWith('•')) return;
+    try {
+      await apiWrite('gemini_key_set', val);
+    } catch (err) {
+      showToast(err.message, 'err');
+      return;
+    }
     _chatApiKey = val;
-    await apiCall('gemini_key_set', val);
     document.getElementById('chatAiSettingsSection')?.classList.add('hidden');
-    if (typeof showToast === 'function') showToast('API key Gemini salvata ✓', 'ok');
+    showToast('Chiave Gemini salvata', 'ok');
   });
 
   /* Rimuovi key → DB */
   document.getElementById('chatAiKeyDelBtn')?.addEventListener('click', async () => {
+    const ok = await uiConfirm({
+      title: 'Rimuovere la chiave Gemini?',
+      message: 'L\'assistente non potrà più rispondere finché non inserisci una nuova chiave.',
+      confirmText: 'Rimuovi chiave',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await apiWrite('gemini_key_delete');
+    } catch (err) {
+      showToast(err.message, 'err');
+      return;
+    }
     _chatApiKey = null;
-    await apiCall('gemini_key_delete');
     _chatSyncSettingsInput();
     document.getElementById('chatAiSettingsSection')?.classList.add('hidden');
-    if (typeof showToast === 'function') showToast('API key rimossa', 'ok');
+    showToast('Chiave Gemini rimossa', 'ok');
   });
 
   /* Pulsante Invia */

@@ -39,9 +39,11 @@ cn_turni/
     swap_optimizer.py  two_opt_swap: 2-opt local search post-assegnazione
 
 ui/
-  index.html           shell: sidebar nav + <div id="view"> + script tags
+  index.html           shell: sidebar (brand, nav con icone SVG, versione) + <div id="view"> + script tags
   assets/
-    app.js             CORE: routing, calendario, modali, stato UI globale
+    ui_kit.js          UI KIT condiviso (caricato per primo): showToast, uiConfirm, uiAlert,
+                       apiWrite (scritture che lanciano errore), infoTip + tooltip (i)
+    app.js             CORE: routing, calendario, modali, stato UI globale, resyncWeekFromDb
     employees.js       CRUD dipendenti
     squads.js          fabbisogni settimanali + tipi giornata
     import_availability.js  flusso import CSV
@@ -49,13 +51,21 @@ ui/
     custom_slot_resolver.js  modal celle CSV ambigue
     availability_viewer.js   visualizzatore disponibilità post-import
     export.js          view export + PDF download (normale e semplificato)
-    db_adapter.js      wrapper apiCall("method", ...)
+    db_adapter.js      apiCall (letture, null se errore) + funzioni di load/save (le save usano apiWrite)
     chat_ai.js         Chat AI Gemini (pannello fisso, context builder)
     report.js          Scheda Report (settimana + storico)
   views/ + customization/   HTML e CSS per ogni sezione
+  customization/ui_kit.css  DESIGN SYSTEM, caricato per ultimo: token slate/blue-600, pulsanti, campi,
+                            finestre, notifiche, (i), barra laterale
 
 tests/
-  test_two_opt.py      4 test cases per swap_optimizer
+  test_two_opt.py           swap_optimizer
+  test_skill_upgrade.py     skill_upgrade_pass
+  test_csv_availability.py  parser CSV (mezz'ore, "18-01", Capodanno)
+  test_import_service.py    import end-to-end su DB temporaneo (alias, riposi, squadre, copia settimana)
+  test_export_service.py    orari dell'export con mezz'ore
+
+Lint UI: `npx eslint ui/assets` (eslint.config.mjs ricava le globali condivise dai file).
 ```
 
 ---
@@ -187,3 +197,5 @@ Best-improvement local search, max 50 iterazioni. Per ogni coppia `(emp_a@role_A
 | 2026-05-24 | fix: modal dettaglio giorno usa `computeTimeSegmentsForDay` (segmenti specifici del giorno, non globali) |
 | 2026-05-24 | fix: `hasAssigned` check nel day modal — nasconde segmenti senza fabbisogno né assegnazioni |
 | 2026-05-24 | fix: export/import dialog — `Tk()` da thread API pywebview causava crash intermittente; sostituito con `webview.create_file_dialog` (thread-safe). Rimosso import tkinter. Commit: 18d67c6 e fba7057 |
+| 2026-11-19 | Controllo completo: parser mezz'ore/Capodanno, vincoli indeterminati nel fill-gap, alias senza perdita dati, backup prima della retention, connessioni SQLite chiuse, export con mezz'ore, Domenica non più coperta nell'export, pulsante «Indeterminati» ripristinato, conferme su Svuota/Copia/Import |
+| 2026-11-19 | Design system premium (`ui_kit.css`/`ui_kit.js`): sidebar nuova con icone e stato ridotto, gerarchia pulsanti, finestre e notifiche dell'app al posto di alert/confirm, icone (i) con spiegazioni, stati vuoti/caricamento/errore, `apiWrite` per tutte le scritture con riallineamento al DB, finestre import (nomi e orari) rifatte, Indeterminati senza rischio di cancellazione, Squadre lette sempre dalla tabella unica, media ore del Report corretta, guida in-app allineata all'app reale |

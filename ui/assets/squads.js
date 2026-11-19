@@ -60,7 +60,7 @@ function dayTypesLoad() {
 }
 
 async function dayTypesSaveToDb(data) {
-  await apiCall("day_type_presets_set", data);
+  await apiWrite("day_type_presets_set", data);
 }
 
 // Applica un tipo giornata a un giorno specifico nella tabella corrente
@@ -80,7 +80,11 @@ async function applyDayType(weekKey, dayIndex, typeName) {
   scheduleSquadsAutosave(weekKey);
 
   // salva assegnazione giorno→tipo a DB
-  await apiCall("day_type_assignments_set", dayIndex, typeName);
+  try {
+    await apiWrite("day_type_assignments_set", dayIndex, typeName);
+  } catch (err) {
+    showToast(err.message, "err");
+  }
   await renderDayTypesSection(weekKey);
 }
 
@@ -88,9 +92,6 @@ async function applyDayType(weekKey, dayIndex, typeName) {
 async function renderDayTypesSection(weekKey) {
   const container = document.getElementById("dayTypesBody");
   if (!container) return;
-
-  const types = dayTypesLoad();
-  const wkData = getWeekSquad(weekKey);
 
   // legge assegnazioni correnti da DB
   let currentAssignments = {};
@@ -253,96 +254,6 @@ function bindDayTypeEditModal() {
 }
 // Tabella squadre unica (non per settimana)
 const SQUADS_GLOBAL_KEY = weekKeyOf(getMondayOfCurrentWeek(new Date()));
-function openSquadsModal(){
-  const weekKey = weekKeyOf(currentWeekStart);
-  const data = getWeekSquad(weekKey);
-
-  closeModal();
-
-  const overlay = document.createElement("div");
-  overlay.className = "modal-overlay";
-  overlay.addEventListener("mousedown", (e) => {
-    if (e.target === overlay) closeModal();
-  });
-
-  const modal = document.createElement("div");
-  modal.className = "modal";
-
-  const head = document.createElement("div");
-  head.className = "modal-head";
-  head.innerHTML = `<div class="modal-title">Squadra settimana (${weekKey})</div>`;
-  const close = document.createElement("div");
-  close.className = "modal-close";
-  close.textContent = "✕";
-  close.addEventListener("click", closeModal);
-  head.appendChild(close);
-
-  const body = document.createElement("div");
-  body.className = "modal-body";
-
-  const table = document.createElement("table");
-  table.className = "squad-table";
-
-  const thead = document.createElement("thead");
-  const hr = document.createElement("tr");
-  hr.innerHTML = `<th style="width:140px">Giorno</th><th style="width:110px">Fascia</th>` + ROLES.map(r => `<th>${r}</th>`).join("");
-  thead.appendChild(hr);
-  table.appendChild(thead);
-
-  const tbody = document.createElement("tbody");
-
-  DAYS.forEach((day, dayIndex) => {
-    ["morning","evening"].forEach((band, bi) => {
-      const tr = document.createElement("tr");
-      const dayCell = bi === 0 ? `<td rowspan="2"><b>${day}</b></td>` : "";
-      const bandLabelTxt = band === "morning" ? "Mattina" : "Pomeriggio";
-      tr.innerHTML = `${dayCell}<td>${bandLabelTxt}</td>` + ROLES.map(role => {
-        const v = data[dayIndex][band][role] ?? 0;
-        return `<td><input class="squad-input" type="number" min="0" value="${v}" data-day="${dayIndex}" data-band="${band}" data-role="${role}"></td>`;
-      }).join("");
-      tbody.appendChild(tr);
-    });
-  });
-
-  table.appendChild(tbody);
-  body.appendChild(table);
-
-  const foot = document.createElement("div");
-  foot.className = "modal-foot";
-
-  const btnCancel = document.createElement("button");
-  btnCancel.className = "btn btn-ghost";
-  btnCancel.textContent = "Chiudi";
-  btnCancel.addEventListener("click", closeModal);
-
-  const btnSave = document.createElement("button");
-  btnSave.className = "btn";
-  btnSave.textContent = "Salva";
-  btnSave.addEventListener("click", async () => {
-    modal.querySelectorAll("input.squad-input").forEach(inp => {
-      const d = Number(inp.dataset.day);
-      const band = inp.dataset.band;
-      const role = inp.dataset.role;
-      data[d][band][role] = Number(inp.value || 0);
-    });
-    squads.set(weekKey, data);
-
-    await saveSquadsToDb(weekKey, data);
-
-    closeModal();
-  });
-
-  foot.appendChild(btnCancel);
-  foot.appendChild(btnSave);
-
-  modal.appendChild(head);
-  modal.appendChild(body);
-  modal.appendChild(foot);
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-  activeModalEl = overlay;
-}
-
 function deepClone(obj){
   return JSON.parse(JSON.stringify(obj));
 }
@@ -354,15 +265,17 @@ function setUndoEnabled(enabled){
 
 /** DELETE template (API) */
 async function squadsTemplateDelete(name){
-  return apiCall("squads_template_delete", name);
+  return apiWrite("squads_template_delete", name);
 }
 
 async function refreshTemplatesUI(){
   const sel = document.getElementById("squadsTemplateSelect");
   if (!sel) return;
 
-  const names = await squadsTemplateList();
-  sel.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join("");
+  const names = (await squadsTemplateList()) || [];
+  sel.innerHTML = names.length
+    ? names.map(n => `<option value="${uiEscape(n)}">${uiEscape(n)}</option>`).join("")
+    : `<option value="">Nessun template salvato</option>`;
   sel.disabled = names.length === 0;
 
   const bApply = document.getElementById("btnSquadsApplyTemplate");
@@ -383,7 +296,7 @@ function setSquadsStatus(txt, kind){
 function renderSquadsWeekLabel(){
   const label = document.getElementById("squadsWeekLabel");
   if (!label) return;
-  label.textContent = "Squadre: tabella unica (valida per tutte le settimane)";
+  label.innerHTML = `Fabbisogno per giorno e fascia ${infoTip("Numero di persone che servono per ogni ruolo, nella fascia del mattino (8–16) e del pomeriggio (16–24). La tabella vale per tutte le settimane: ogni import di disponibilità usa questi valori. Le modifiche si salvano da sole.")}`;
 }
 
 function buildSquadsTable(weekKey, data){
@@ -475,8 +388,11 @@ function scheduleSquadsAutosave(weekKey){
       await saveSquadsToDb(weekKey, getWeekSquad(weekKey));
       setSquadsStatus("Salvato", "chip-ok");
     }catch(e){
-      console.error(e);
-      setSquadsStatus("Errore salvataggio", "chip-bad");
+      setSquadsStatus("Non salvato", "chip-bad");
+      showToast(`${e.message} La tabella mostra di nuovo i valori salvati.`, "err");
+      // lo schermo torna uguale al DB
+      await reloadSquadsFromDbForWeek(weekKey);
+      buildSquadsTable(weekKey, getWeekSquad(weekKey));
     }
   }, 400);
 }
@@ -552,15 +468,15 @@ function bindDeleteTplUIOnce(){
       closeDeleteTplModal();
       await refreshTemplatesUI();
       setSquadsStatus("Template eliminato", "chip-ok");
+      showToast(`Template «${name}» eliminato`);
     } catch (e) {
-      console.error("DELETE TEMPLATE ERROR:", e);
-      setSquadsStatus("Errore eliminazione", "chip-bad");
+      setSquadsStatus("Non eliminato", "chip-bad");
+      showToast(e.message, "err");
     }
   });
 }
 
 async function initSquadsPage(){
-  initAccordions();
 
   // Tabella unica: non dipende dalla settimana
   const weekKey = SQUADS_GLOBAL_KEY;
@@ -596,14 +512,28 @@ async function initSquadsPage(){
       return;
     }
 
+    // un nome già esistente SOSTITUISCE quel template: lo si chiede prima
+    const existing = (await squadsTemplateList()) || [];
+    if (existing.some(n => n.toLowerCase() === name.toLowerCase())) {
+      const ok = await uiConfirm({
+        title: "Sostituire il template?",
+        message: `Esiste già un template «${name}». Salvando, i suoi valori vengono sostituiti con quelli attuali.`,
+        confirmText: "Sostituisci",
+        danger: true,
+      });
+      if (!ok) return;
+    }
     try{
       await squadsTemplateSave(name, payload);
       closeTplModal();
       setSquadsStatus("Template salvato", "chip-ok");
+      showToast(`Template «${name}» salvato`);
       await refreshTemplatesUI();
+      const sel = document.getElementById("squadsTemplateSelect");
+      if (sel) sel.value = name;
     }catch(e){
-      console.error(e);
-      setSquadsStatus("Nome già usato", "chip-bad");
+      setSquadsStatus("Non salvato", "chip-bad");
+      showToast(e.message, "err");
     }
   });
 
@@ -622,6 +552,7 @@ async function initSquadsPage(){
       setUndoEnabled(true);
 
       const tpl = await squadsTemplateGet(templateName);
+      if (!tpl || typeof tpl !== "object") throw new Error(`Il template «${templateName}» non si può leggere.`);
 
       // sovrascrivo week corrente
       squads.set(weekKey, tpl);
@@ -631,9 +562,12 @@ async function initSquadsPage(){
       setSquadsStatus("Salvataggio…", "chip-warn");
       await saveSquadsToDb(weekKey, getWeekSquad(weekKey));
       setSquadsStatus(`Applicato: ${templateName}`, "chip-ok");
+      showToast(`Template «${templateName}» applicato`);
     }catch(e){
-      console.error(e);
-      setSquadsStatus("Errore applicazione", "chip-bad");
+      setSquadsStatus("Non applicato", "chip-bad");
+      showToast(e.message, "err");
+      await reloadSquadsFromDbForWeek(weekKey);
+      buildSquadsTable(weekKey, getWeekSquad(weekKey));
     }
   });
 
@@ -649,10 +583,12 @@ async function initSquadsPage(){
 
         _undoSnapshot = null;
         setUndoEnabled(false);
-        setSquadsStatus("Annullato", "chip-ok");
+        setSquadsStatus("Modifica annullata", "chip-ok");
       }catch(e){
-        console.error(e);
-        setSquadsStatus("Errore annulla", "chip-bad");
+        setSquadsStatus("Non salvato", "chip-bad");
+        showToast(e.message, "err");
+        await reloadSquadsFromDbForWeek(weekKey);
+        buildSquadsTable(weekKey, getWeekSquad(weekKey));
       }
     });
 

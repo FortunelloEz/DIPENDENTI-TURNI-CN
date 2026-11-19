@@ -3,9 +3,7 @@
    Richiede: <div class="page employees-page"> in employees.html
    ========================================================= */
 
-.employees-page{
-  padding: 0; /* usa layout esistente */
-}
+/* stessa spaziatura delle altre pagine (.page) */
 
 /* header già esiste nel tema, qui solo piccoli aggiustamenti */
 .employees-page .page-header{
@@ -13,11 +11,6 @@
 }
 
 /* bottoni: riusa .btn esistente, aggiungo solo variante "primary" se serve */
-.employees-page .btn.primary{
-  background: rgba(37, 99, 235, .18);
-  border-color: rgba(37, 99, 235, .35);
-}
-
 /* pannello contenitore tabella */
 .employees-page .panel{
   background: var(--panel);
@@ -486,31 +479,7 @@
   white-space: nowrap;
 }
 
-.emp-btn-edit {
-  font-size: 12px;
-  padding: 6px 12px;
-  border-radius: 10px;
-  margin-right: 4px;
-  background: rgba(37,99,235,.12);
-  border-color: rgba(37,99,235,.25);
-}
-
-.emp-btn-edit:hover {
-  background: rgba(37,99,235,.20);
-}
-
-.emp-btn-del {
-  font-size: 12px;
-  padding: 6px 12px;
-  border-radius: 10px;
-  background: rgba(239,68,68,.10);
-  border-color: rgba(239,68,68,.22);
-  color: #991b1b;
-}
-
-.emp-btn-del:hover {
-  background: rgba(239,68,68,.18);
-}
+.emp-btn-edit { margin-right: 4px; }
 
 /* alternanza righe */
 .employees-page tbody tr:nth-child(even) td {
@@ -612,17 +581,6 @@
   padding: 14px 18px;
   border-top: 1px solid rgba(15,23,42,.07);
   background: #fafbfc;
-}
-
-.emp-btn-save-primary {
-  background: rgba(37,99,235,.18);
-  border-color: rgba(37,99,235,.40);
-  font-weight: 700;
-  padding: 8px 20px;
-}
-
-.emp-btn-save-primary:hover {
-  background: rgba(37,99,235,.26);
 }
 
 /* override: nel nuovo layout il form-field non ha il padding del vecchio grid */
@@ -747,4 +705,62 @@
     max-height: 70vh;
     overflow-y: auto;
   }
+}
+/* dipendente senza skill: non verrà mai assegnato */
+.emp-no-skill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--amber-50);
+  border: 1px solid var(--amber-200);
+  color: #92400e;
+  font-size: 11.5px;
+  font-weight: 650;
+  cursor: help;
+}
+
+/* ---------- finestra Indeterminati ---------- */
+.modal.perm-modal { max-width: 640px; }
+.perm-sub { margin-top: 2px; font-size: 12.5px; color: var(--slate-500); }
+.perm-hint { margin: 0 0 14px; font-size: 13px; line-height: 1.55; color: var(--slate-600); }
+.perm-hint strong { color: var(--slate-800); }
+.perm-list { display: flex; flex-direction: column; gap: 8px; }
+.perm-row {
+  display: grid;
+  grid-template-columns: 1fr 170px 130px;
+  align-items: end;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  background: #fff;
+}
+.perm-name { align-self: center; font-weight: 700; font-size: 13.5px; color: var(--slate-800); }
+.perm-field { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--slate-500); }
+.perm-field select, .perm-field input {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--slate-200);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.perm-state { padding: 22px 12px; text-align: center; color: var(--slate-500); font-size: 13px; line-height: 1.6; }
+.perm-state strong { color: var(--slate-800); }
+.perm-state--err { color: var(--red-700); }
+
+.emp-empty { padding: 40px 16px !important; text-align: center; color: var(--slate-500); font-size: 13.5px; line-height: 1.6; }
+.emp-empty strong { color: var(--slate-800); font-size: 14.5px; }
+
+/* pulsanti della scheda sempre visibili anche quando il contenuto scorre */
+.emp-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--slate-50);
+  border-top-color: var(--slate-200);
 }

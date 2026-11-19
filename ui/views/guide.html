@@ -181,14 +181,14 @@
         <div class="guide-card">
           <div class="guide-card-title">Modificare un dipendente</div>
           <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
-            Clicca sul dipendente nella lista per selezionarlo. Il form a destra si popola con i dati attuali.
-            Modifica i campi che vuoi e clicca <strong>Salva</strong>. Le modifiche sono immediate.
+            Nella riga del dipendente clicca <strong>Modifica</strong>: si apre la sua scheda con i dati attuali.
+            Cambia i campi che vuoi e clicca <strong>Salva dipendente</strong>.
           </p>
         </div>
         <div class="guide-card">
           <div class="guide-card-title">Eliminare un dipendente</div>
           <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
-            Seleziona il dipendente e clicca il pulsante <strong>Elimina</strong> (rosso). Viene richiesta conferma prima della cancellazione definitiva.
+            Nella riga del dipendente clicca <strong>Elimina</strong> (rosso). Viene chiesta conferma prima della cancellazione definitiva.
           </p>
           <div class="guide-callout warning" style="margin-top:10px">
             <span class="guide-callout-icon">⚠️</span>
@@ -266,29 +266,29 @@
           <div class="guide-step">
             <div class="guide-step-num">1</div>
             <div class="guide-step-body">
-              <div class="guide-step-title">Seleziona la settimana</div>
-              <div class="guide-step-desc">La settimana corrente è già selezionata. Puoi navigare con le frecce.</div>
+              <div class="guide-step-title">Una tabella per tutte le settimane</div>
+              <div class="guide-step-desc">La tabella delle Squadre è unica: vale per ogni settimana e viene usata da ogni import di disponibilità.</div>
             </div>
           </div>
           <div class="guide-step">
             <div class="guide-step-num">2</div>
             <div class="guide-step-body">
               <div class="guide-step-title">Compila la tabella</div>
-              <div class="guide-step-desc">Per ogni giorno e fascia, inserisci il numero di persone richieste per ogni ruolo. Inserisci 0 per i ruoli non necessari.</div>
+              <div class="guide-step-desc">Per ogni giorno e fascia, usa <strong>−</strong> e <strong>+</strong> per indicare quante persone servono per ogni ruolo. Lascia 0 per i ruoli non necessari. In alternativa scegli un <strong>tipo giornata</strong> (Leggera, Normale, Pesante) per riempire un giorno in un clic.</div>
             </div>
           </div>
           <div class="guide-step">
             <div class="guide-step-num">3</div>
             <div class="guide-step-body">
               <div class="guide-step-title">Usa un template</div>
-              <div class="guide-step-desc">Se usi spesso la stessa configurazione, salva un template con il nome che preferisci e ricaricalo le settimane successive.</div>
+              <div class="guide-step-desc">Se usi spesso la stessa configurazione, salvala con <strong>Salva template</strong> e riapplicala quando serve con <strong>Applica</strong>. <strong>Annulla modifica</strong> ripristina la tabella com'era prima.</div>
             </div>
           </div>
           <div class="guide-step">
             <div class="guide-step-num">4</div>
             <div class="guide-step-body">
-              <div class="guide-step-title">Salva</div>
-              <div class="guide-step-desc">I dati vengono salvati nel database. Il calendario Home mostrerà immediatamente i semafori di copertura aggiornati.</div>
+              <div class="guide-step-title">Salvataggio automatico</div>
+              <div class="guide-step-desc">Ogni modifica si salva da sola: lo stato in alto a destra indica «Salvato». Se il salvataggio non riesce compare un avviso e la tabella torna ai valori salvati. I pallini di copertura in Home si aggiornano di conseguenza.</div>
             </div>
           </div>
         </div>
@@ -341,9 +341,10 @@
             <tr><th>Elemento</th><th>Significato</th></tr>
           </thead>
           <tbody>
-            <tr><td>🟢 Punto verde (colonna giorno)</td><td>Copertura ≥ 90% del fabbisogno</td></tr>
-            <tr><td>🟡 Punto giallo</td><td>Copertura tra 50% e 89%</td></tr>
-            <tr><td>🔴 Punto rosso</td><td>Copertura inferiore al 50%</td></tr>
+            <tr><td>🟢 Pallino verde (sotto il giorno)</td><td>Tutti i ruoli richiesti dalle Squadre sono coperti</td></tr>
+            <tr><td>🟡 Pallino giallo</td><td>Manca qualcuno, ma è coperto almeno metà del fabbisogno</td></tr>
+            <tr><td>🔴 Pallino rosso</td><td>È coperto meno della metà del fabbisogno</td></tr>
+            <tr><td>⚪ Pallino grigio</td><td>Per quel giorno non è richiesto personale</td></tr>
             <tr><td>— (trattino)</td><td>Nessun dipendente assegnato in quella fascia</td></tr>
             <tr><td>C, R, B, Co, A, J</td><td>Abbreviazioni: Cassa, Runner, Bar, Comande, Accoglienza, Jolly</td></tr>
           </tbody>
@@ -371,7 +372,7 @@
             <div class="guide-step-num">▶</div>
             <div class="guide-step-body">
               <div class="guide-step-title">Settimana successiva</div>
-              <div class="guide-step-desc">Avanza alla settimana successiva. All'avvio l'app carica automaticamente la settimana prossima.</div>
+              <div class="guide-step-desc">Avanza alla settimana successiva. All'avvio l'app riapre l'ultima settimana su cui hai lavorato (la prima volta, la settimana prossima).</div>
             </div>
           </div>
         </div>
@@ -417,8 +418,9 @@
       <div class="guide-card">
         <div class="guide-card-title">Copia settimana precedente <span class="gtag gtag-orange">Scorciatoia</span></div>
         <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
-          Il pulsante <strong>"Copia settimana prec."</strong> duplica tutti i turni della settimana precedente sulla settimana corrente.
-          Utile quando la struttura dei turni è simile di settimana in settimana. I turni esistenti vengono sovrascritti dopo conferma.
+          Il pulsante <strong>«Copia settimana precedente»</strong> copia tutti i turni della settimana prima su quella mostrata.
+          Utile quando i turni sono simili di settimana in settimana. I turni già presenti vengono sostituiti dopo conferma;
+          se la settimana precedente è vuota non viene cambiato nulla.
         </p>
       </div>
 
@@ -449,14 +451,14 @@
             <div class="guide-step-num">1</div>
             <div class="guide-step-body">
               <div class="guide-step-title">Seleziona il file CSV</div>
-              <div class="guide-step-desc">Nella sezione Home, nella card "File CSV disponibilità", clicca <strong>"Carica CSV"</strong> e scegli il file dal tuo computer. Il file viene salvato nel database per riuso futuro.</div>
+              <div class="guide-step-desc">In Home clicca <strong>«Importa CSV»</strong> e scegli il file delle disponibilità. Il file compare nella lista <strong>File CSV caricati</strong>: l'app ricorda dove si trova, quindi non spostarlo o rinominarlo se vuoi rielaborarlo in seguito.</div>
             </div>
           </div>
           <div class="guide-step">
             <div class="guide-step-num">2</div>
             <div class="guide-step-body">
-              <div class="guide-step-title">Risoluzione nomi (se necessario)</div>
-              <div class="guide-step-desc">Se un nome nel CSV non corrisponde esattamente a un dipendente in anagrafica, l'app mostra un dialog di risoluzione. Abbina manualmente il nome CSV al dipendente corretto.</div>
+              <div class="guide-step-title">Nomi e orari da chiarire (se necessario)</div>
+              <div class="guide-step-desc">Se un nome del CSV non corrisponde a nessun dipendente, scegli se <strong>collegarlo</strong> a un dipendente esistente (diventa un suo alias e la volta dopo viene riconosciuto da solo) oppure <strong>crearlo</strong> come nuovo dipendente. Un dipendente nuovo nasce senza skill: in quell'import non riceve turni finché non completi la sua scheda in «Dipendenti» e rielabori il file. Se una disponibilità è scritta in modo non chiaro (es. «Dalle 11»), l'app ti propone l'orario che legge nel testo: controllalo e conferma, oppure scegli «Non disponibile».</div>
             </div>
           </div>
           <div class="guide-step">
@@ -604,30 +606,30 @@
         <div class="guide-section-icon indigo">📊</div>
         <div>
           <div class="guide-section-title">Report</div>
-          <div class="guide-section-sub">Analisi delle ore e della copertura settimanale</div>
+          <div class="guide-section-sub">Chi lavora la settimana prossima e quante ore fa ognuno</div>
         </div>
       </div>
 
       <div class="guide-card">
         <div class="guide-card-title">Cosa mostra il Report</div>
         <p style="font-size:13px;color:#475569;line-height:1.65;margin:0 0 12px">
-          La sezione Report offre una panoramica quantitativa dei turni elaborati. Puoi vedere quante ore sono state assegnate a ogni dipendente e confrontarle con il target settimanale.
+          Il Report elenca i dipendenti: in alto chi ha turni nella <strong>settimana prossima</strong> (quella dopo la settimana in corso),
+          poi gli altri, in ordine di ore medie. Clicca una scheda per aprire il dettaglio.
         </p>
         <table class="guide-table">
           <thead><tr><th>Dato</th><th>Descrizione</th></tr></thead>
           <tbody>
-            <tr><td>Ore assegnate</td><td>Totale ore di turno assegnate al dipendente nella settimana selezionata</td></tr>
-            <tr><td>Ore target</td><td>Ore settimanali target configurate in anagrafica</td></tr>
-            <tr><td>Differenza</td><td>Scostamento positivo o negativo rispetto al target</td></tr>
-            <tr><td>Copertura ruoli</td><td>Percentuale di slot coperti rispetto al fabbisogno per ogni ruolo</td></tr>
+            <tr><td>Lavora sett. prossima</td><td>La persona ha almeno un turno nella settimana prossima</td></tr>
+            <tr><td>Ore / settimana</td><td>Media delle ore assegnate nelle ultime 8 settimane, contando solo le settimane che hanno turni</td></tr>
+            <tr><td>Settimana prossima</td><td>Nel dettaglio: giorno, fascia, ruolo e orario di ogni turno</td></tr>
+            <tr><td>Ruoli più frequenti</td><td>Nel dettaglio: i tre ruoli che la persona ha coperto più spesso nelle ultime 8 settimane</td></tr>
           </tbody>
         </table>
       </div>
-
       <div class="guide-callout info">
         <span class="guide-callout-icon">ℹ️</span>
         <div class="guide-callout-body">
-          Il report è generato a partire dai dati della settimana attualmente caricata in Home. Naviga alla settimana desiderata e poi apri il Report per analizzarla.
+          Il Report si basa sulla data di oggi, non sulla settimana aperta in Home. Usa la ricerca in alto per trovare subito un dipendente.
         </div>
       </div>
     </section>

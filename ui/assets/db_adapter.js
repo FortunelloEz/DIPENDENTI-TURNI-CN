@@ -3,7 +3,9 @@
 // Deve essere caricato PRIMA di app.js.
 // =========================
 
-/* ---------- Safe bridge helpers ---------- */
+/* ---------- Safe bridge helpers ----------
+   apiCall: LETTURE. Se qualcosa va storto restituisce null (la UI mostra lo stato vuoto).
+   Le SCRITTURE usano apiWrite (ui_kit.js), che lancia un errore leggibile. */
 function hasApi(){
   return !!(window.pywebview && window.pywebview.api);
 }
@@ -74,7 +76,7 @@ async function loadWeekFromDb(weekKey){
 
 /* ---------- Overrides SAVE helpers ---------- */
 async function clearWeekOverridesOnDb(weekKey){
-  await apiCall("overrides_clear_week", weekKey);
+  await apiWrite("overrides_clear_week", weekKey);
 }
 
 /* ---------- Squads SAVE ---------- */
@@ -83,7 +85,7 @@ async function saveSquadsToDb(weekKey, data){
   DAYS.forEach((_, dayIndex) => {
     payload[String(dayIndex)] = data?.[dayIndex] || defaultSquadDay();
   });
-  await apiCall("squads_set_week", weekKey, payload);
+  await apiWrite("squads_set_week", weekKey, payload);
 }
 
 /* ---------- Permanent week ---------- */
@@ -91,7 +93,7 @@ async function loadPermanentWeekFromDb(weekKey){
   return await apiCall("permanent_week_get", weekKey) || [];
 }
 async function savePermanentWeekToDb(weekKey, items){
-  await apiCall("permanent_week_set", weekKey, items || []);
+  await apiWrite("permanent_week_set", weekKey, items || []);
 }
 async function loadSquadsFromDb(weekKey){
   const sq = await apiCall("squads_get_week", weekKey);
@@ -112,7 +114,7 @@ async function squadsTemplateList(){
 }
 
 async function squadsTemplateSave(name, payload){
-  return await apiCall("squads_template_save", name, payload);
+  return await apiWrite("squads_template_save", name, payload);
 }
 
 async function squadsTemplateGet(name){
@@ -125,15 +127,15 @@ async function importedFilesList(){
 }
 
 async function importedFilesAdd(filename, filePath, weekKey){
-  return await apiCall("imported_files_add", filename, filePath, weekKey);
+  return await apiWrite("imported_files_add", filename, filePath, weekKey);
 }
 async function importedFilesGetContent(fileId){
   return await apiCall("imported_files_get_content", fileId);
 }
 async function importedFilesDelete(fileId){
-  return await apiCall("imported_files_delete", fileId);
+  return await apiWrite("imported_files_delete", fileId);
 }
 
 async function importedFilesClear(){
-  return await apiCall("imported_files_clear");
+  return await apiWrite("imported_files_clear");
 }

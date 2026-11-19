@@ -328,17 +328,15 @@
     return "—";
   }
 
-  function formatSkills(emp) {
-    const s = emp.skills || {};
-    const parts = ROLES.filter(r => s[r] != null).map(r => `${r}:${Number(s[r])}`);
-    return parts.length ? parts.join(" • ") : "—";
-  }
 
   function renderEmployeesTable(E, list) {
     E.tbody.innerHTML = "";
 
     if (!list || list.length === 0) {
-      E.tbody.innerHTML = `<tr><td colspan="5" style="opacity:.70;padding:14px">Nessun dipendente trovato.</td></tr>`;
+      const q = (document.getElementById("empSearch")?.value || "").trim();
+      E.tbody.innerHTML = q
+        ? `<tr><td colspan="5" class="emp-empty"><strong>Nessun dipendente corrisponde a «${escapeHtml(q)}».</strong><br>Controlla il nome o svuota la ricerca.</td></tr>`
+        : `<tr><td colspan="5" class="emp-empty"><strong>Ancora nessun dipendente.</strong><br>Aggiungi il primo con «Aggiungi dipendente». Puoi anche importare un CSV: i nomi nuovi si possono creare durante l'import.</td></tr>`;
       return;
     }
 
@@ -379,10 +377,10 @@
         </td>
         <td>${permBadge}${emp.is_permanent ? `<div class="emp-perm-info">${escapeHtml(formatPermInfo(emp))}</div>` : ""}</td>
         <td>${escapeHtml(emp.preferred_role || "—")}</td>
-        <td><div class="emp-skills-wrap">${skillBadges || '<span style="opacity:.4">—</span>'}</div></td>
+        <td><div class="emp-skills-wrap">${skillBadges || `<span class="emp-no-skill" data-tip="Senza nessuna skill la persona non viene mai assegnata. Apri «Modifica» e indica almeno un ruolo.">Nessuna skill · mai assegnato</span>`}</div></td>
         <td class="emp-td-actions">
-          <button class="btn emp-btn-edit" data-action="edit" data-id="${emp.id}" title="Modifica">✎ Modifica</button>
-          <button class="btn emp-btn-del" data-action="del" data-id="${emp.id}" title="Elimina">Elimina</button>
+          <button class="btn btn-small emp-btn-edit" data-action="edit" data-id="${emp.id}" aria-label="Modifica ${escapeHtml(emp.name)}">Modifica</button>
+          <button class="btn btn-small btn-danger emp-btn-del" data-action="del" data-id="${emp.id}" aria-label="Elimina ${escapeHtml(emp.name)}">Elimina</button>
         </td>
       `;
       E.tbody.appendChild(tr);
@@ -471,7 +469,11 @@
 
   async function onSave(E) {
     const name = normalizeUpper(E.inpName.value);
-    if (!name) return alert("Inserisci il nome del dipendente.");
+    if (!name) {
+      showModalBanner(E, "<b>Manca il nome.</b> Inserisci nome e cognome del dipendente.", "error");
+      E.inpName.focus();
+      return;
+    }
 
     const payload = {
           name,
@@ -487,7 +489,8 @@
           };
 
     if (!payload.slot_morning && !payload.slot_evening) {
-      return alert("Seleziona almeno uno slot: Mattina o Pomeriggio.");
+      showModalBanner(E, "<b>Scegli almeno una fascia oraria:</b> Mattina o Pomeriggio.", "error");
+      return;
     }
 
     try {
@@ -524,18 +527,21 @@
     const value = Number(E.bulkValue?.value ?? 0);
 
     if (!role) {
-      alert("Seleziona un ruolo.");
+      await uiAlert({ message: "Scegli il ruolo da aggiornare." });
       return;
     }
 
     if (Number.isNaN(value) || value < 0 || value > 10) {
-          alert("Seleziona un valore valido tra 0 e 10.");
+          await uiAlert({ message: "Il valore della skill deve essere compreso tra 0 e 10." });
           return;
         }
 
-        const ok = window.confirm(
-          `Impostare ${value} su tutti i dipendenti per il ruolo "${role}"?\n\nQuesta operazione sovrascrive i valori esistenti.`
-        );
+        const ok = await uiConfirm({
+          title: "Aggiornare la skill di tutti?",
+          message: `Tutti i dipendenti avranno skill ${value} nel ruolo «${role}».\nI valori attuali di quel ruolo vengono sostituiti.`,
+          confirmText: "Aggiorna tutti",
+          danger: true,
+        });
         if (!ok) return;
 
         try {
@@ -638,50 +644,6 @@
       close();
     };
   }
-  // ---------------------------------------------------------
-  // Bridge per import CSV: apri modal "Nuovo dipendente" e precompila nome.
-  // Ritorna una Promise che si risolve quando il dipendente viene salvato.
-  // ---------------------------------------------------------
-  window.openEmployeeCreateModal = async function openEmployeeCreateModal(prefillName) {
-    // assicurati che la view employees sia caricata, altrimenti initEmployees non trova i DOM id
-    // NB: il modal esiste dentro employees.html, quindi deve essere nel DOM.
-    const E = els();
-    if (!E.backdrop || !E.inpName || !E.btnSave) {
-      throw new Error("Modal dipendente non presente nel DOM. Apri la view 'Dipendenti' almeno una volta o includi il modal nella home.");
-    }
-
-    // Apri modal nuovo e precompila nome
-    openEmpModal(E, "new", {});
-    E.inpName.value = String(prefillName || "");
-
-    // Ritorno promise risolta quando salvi con successo
-    return new Promise((resolve, reject) => {
-      const oldOnclick = E.btnSave.onclick;
-
-      E.btnSave.onclick = async () => {
-        try {
-          await onSave(E);   // usa la tua logica esistente
-          // se onSave va a buon fine chiude modal e refresha
-          // ripristina handler
-          E.btnSave.onclick = oldOnclick;
-          resolve(true);
-        } catch (err) {
-          // onSave già mostra banner; qui non interrompiamo il flusso
-          console.error(err);
-          // non reject per non rompere l’esperienza; resti nel modal
-        }
-      };
-
-      // se chiude il modal senza salvare, consideriamo annullato
-      const oldClose = E.btnClose.onclick;
-      E.btnClose.onclick = () => {
-        E.btnClose.onclick = oldClose;
-        E.btnSave.onclick = oldOnclick;
-        closeEmpModal(E);
-        reject(new Error("Creazione utente annullata."));
-      };
-    });
-  };
 
   window.initEmployees = initEmployees;
 })();
@@ -695,133 +657,123 @@ function openPermanentModal(){
   window._permWeekKey = weekKey;
   closeModal();
 
-  const permanents = (window.employees || []).filter(e => !!e.is_permanent);
+  const permanents = (window.employees || [])
+    .filter(e => !!e.is_permanent)
+    .sort((a, b) => a.label.localeCompare(b.label, "it"));
+  const DAY_NAMES = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
 
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
   overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) closeModal(); });
 
   const modal = document.createElement("div");
-  modal.className = "modal";
+  modal.className = "modal perm-modal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "permModalTitle");
+  modal.innerHTML = `
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="permModalTitle">Indeterminati della settimana</div>
+        <div class="perm-sub">Settimana ${uiEscape(weekRangeText(currentWeekStart))} · quella aperta in Home</div>
+      </div>
+      <button type="button" class="modal-close" aria-label="Chiudi">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="perm-hint">
+        Il <strong>giorno di riposo</strong> esclude la persona da quel giorno.
+        Le <strong>ore settimanali</strong> sono il massimo che l'algoritmo può assegnarle (0–80, vuoto = 40).
+        Valgono per la generazione dei turni di questa settimana.
+      </p>
+      <div class="perm-list" id="permList"><div class="perm-state">Caricamento…</div></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-act="close">Chiudi</button>
+      <button type="button" class="btn primary" data-act="save" disabled>Salva</button>
+    </div>`;
 
-  const head = document.createElement("div");
-  head.className = "modal-head";
-  head.innerHTML = `<div class="modal-title">Indeterminati – settimana (${weekKey})</div>`;
-  const close = document.createElement("div");
-  close.className = "modal-close";
-  close.textContent = "✕";
-  close.addEventListener("click", closeModal);
-  head.appendChild(close);
-
-  const body = document.createElement("div");
-  body.className = "modal-body";
-
-  const info = document.createElement("div");
-  info.style.opacity = ".85";
-  info.style.marginBottom = "10px";
-  info.textContent = "Imposta giorni di riposo.";
-  body.appendChild(info);
-
-  const table = document.createElement("table");
-  table.className = "squad-table";
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th style="width:260px">Dipendente</th>
-        <th style="width:160px">Giorno riposo</th>
-        <th style="width:140px">Ore target</th>
-      </tr>
-    </thead>
-    <tbody id="permTbody"></tbody>
-  `;
-  body.appendChild(table);
-
-  const tbody = table.querySelector("#permTbody");
-
-  const days = ["(nessuno)","Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
-
-  (async () => {
-    const rows = await loadPermanentWeekFromDb(weekKey);
-    const map = new Map();
-    (rows || []).forEach(r => {
-      map.set(String(r.employee_id), {
-        day_off: r.day_off,
-        target_hours: r.target_hours ?? 40
-      });
-    });
-
-    permanents
-      .slice()
-      .sort((a,b)=>a.label.localeCompare(b.label,"it"))
-      .forEach(emp => {
-        const s = map.get(String(emp.id)) || { day_off: null, target_hours: 40 };
-
-        const tr = document.createElement("tr");
-        const sel = document.createElement("select");
-        sel.className = "squad-input";
-        sel.dataset.emp = emp.id;
-        sel.innerHTML = days.map((d,i)=>`<option value="${i===0 ? "" : (i-1)}">${d}</option>`).join("");
-        sel.value = (s.day_off === null || s.day_off === undefined) ? "" : String(s.day_off);
-
-        const hours = document.createElement("input");
-        hours.type = "number";
-        hours.min = "0";
-        hours.className = "squad-input";
-        hours.dataset.emp = emp.id;
-        hours.value = String(Number(s.target_hours ?? 40));
-
-        tr.innerHTML = `<td><b>${emp.label}</b></td>`;
-        const tdDay = document.createElement("td");
-        tdDay.appendChild(sel);
-        const tdHours = document.createElement("td");
-        tdHours.appendChild(hours);
-
-        tr.appendChild(tdDay);
-        tr.appendChild(tdHours);
-        tbody.appendChild(tr);
-      });
-  })();
-
-  const foot = document.createElement("div");
-  foot.className = "modal-foot";
-
-  const btnCancel = document.createElement("button");
-  btnCancel.className = "btn btn-ghost";
-  btnCancel.textContent = "Chiudi";
-  btnCancel.addEventListener("click", closeModal);
-
-  const btnSave = document.createElement("button");
-  btnSave.className = "btn";
-  btnSave.textContent = "Salva";
-  btnSave.addEventListener("click", async () => {
-    const items = [];
-    tbody.querySelectorAll("tr").forEach(tr => {
-      const selEl = tr.querySelector("select");
-      const inp = tr.querySelector('input[type="number"]');
-      items.push({
-        employee_id: Number(selEl.dataset.emp),
-        day_off: selEl.value === "" ? null : Number(selEl.value),
-        target_hours: Number(inp.value || 40)
-      });
-    });
-    await savePermanentWeekToDb(weekKey, items);
-    window._permWeekKey = weekKey;
-    if (document.querySelector(".employees-page")) {
-      // se sei nei dipendenti, refresh immediato
-      window.initEmployees?.(); // oppure chiama direttamente refreshEmployeesUI se lo esponi
-    }
-    closeModal();
-  });
-
-  foot.appendChild(btnCancel);
-  foot.appendChild(btnSave);
-
-  modal.appendChild(head);
-  modal.appendChild(body);
-  modal.appendChild(foot);
+  const list = modal.querySelector("#permList");
+  const btnSave = modal.querySelector('[data-act="save"]');
+  modal.querySelector(".modal-close").addEventListener("click", closeModal);
+  modal.querySelector('[data-act="close"]').addEventListener("click", closeModal);
 
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   activeModalEl = overlay;
+  _escKeyHandler = (e) => { if (e.key === "Escape") closeModal(); };
+  document.addEventListener("keydown", _escKeyHandler);
+
+  if (!permanents.length) {
+    list.innerHTML = `
+      <div class="perm-state">
+        <strong>Nessun dipendente a tempo indeterminato.</strong><br>
+        Apri la scheda di un dipendente con «Modifica» e attiva «Tempo indeterminato».
+      </div>`;
+    btnSave.remove();
+    return;
+  }
+
+  (async () => {
+    const rows = await apiCall("permanent_week_get", weekKey);
+    if (!Array.isArray(rows)) {
+      // lettura fallita: NON si offre il salvataggio, che sostituirebbe i dati con valori vuoti
+      list.innerHTML = `<div class="perm-state perm-state--err">Impossibile leggere le impostazioni salvate. Chiudi e riprova.</div>`;
+      return;
+    }
+    const map = new Map(rows.map(r => [String(r.employee_id), r]));
+
+    list.innerHTML = "";
+    permanents.forEach(emp => {
+      const saved = map.get(String(emp.id));
+      const row = document.createElement("div");
+      row.className = "perm-row";
+      row.innerHTML = `
+        <div class="perm-name">${uiEscape(emp.label)}</div>
+        <label class="perm-field">
+          <span>Riposo</span>
+          <select data-emp="${emp.id}" aria-label="Giorno di riposo di ${uiEscape(emp.label)}">
+            <option value="">Nessuno</option>
+            ${DAY_NAMES.map((d, i) => `<option value="${i}">${d}</option>`).join("")}
+          </select>
+        </label>
+        <label class="perm-field">
+          <span>Ore settimanali</span>
+          <input type="number" min="0" max="80" step="1" inputmode="numeric"
+                 aria-label="Ore settimanali di ${uiEscape(emp.label)}" placeholder="40">
+        </label>`;
+      const sel = row.querySelector("select");
+      sel.value = (saved?.day_off === null || saved?.day_off === undefined) ? "" : String(saved.day_off);
+      row.querySelector("input").value = String(Number(saved?.target_hours ?? 40));
+      list.appendChild(row);
+    });
+    btnSave.disabled = false; // si salva solo dopo aver caricato i valori esistenti
+  })();
+
+  btnSave.addEventListener("click", async () => {
+    const items = [...list.querySelectorAll(".perm-row")].map(row => {
+      const sel = row.querySelector("select");
+      const inp = row.querySelector("input");
+      // ore settimanali: intero tra 0 e 80, vuoto = 40
+      const raw = inp.value === "" ? 40 : Math.round(Number(inp.value));
+      return {
+        employee_id: Number(sel.dataset.emp),
+        day_off: sel.value === "" ? null : Number(sel.value),
+        target_hours: Number.isFinite(raw) ? Math.min(80, Math.max(0, raw)) : 40,
+      };
+    });
+    btnSave.disabled = true;
+    btnSave.classList.add("is-busy");
+    try {
+      await savePermanentWeekToDb(weekKey, items);
+    } catch (err) {
+      showToast(err.message, "err");
+      btnSave.disabled = false;
+      btnSave.classList.remove("is-busy");
+      return;
+    }
+    closeModal();
+    showToast("Riposi e ore degli indeterminati salvati");
+    if (document.querySelector(".employees-page")) window.initEmployees?.();
+  });
 }
 

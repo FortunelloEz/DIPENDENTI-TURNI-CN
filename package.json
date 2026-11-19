@@ -1,0 +1,13 @@
+{
+  "name": "turni-cn-ui",
+  "private": true,
+  "description": "Strumenti di sviluppo per la UI di TurniCN (lint). L'app non usa Node a runtime.",
+  "scripts": {
+    "lint": "eslint ui/assets"
+  },
+  "devDependencies": {
+    "eslint": "10.14.0",
+    "@eslint/js": "10.0.1",
+    "globals": "17.14.0"
+  }
+}

@@ -194,12 +194,18 @@
 
 /* empty state */
 .export-empty {
-  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 48px 24px;
   text-align: center;
-  opacity: .55;
-  font-size: 14px;
+  color: var(--slate-500);
+  font-size: 13.5px;
   line-height: 1.6;
 }
+.export-empty-title { font-size: 15px; font-weight: 700; color: var(--slate-800); }
+.export-empty .btn { margin-top: 12px; }
 
 /* ===== Colonna nome finale (destra) =====
    NON sticky: fissata a destra copriva le colonne della Domenica

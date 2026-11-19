@@ -1,17 +1,6 @@
+/* Token del design system: vedi ui_kit.css (:root). Qui solo i token storici non ridefiniti. */
 :root{
-  --bg:#f6f8fc;
-  --panel:#ffffff;
-  --panel2:#f3f6ff;
-  --text:#0b1220;
-  --muted:#4c5d7a;
-  --line: rgba(15,23,42,.14);
-  --accent:#2563eb;
   --accent2:#10b981;
-  --danger:#ef4444;
-
-  --radius:16px;
-  --shadow: 0 10px 24px rgba(15, 23, 42, .10);
-  --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
 *{box-sizing:border-box}
@@ -19,94 +8,16 @@ html,body{height:100%}
 body{
   margin:0;
   font-family:var(--font);
-  background: linear-gradient(180deg, #f7f9ff 0%, var(--bg) 70%) fixed;
+  background: var(--bg);
   color:var(--text);
 }
 
 .app{
   height:100vh;
   display:grid;
-  grid-template-columns: 280px 1fr;
   min-width: 0;
 }
-.app.left-collapsed{
-  grid-template-columns: 72px 1fr;
-}
-.sidebar{
-  background: linear-gradient(180deg, var(--panel) 0%, #0c1322 100%);
-  border-right:1px solid var(--line);
-  padding:16px;
-  display:flex;
-  flex-direction:column;
-  gap:18px;
-  transition: width .22s ease, padding .22s ease;
-
-}
-
-.brand{
-  display:flex;
-  gap:12px;
-  align-items:center;
-  padding:12px;
-  border:1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  background: rgba(255,255,255,.03);
-}
-.logo{
-  width:44px;height:44px;
-  display:grid;place-items:center;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--accent) 0%, #9b7cff 100%);
-  font-weight:800;
-}
-.brand-title{font-weight:800; letter-spacing:.2px}
-.brand-sub{color:var(--muted); font-size:12px; margin-top:2px}
-
-.nav{display:flex; flex-direction:column; gap:8px}
-
-.accordion{
-  width:100%;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:10px 12px;
-  border:1px solid var(--line);
-  background: rgba(255,255,255,.03);
-  color:var(--text);
-  border-radius:14px;
-  cursor:pointer;
-  transition: transform .12s ease, background .2s ease, border-color .2s ease;
-}
-.accordion:hover{ background: rgba(255,255,255,.06); border-color:#2a3a5a; }
-.accordion:active{ transform: scale(.99); }
-.chev{ transition: transform .25s ease; opacity:.85; }
-.accordion.open .chev{ transform: rotate(180deg); }
-
-.panel{
-  overflow:hidden;
-  max-height:0;
-  opacity:0;
-  transition: max-height .28s ease, opacity .2s ease;
-  margin-top:6px;
-}
-.panel.open{
-  max-height: 500px;
-  opacity:1;
-}
-.nav-item{
-  width:100%;
-  text-align:left;
-  padding:10px 12px;
-  border:1px solid transparent;
-  background: transparent;
-  color:var(--text);
-  border-radius:12px;
-  cursor:pointer;
-}
-.nav-item:hover{ background: rgba(255,255,255,.05); }
-.nav-item.active{
-  background: rgba(106,166,255,.12);
-  border-color: rgba(106,166,255,.35);
-}
+/* Barra laterale: stili in ui_kit.css (design system) */
 
 /* Pagine lunghe che scorrono: spazio in fondo così il pulsante fisso
    "AI Assistente" non copre l'ultima riga (es. Modifica/Elimina dell'ultimo dipendente). */
@@ -118,27 +29,11 @@ body{
   height: 72px;
 }
 
-.sidebar-footer{ margin-top:auto; }
-/* Il fondo della sidebar è blu scuro (gradiente): testo chiaro per restare leggibile */
-.sidebar-footer .nav-item{
-  color:#e6ecff;
-  border-color: rgba(255,255,255,.14);
-  background: rgba(255,255,255,.04);
-}
-.sidebar-footer .nav-item:hover{ background: rgba(255,255,255,.10); }
-.sidebar-footer .nav-item.active{
-  background: rgba(106,166,255,.22);
-  border-color: rgba(106,166,255,.55);
-}
-.sidebar-footer .chip{
-  color: rgba(230,236,255,.75);
-  border-color: rgba(255,255,255,.16);
-}
 .chip{
   display:inline-block;
   padding:6px 10px;
   border-radius:999px;
-  background: rgba(255,255,255,.06);
+  background: #fff;
   border:1px solid var(--line);
   color:var(--muted);
   font-size:12px;
@@ -174,7 +69,7 @@ body{
   padding:16px;
   border:1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(255,255,255,.03);
+  background: #fff;
   box-shadow: var(--shadow);
   margin-bottom: 12px;
 }
@@ -194,7 +89,7 @@ body{
 .btn:hover{ background: rgba(106,166,255,.22); }
 .btn:active{ transform: scale(.99); }
 .btn-ghost{
-  background: rgba(255,255,255,.04);
+  background: #fff;
 }
 .btn-small{
   padding:8px 10px;
@@ -332,7 +227,7 @@ body{
 }
 
 .ds-item--set {
-  background: rgba(255,255,255,.04);
+  background: #fff;
 }
 
 .ds-item-head {
@@ -447,7 +342,7 @@ body{
   padding: 14px 18px 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(255,255,255,.03);
+  background: #fff;
   box-shadow: var(--shadow);
   flex-shrink: 0;
 }
@@ -533,19 +428,6 @@ body{
 
 /* 700px: sidebar si compatta automaticamente a 72px, layout diventa più stretto */
 @media (max-width: 700px) {
-  .app { grid-template-columns: 72px 1fr !important; }
-
-  /* auto-collapse sidebar */
-  .sidebar {
-    padding: 10px 8px;
-  }
-  .sidebar .brand-text,
-  .sidebar .acc-txt,
-  .sidebar .chip,
-  .sidebar .sidebar-footer { display: none; }
-  .sidebar .accordion { justify-content: center; }
-  .sidebar .brand { justify-content: center; padding: 8px; }
-
   .content { padding: 10px; }
   .page   { padding: 10px; gap: 10px; }
 
@@ -568,4 +450,8 @@ body{
 
   /* form-grid globale: 1 colonna */
   .form-grid { grid-template-columns: 1fr; }
+}
+/* intestazione Home su finestre medie: i pulsanti vanno a capo, il separatore non serve */
+@media (max-width: 1500px) {
+  .home-actions-sep { display: none; }
 }

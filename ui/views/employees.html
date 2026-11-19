@@ -1,10 +1,13 @@
 <div class="page employees-page">
     <div class="page-header">
-        <h1>Dipendenti</h1>
+        <div class="page-title">
+            <h1>Dipendenti</h1>
+            <p>Anagrafica del personale: ruoli che sa coprire, fasce orarie, giorni e limiti di ore.</p>
+        </div>
         <div class="row gap">
-            <button id="btnPermManage" class="btn btn-ghost" title="Giorno di riposo e ore settimanali degli indeterminati, per la settimana selezionata">📅 Indeterminati</button>
-            <button id="btnEmpBulkSkill" class="btn btn-ghost">⚙ Aggiornamento massivo skill</button>
-            <button id="btnEmpNew" class="btn primary">+ Aggiungi</button>
+            <button id="btnPermManage" class="btn btn-ghost" title="Giorno di riposo e ore settimanali degli indeterminati, per la settimana selezionata in Home"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Indeterminati</button>
+            <button id="btnEmpBulkSkill" class="btn btn-ghost" title="Imposta lo stesso valore di skill a tutti i dipendenti per un ruolo"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Aggiornamento massivo skill</button>
+            <button id="btnEmpNew" class="btn primary"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Aggiungi dipendente</button>
         </div>
     </div>
 
@@ -49,7 +52,7 @@
                         <input id="empName" type="text" placeholder="Nome e cognome" />
                     </div>
                     <div class="form-field">
-                        <label>Alias CSV <span class="emp-hint-inline">(opzionale)</span></label>
+                        <label>Alias CSV <span class="emp-hint-inline">(opzionale)</span> <button type="button" class="info-tip" aria-label="A cosa serve l'alias" data-tip="Il nome con cui la persona compare nel CSV delle disponibilità, se diverso (es. un soprannome). Più alias si separano con | oppure con la virgola.">i</button></label>
                         <input id="empAlias" type="text" placeholder="Come appare nel CSV" />
                     </div>
                 </div>
@@ -60,7 +63,7 @@
                 <div class="emp-modal-section-title">Configurazione</div>
                 <div class="emp-modal-row3">
                     <div class="form-field">
-                        <label>Tipo contratto</label>
+                        <label>Tipo contratto <button type="button" class="info-tip" aria-label="Tempo indeterminato" data-tip="Gli indeterminati vengono assegnati per primi. Se non compaiono nel CSV sono considerati disponibili tutto il giorno. Riposo e ore della settimana si impostano con il pulsante «Indeterminati».">i</button></label>
                         <div class="emp-toggle-row">
                             <label class="switch">
                                 <input id="empPermanent" type="checkbox" />
@@ -70,7 +73,7 @@
                         </div>
                     </div>
                     <div class="form-field">
-                        <label>Fasce orarie</label>
+                        <label>Fasce orarie <button type="button" class="info-tip" aria-label="Fasce orarie" data-tip="L'algoritmo assegna la persona solo nelle fasce spuntate: Mattina 8–16, Pomeriggio 16–24.">i</button></label>
                         <div class="check-row">
                             <label class="check">
                                 <input id="empSlotMorning" type="checkbox" checked />
@@ -83,7 +86,7 @@
                         </div>
                     </div>
                     <div class="form-field">
-                        <label>Mansione preferita</label>
+                        <label>Mansione preferita <button type="button" class="info-tip" aria-label="Mansione preferita" data-tip="A parità di condizioni, la persona viene messa di preferenza in questo ruolo. Non obbliga l'algoritmo.">i</button></label>
                         <select id="empPreferredRole">
                             <option value="">(nessuna)</option>
                             <option value="Cassa">Cassa</option>
@@ -100,7 +103,8 @@
             <!-- SEZIONE: Giorni lavorativi -->
             <div class="emp-modal-section">
                 <div class="emp-modal-section-title">Giorni lavorativi
-                    <span class="emp-hint-inline">— lascia tutto deselezionato per nessun filtro</span>
+                    <button type="button" class="info-tip" aria-label="Giorni lavorativi" data-tip="Se scegli dei giorni, la persona viene assegnata solo in quei giorni. Lasciando tutto vuoto può lavorare in qualsiasi giorno.">i</button>
+                    <span class="emp-hint-inline">— tutto vuoto = qualsiasi giorno</span>
                 </div>
                 <div class="work-days-grid" id="empWorkDaysGrid">
                     <label class="work-day-check"><input type="checkbox" value="0"> Lun</label>
@@ -112,7 +116,7 @@
                     <label class="work-day-check"><input type="checkbox" value="6"> Dom</label>
                 </div>
                 <div class="emp-max-hours-row">
-                    <label class="emp-max-hours-label">Ore max al giorno</label>
+                    <label class="emp-max-hours-label" for="empMaxDailyHours">Ore max al giorno <button type="button" class="info-tip" aria-label="Ore massime al giorno" data-tip="Limite di ore per singolo giorno. Vuoto = nessun limite.">i</button></label>
                     <input
                             id="empMaxDailyHours"
                             type="number"
@@ -122,7 +126,7 @@
                             placeholder="Vuoto = nessun limite"
                             class="emp-max-hours-input"
                     />
-                    <label class="emp-max-hours-label" style="margin-left:16px">Ore settimanali</label>
+                    <label class="emp-max-hours-label" for="empWeeklyHours" style="margin-left:16px">Ore settimanali <button type="button" class="info-tip" aria-label="Ore settimanali" data-tip="Massimo di ore nella settimana: l'algoritmo non assegna la persona oltre questo limite. Vuoto = nessun limite.">i</button></label>
                     <input
                             id="empWeeklyHours"
                             type="number"
@@ -136,15 +140,15 @@
             </div>
 
             <!-- SEZIONE: Skill (collassabile) -->
-            <details class="emp-adv">
-                <summary class="emp-adv-summary">Skill per mansione (0–10)</summary>
+            <details class="emp-adv" open>
+                <summary class="emp-adv-summary">Skill per mansione (0–10) <button type="button" class="info-tip" aria-label="Come funzionano le skill" data-tip="Quanto è brava la persona in ogni ruolo. 0 = non può coprire quel ruolo. Tra più candidati l'algoritmo sceglie chi ha la skill più alta. Senza nessuna skill la persona non viene mai assegnata.">i</button></summary>
                 <div class="skills-grid" id="empSkillsGrid" style="margin-top:10px"></div>
             </details>
 
             <!-- FOOTER -->
             <div class="emp-modal-footer">
                 <button class="btn btn-ghost" id="empModalCancel">Annulla</button>
-                <button class="btn emp-btn-save-primary" id="empModalSave">Salva dipendente</button>
+                <button class="btn primary" id="empModalSave">Salva dipendente</button>
             </div>
         </div>
     </div>
@@ -220,7 +224,7 @@
 
         <div class="modal-actions">
             <button class="btn btn-ghost" id="empBulkCancel">Annulla</button>
-            <button class="btn emp-btn-save-primary" id="btnEmpBulkApply">Applica a tutti</button>
+            <button class="btn primary" id="btnEmpBulkApply">Applica a tutti</button>
         </div>
 
     </div>

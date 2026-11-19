@@ -25,7 +25,21 @@ function renderExportTable(exportData, wrapId = "exportTableWrap") {
   if (!wrap) return;
 
   if (!exportData || !exportData.headers || !exportData.rows) {
-    wrap.innerHTML = `<div class="export-empty">Nessun export generato.<br>Vai in Home e clicca "Elabora tabella Export".</div>`;
+    wrap.innerHTML = `
+      <div class="export-empty">
+        <div class="export-empty-title">Nessuna tabella pronta</div>
+        <div>In Home scegli la settimana e clicca «Elabora tabella Export».</div>
+        <button type="button" class="btn primary" data-route-go="home">Vai alla Home</button>
+      </div>`;
+    wrap.querySelector("[data-route-go]")?.addEventListener("click", () => loadView("home"));
+    return;
+  }
+  if (exportData.rows.length === 0) {
+    wrap.innerHTML = `
+      <div class="export-empty">
+        <div class="export-empty-title">Nessun turno in questa settimana</div>
+        <div>Importa le disponibilità o aggiungi i turni in Home, poi elabora di nuovo la tabella.</div>
+      </div>`;
     return;
   }
 
@@ -127,29 +141,51 @@ function _exportFormat() {
 
 async function _doExport(type) {
   const wk = window.lastWeekKey;
-  if (!wk) { alert("Prima elabora una settimana dalla Home."); return; }
+  if (!wk) { await uiAlert({ title: "Nessuna tabella da esportare", message: "In Home scegli la settimana e clicca «Elabora tabella Export»." }); return; }
   const fmt    = _exportFormat();
   const method = _EXPORT_API[fmt]?.[type];
   if (!method) return;
 
   const btnId  = type === "full" ? "btnExportFull" : "btnExportSimple";
   const btn    = document.getElementById(btnId);
-  const origTx = btn?.textContent;
-  if (btn) { btn.disabled = true; btn.textContent = "Esportazione…"; }
+  // spinner sul pulsante (il contenuto, icona compresa, resta intatto)
+  if (btn) { btn.disabled = true; btn.classList.add("is-busy"); }
 
   try {
     const res = await window.pywebview.api[method](wk);
-    if (res?.saved) alert("File salvato correttamente.");
+    if (res?.saved) {
+      const name = String(res.path || "").split(/[\\/]/).pop();
+      showToast(name ? `File salvato: ${name}` : "File salvato");
+    }
   } catch (err) {
-    console.error(err);
-    alert("Errore durante l'esportazione. Controlla la console.");
+    console.error("[Export]", err);
+    const detail = String(err?.message || err || "").replace(/^\w*Error:\s*/, "");
+    await uiAlert({
+      kind: "error",
+      title: "Esportazione non riuscita",
+      message: `${detail || "Errore sconosciuto."}\nSe il file è aperto in Excel o in un lettore PDF, chiudilo e riprova.`,
+    });
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = origTx; }
+    if (btn) { btn.disabled = false; btn.classList.remove("is-busy"); }
   }
 }
 
 function initExportView() {
-  renderExportTable(window.lastExportData);
+  const data = window.lastExportData;
+  renderExportTable(data);
+
+  // senza tabella (o senza turni) non c'è niente da esportare: pulsanti spenti
+  const hasRows = !!(data && Array.isArray(data.rows) && data.rows.length);
+  ["btnExportFull", "btnExportSimple", "exportFormat"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !hasRows;
+  });
+  const sub = document.getElementById("exportSubtitle");
+  const isos = (data?.headers || []).map(h => h.iso).filter(Boolean);
+  if (sub && isos.length) {
+    const f = iso => iso.slice(8, 10) + "/" + iso.slice(5, 7);
+    sub.textContent = `Settimana ${f(isos[0])} → ${f(isos[isos.length - 1])} · anteprima da salvare in PDF o Excel.`;
+  }
 
   for (const [id, type] of [["btnExportFull", "full"], ["btnExportSimple", "simple"]]) {
     const btn = document.getElementById(id);

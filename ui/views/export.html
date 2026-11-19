@@ -2,18 +2,21 @@
     <header class="page-header">
         <div class="page-title">
             <h1>Export</h1>
+            <p id="exportSubtitle">Anteprima della settimana elaborata, da salvare in PDF o Excel.</p>
         </div>
 
         <div class="page-actions export-toolbar">
-            <label class="export-format-label">
+            <label class="export-format-label" for="exportFormat">
                 Formato
                 <select id="exportFormat" class="export-format-select">
                     <option value="pdf">PDF</option>
                     <option value="excel">Excel</option>
                 </select>
             </label>
-            <button class="btn" id="btnExportFull">Esporta completo</button>
-            <button class="btn btn-secondary" id="btnExportSimple">Esporta semplificato</button>
+            <button type="button" class="info-tip" aria-label="Completo o semplificato"
+                    data-tip="Completo: due colonne per giorno (mattina e sera) con il ruolo di ognuno.&#10;Semplificato: una colonna per giorno con l'orario complessivo, ideale da appendere in bacheca.">i</button>
+            <button class="btn primary" id="btnExportFull"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17"/></svg>Esporta completo</button>
+            <button class="btn btn-secondary" id="btnExportSimple"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17"/></svg>Esporta semplificato</button>
         </div>
     </header>
 

@@ -4,6 +4,7 @@
 
 /* ---------- ROUTING ---------- */
 async function loadView(route) {
+  window.uiHideTip?.();
   const viewEl = document.getElementById("view");
   const html = await fetch(`./views/${route}.html`).then(r => r.text());
   viewEl.innerHTML = html;
@@ -20,34 +21,35 @@ async function loadView(route) {
   if (route === "report") window.initReportPage?.();
 }
 
-/* ---------- ACCORDION UI ---------- */
-function initAccordions() {
-  document.querySelectorAll(".accordion").forEach(btn => {
-    if (btn.dataset.bound === "1") return;
-    btn.dataset.bound = "1";
-    btn.addEventListener("click", () => {
-      const accId = btn.getAttribute("data-acc");
-      const panel = document.getElementById(`acc-${accId}`);
-      if (accId === "main") {
-        const sidebar = document.querySelector(".sidebar");
-        const isCollapsed = sidebar.classList.toggle("collapsed");
-        document.querySelector(".app")?.classList.toggle("left-collapsed", isCollapsed);
-        btn.classList.toggle("open", !isCollapsed);
-        panel?.classList.toggle("open", !isCollapsed);
-        return;
-      }
-      if (accId === "employees") {
-        const rightbar = btn.closest(".rightbar");
-        if (!rightbar) return;
-        const isCollapsed = rightbar.classList.toggle("collapsed");
-        btn.classList.toggle("open", !isCollapsed);
-        panel?.classList.toggle("open", !isCollapsed);
-        return;
-      }
-      const isOpen = panel?.classList.contains("open");
-      panel?.classList.toggle("open", !isOpen);
-      btn.classList.toggle("open", !isOpen);
-    });
+/* ---------- BARRA LATERALE ---------- */
+// Ridotta/estesa: è una preferenza di vista, quindi resta in localStorage (non è un dato utente).
+const SB_COLLAPSED_KEY = "sbCollapsed";
+function setSidebarCollapsed(collapsed) {
+  document.querySelector(".sidebar")?.classList.toggle("collapsed", collapsed);
+  document.querySelector(".app")?.classList.toggle("left-collapsed", collapsed);
+  const t = document.getElementById("sbToggle");
+  if (t) {
+    const label = collapsed ? "Espandi la barra laterale" : "Riduci la barra laterale";
+    t.setAttribute("aria-label", label);
+    t.title = label;
+    t.setAttribute("aria-expanded", String(!collapsed));
+  }
+}
+function initSidebar() {
+  const t = document.getElementById("sbToggle");
+  if (!t || t.dataset.bound === "1") return;
+  t.dataset.bound = "1";
+  let saved = false;
+  try { saved = localStorage.getItem(SB_COLLAPSED_KEY) === "1"; } catch (_) {}
+  setSidebarCollapsed(saved);
+  t.addEventListener("click", () => {
+    const next = !document.querySelector(".sidebar")?.classList.contains("collapsed");
+    setSidebarCollapsed(next);
+    try { localStorage.setItem(SB_COLLAPSED_KEY, next ? "1" : "0"); } catch (_) {}
+  });
+  apiCall("app_version").then(v => {
+    const el = document.getElementById("sbVersion");
+    if (el && v) el.textContent = `Versione ${v}`;
   });
 }
 
@@ -158,13 +160,18 @@ function closeModal(){
   activeModalEl = null;
 }
 
-function showToast(msg, type = "ok") {
-  const t = document.createElement("div");
-  t.className = `toast toast-${type}`;
-  t.textContent = msg;
-  document.body.appendChild(t);
-  requestAnimationFrame(() => t.classList.add("toast-visible"));
-  setTimeout(() => { t.classList.remove("toast-visible"); setTimeout(() => t.remove(), 300); }, 2200);
+// showToast(): vedi ui_kit.js
+
+/**
+ * Ricarica la settimana dal DB e ridisegna il calendario.
+ * Si usa dopo le scritture che toccano più slot e dopo ogni errore di salvataggio:
+ * lo schermo mostra sempre e solo ciò che è davvero salvato.
+ */
+async function resyncWeekFromDb(weekKey){
+  await loadWeekFromDb(weekKey);
+  recalcSegmentsFromAssignments(weekKey);
+  if (weekKey === weekKeyOf(currentWeekStart)) renderCalendar();
+  window.chatAiUpdateContext?.();
 }
 
 /* ---------- ASSIGNMENTS HELPERS ---------- */
@@ -356,12 +363,16 @@ function renderEmployees(){
     list.appendChild(item);
   });
 }
+/** "25/05 → 31/05" per la settimana che inizia il lunedì `start` (Date locale). */
+function weekRangeText(start){
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return `${formatDate(start)} → ${formatDate(end)}`;
+}
 function renderWeekLabel(){
   const label = document.getElementById("weekLabel");
   if (!label) return;
-  const end = new Date(currentWeekStart);
-  end.setDate(end.getDate() + 6);
-  label.textContent = `Settimana: ${formatDate(currentWeekStart)} → ${formatDate(end)}`;
+  label.textContent = `Settimana: ${weekRangeText(currentWeekStart)}`;
 }
 async function renderDaySummary() {
   const container = document.getElementById("daySummaryBody");
@@ -415,9 +426,12 @@ function renderCalendar(){
     const tl = computeDayTrafficLight(weekKey, di);
     const dot = document.createElement("span");
     dot.className = `day-cov-dot day-cov-dot--${tl.color}`;
-    dot.title = tl.tooltip;
+    dot.setAttribute("aria-hidden", "true");
     th.appendChild(dot);
-    th.title = "Clicca per vedere il dettaglio del giorno";
+    // spiegazione su tutta l'intestazione (il pallino da solo è troppo piccolo da puntare)
+    th.dataset.tip = `${tl.tooltip}\nClicca per il dettaglio del giorno.`;
+    th.tabIndex = 0;
+    th.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDayModal(di); } });
     th.style.cursor = "pointer";
     th.addEventListener("click", () => openDayModal(di));
     headerRow.appendChild(th);
@@ -480,6 +494,18 @@ function renderCalendar(){
   table.appendChild(tbody);
   wrap.innerHTML = "";
   wrap.appendChild(table);
+
+  // settimana senza turni: si dice cosa fare (le celle restano cliccabili per inserire a mano)
+  const hasAny = Array.from(assignments.keys()).some(k => k.startsWith(weekKey + "|"));
+  if (!hasAny) {
+    const empty = document.createElement("div");
+    empty.className = "tl-empty";
+    empty.innerHTML = `
+      <div class="tl-empty-title">Nessun turno in questa settimana</div>
+      <div>Usa <strong>Importa CSV</strong> per generare i turni dalle disponibilità,
+      oppure <strong>Aggiungi turno</strong> per inserirli a mano.</div>`;
+    wrap.appendChild(empty);
+  }
 
   applyTimelineFilter();
 }
@@ -968,16 +994,16 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = fal
     btnSave.addEventListener("click", async () => {
       btnSave.disabled = true;
       btnSave.textContent = "Salvataggio...";
+      const roleIds = {};
+      for (const role of ROLES) {
+        roleIds[role] = Array.from(localAssigned[role]).map(Number).filter(Boolean);
+      }
       try {
-        const roleIds = {};
+        // prima il DB, poi lo schermo: se il salvataggio fallisce il calendario non cambia
+        await apiWrite("overrides_save_slot", weekKey, dayIndex, timeLabels, roleIds);
         for (const role of ROLES) {
-          const idsArr = Array.from(localAssigned[role]).map(Number).filter(Boolean);
-          roleIds[role] = idsArr;
-          for (const t of timeLabels) {
-            setAssignedIdsFor(weekKey, dayIndex, role, t, idsArr);
-          }
+          for (const t of timeLabels) setAssignedIdsFor(weekKey, dayIndex, role, t, roleIds[role]);
         }
-        await apiCall("overrides_save_slot", weekKey, dayIndex, timeLabels, roleIds);
         recalcSegmentsFromAssignments(weekKey);
         closeModal();
         renderCalendar();
@@ -986,7 +1012,7 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = fal
       } catch (err) {
         btnSave.disabled = false;
         btnSave.textContent = "Salva turno";
-        showToast("Errore nel salvataggio", "err");
+        showToast(err.message, "err");
       }
     });
     foot.appendChild(btnCancel);
@@ -1040,7 +1066,8 @@ function computeDayTrafficLight(weekKey, dayIndex) {
   if (totalRequired === 0) return { color: "neutral", tooltip: "Nessun fabbisogno" };
   const ratio = totalCovered / totalRequired;
   const pct = Math.round(ratio * 100);
-  const color = ratio >= 0.9 ? "green" : ratio >= 0.5 ? "yellow" : "red";
+  // verde solo se non manca nessuno: un giorno con un ruolo scoperto non è "tutto ok"
+  const color = missing.length === 0 ? "green" : ratio >= 0.5 ? "yellow" : "red";
   const tooltip = missing.length
     ? `Copertura: ${pct}%\nScoperti: ${missing.join(", ")}`
     : `Copertura: ${pct}% — tutto ok`;
@@ -1049,7 +1076,6 @@ function computeDayTrafficLight(weekKey, dayIndex) {
 
 /* ---------- INIT HOME ---------- */
 async function initHome(){
-  initAccordions();
 
   if (!currentWeekStart) {
     let saved = localStorage.getItem('lastWeekKey');
@@ -1095,11 +1121,19 @@ async function initHome(){
         const wk2 = weekKeyOf(currentWeekStart);
         window.lastWeekKey = wk2;
         if (!window.pywebview?.api?.export_week) {
-          alert("API non pronta: pywebview.api.export_week non disponibile.");
+          await uiAlert({ kind: "error", message: "L'app non è ancora pronta. Riprova tra qualche secondo." });
           return;
         }
-        window.lastExportData = await window.pywebview.api.export_week(wk2);
-        await loadView("export");
+        clone.disabled = true;
+        try {
+          window.lastExportData = await window.pywebview.api.export_week(wk2);
+          await loadView("export");
+        } catch (err) {
+          console.error("[Export] export_week", err);
+          await uiAlert({ kind: "error", message: `Non è stato possibile preparare la tabella export.\n${err?.message || err}` });
+        } finally {
+          clone.disabled = false;
+        }
       });
     }
   }
@@ -1137,19 +1171,23 @@ async function initHome(){
     currentWeekStart = getMondayOfCurrentWeek(new Date());
     await navWeek(0);
   });
-  document.getElementById("btnTodayTop")?.addEventListener("click", async () => {
-    currentWeekStart = getMondayOfCurrentWeek(new Date());
-    await navWeek(0);
-  });
   document.getElementById("btnClear")?.addEventListener("click", async () => {
     const wk2 = weekKeyOf(currentWeekStart);
     // Operazione irreversibile: cancella tutti i turni della settimana dal DB.
-    if (!confirm("Svuotare tutti i turni di questa settimana?\nL'operazione non si può annullare.")) return;
-    Array.from(assignments.keys()).forEach(k => { if (k.startsWith(wk2 + "|")) assignments.delete(k); });
-    await clearWeekOverridesOnDb(wk2);
-    recalcSegmentsFromAssignments(wk2);
-    renderCalendar();
-    window.chatAiUpdateContext?.();
+    const ok = await uiConfirm({
+      title: "Svuotare la settimana?",
+      message: `Tutti i turni della settimana ${weekRangeText(currentWeekStart)} vengono cancellati.\nL'operazione non si può annullare.`,
+      confirmText: "Svuota settimana",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await clearWeekOverridesOnDb(wk2);
+      showToast("Settimana svuotata");
+    } catch (err) {
+      showToast(err.message, "err");
+    }
+    await resyncWeekFromDb(wk2);
     await renderDaySummary();
   });
   document.getElementById("btnPermManage")?.addEventListener("click", () => openPermanentModal?.());
@@ -1162,20 +1200,27 @@ async function initHome(){
     prev.setDate(prev.getDate() - 7);
     const prevKey = weekKeyOf(prev);
     const curKey = weekKeyOf(currentWeekStart);
-    if (!confirm(`Copiare i turni della settimana ${prevKey} su ${curKey}?\nI turni esistenti verranno sovrascritti.`)) return;
-    const res = await apiCall("overrides_copy_week", prevKey, curKey);
-    if (res?.ok && res.copied === 0) {
-      showToast("La settimana precedente non ha turni: niente da copiare", "err");
+    const ok = await uiConfirm({
+      title: "Copiare la settimana precedente?",
+      message: `I turni della settimana ${weekRangeText(prev)} vengono copiati su questa (${weekRangeText(currentWeekStart)}).\nI turni già presenti in questa settimana vengono sostituiti.`,
+      confirmText: "Copia turni",
+      danger: true,
+    });
+    if (!ok) return;
+    let res;
+    try {
+      res = await apiWrite("overrides_copy_week", prevKey, curKey);
+    } catch (err) {
+      showToast(err.message, "err");
+      await resyncWeekFromDb(curKey);
       return;
     }
-    if (res?.ok) {
-      await loadWeekFromDb(curKey);
-      renderCalendar();
-      window.chatAiUpdateContext?.();
-      showToast(`Copiati ${res.copied} slot dalla settimana precedente`);
-    } else {
-      showToast("Errore nella copia", "err");
+    if (res?.copied === 0) {
+      showToast("La settimana precedente non ha turni: niente da copiare", "info");
+      return;
     }
+    await resyncWeekFromDb(curKey);
+    showToast(`Turni copiati dalla settimana ${weekRangeText(prev)}`);
   });
 }
 
@@ -1555,18 +1600,19 @@ function initQuickInsert() {
         return { time_label: tl, employee_ids: ids };
       });
 
-      await apiCall("overrides_set_many", weekKey, dayIdx, role, items);
+      await apiWrite("overrides_set_many", weekKey, dayIdx, role, items);
       items.forEach(({ time_label, employee_ids }) => {
-        assignments.set(keyOf(weekKey, dayIdx, role, time_label), employee_ids);
+        setAssignedIdsFor(weekKey, dayIdx, role, time_label, employee_ids);
       });
       recalcSegmentsFromAssignments(weekKey);
       renderCalendar();
       window.chatAiUpdateContext?.();
 
       const empName   = (employees || []).find(e => String(e.id) === String(empId))?.label || String(empId);
+      // fine turno = inizio dell'ultima mezz'ora + 30 minuti (es. ultima "15:30" -> "16:00")
       const shiftLbl  = _qiShift === "morning" ? "Mattina" : _qiShift === "evening" ? "Pomeriggio"
-                        : `${timeLabels[0]}–${timeLabels[timeLabels.length-1].slice(0,2)}`;
-      showToast(`✓ ${empName} — ${DAYS[dayIdx]} ${shiftLbl} (${role})`);
+                        : `${timeLabels[0]}–${hoursToLabel(endHalf)}`;
+      showToast(`${empName} aggiunto — ${DAYS[dayIdx]} ${shiftLbl} (${role})`);
 
       // Resetta solo step 3+4, mantieni giorno e ruolo
       _qiShift = null;
@@ -1584,9 +1630,13 @@ function initQuickInsert() {
       _rebuildEmpDropdown(dayIdx, role);
 
     } catch (err) {
-      _qiShowBanner("Errore: " + err.message, "error");
+      _qiShowBanner(err.message, "error");
     } finally {
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "✓ Aggiungi"; }
+      // attivo solo se c'è di nuovo un dipendente scelto (dopo un successo il campo è azzerato)
+      if (saveBtn) {
+        saveBtn.textContent = "✓ Aggiungi";
+        saveBtn.disabled = !document.getElementById("qiEmployee")?.value;
+      }
     }
   }
 
@@ -1850,9 +1900,9 @@ function initQuickRemove() {
           time_label:   ov.time_label,
           employee_ids: (ov.employee_ids || []).filter(id => String(id) !== String(empId))
         }));
-        await apiCall("overrides_set_many", weekKey, dayIdx, role, items);
+        await apiWrite("overrides_set_many", weekKey, dayIdx, role, items);
         items.forEach(({ time_label, employee_ids }) => {
-          assignments.set(keyOf(weekKey, dayIdx, role, time_label), employee_ids);
+          setAssignedIdsFor(weekKey, dayIdx, role, time_label, employee_ids);
         });
       }
 
@@ -1861,7 +1911,7 @@ function initQuickRemove() {
       window.chatAiUpdateContext?.();
 
       const empName = (employees || []).find(e => String(e.id) === String(empId))?.label || String(empId);
-      showToast(`✓ ${empName} rimosso — ${DAYS[dayIdx]} ${shiftLbl}`);
+      showToast(`${empName} rimosso — ${DAYS[dayIdx]} ${shiftLbl}`);
 
       // Reset step 2+3, mantieni giorno per rimuovere altri
       document.getElementById("rmEmployee").value = "";
@@ -1870,7 +1920,9 @@ function initQuickRemove() {
       _buildRmEmpDropdown(dayIdx);
 
     } catch (err) {
-      showToast("Errore: " + err.message, "err");
+      showToast(err.message, "err");
+      // una scrittura per ruolo: se una fallisce a metà, lo schermo torna uguale al DB
+      await resyncWeekFromDb(weekKey);
     } finally {
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "✕ Rimuovi"; }
     }
@@ -1902,6 +1954,7 @@ let _booted = false;
 function boot() {
   if (_booted) return;
   _booted = true;
+  initSidebar();
   bindNavigation();
   loadView("home");
 }

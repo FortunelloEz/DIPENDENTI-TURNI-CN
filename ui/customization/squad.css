@@ -128,55 +128,6 @@
   color: var(--text);
 }
 
-.squads-btn-apply {
-  height: 36px;
-  padding: 0 16px;
-  font-size: 13px;
-  font-weight: 700;
-  background: rgba(37,99,235,.16);
-  border-color: rgba(37,99,235,.35);
-  border-radius: 10px;
-}
-
-.squads-btn-apply:hover {
-  background: rgba(37,99,235,.24);
-}
-
-.squads-btn-undo {
-  height: 36px;
-  padding: 0 14px;
-  font-size: 13px;
-  border-radius: 10px;
-}
-
-.squads-btn-save {
-  height: 36px;
-  padding: 0 16px;
-  font-size: 13px;
-  font-weight: 700;
-  background: rgba(16,185,129,.14);
-  border-color: rgba(16,185,129,.35);
-  border-radius: 10px;
-}
-
-.squads-btn-save:hover {
-  background: rgba(16,185,129,.22);
-}
-
-.squads-btn-del {
-  height: 36px;
-  padding: 0 14px;
-  font-size: 13px;
-  background: rgba(239,68,68,.10);
-  border-color: rgba(239,68,68,.25);
-  color: #991b1b;
-  border-radius: 10px;
-}
-
-.squads-btn-del:hover {
-  background: rgba(239,68,68,.18);
-}
-
 /* ====== Modal ====== */
 .modal-card{
   width: min(420px, calc(100vw - 32px));

@@ -21,3 +21,6 @@ data/exports/
 
 # IDE
 .idea/workspace.xml
+
+# Node (solo strumenti di sviluppo)
+node_modules/

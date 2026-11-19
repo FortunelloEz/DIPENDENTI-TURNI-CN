@@ -676,16 +676,19 @@ class Db:
 
         out: Dict[int, Dict[str, Dict[str, int]]] = {i: mk() for i in range(7)}
 
+        # La pagina Squadre è una tabella UNICA valida per tutte le settimane: si legge sempre
+        # quella globale. Le copie per settimana (scritte da versioni precedenti a ogni salvataggio)
+        # servono solo come riserva se la globale non esiste ancora.
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT day_index, shift, role, required FROM squads_required WHERE week_id=?",
-                (week_id,),
+                (GLOBAL_SQUADS_WEEK_ID,),
             ).fetchall()
 
             if (not rows) and week_id != GLOBAL_SQUADS_WEEK_ID:
                 rows = conn.execute(
                     "SELECT day_index, shift, role, required FROM squads_required WHERE week_id=?",
-                    (GLOBAL_SQUADS_WEEK_ID,),
+                    (week_id,),
                 ).fetchall()
 
             for r in rows:

@@ -2,20 +2,19 @@
     <header class="page-header home-header">
         <div class="page-title">
             <h1>Homepage</h1>
-            <p>Gestione turni — Cascina Nascosta</p>
+            <p>Importa le disponibilità, controlla e correggi i turni della settimana.</p>
         </div>
 
         <div class="home-actions">
             <div class="home-actions-group">
-                <button class="btn" id="btnImportAvailability">📥 Importa CSV</button>
-                <button class="btn" id="btnElaboraSelectedFile" disabled title="Seleziona un file dalla lista per elaborarlo">⚙️ Elabora file selezionato</button>
-                <button class="btn primary" id="btnElaboraWeek">📊 Elabora tabella Export</button>
+                <button class="btn primary" id="btnImportAvailability" title="Scegli il CSV delle disponibilità: i turni della settimana vengono generati in automatico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M4 15v4.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>Importa CSV</button>
+                <button class="btn" id="btnElaboraSelectedFile" disabled title="Rigenera i turni dal file selezionato nella lista a sinistra"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.9-4"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.9 4"/><path d="M20 20v-4h-4"/></svg>Elabora file selezionato</button>
+                <button class="btn" id="btnElaboraWeek" title="Prepara la tabella della settimana mostrata, da salvare in PDF o Excel"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>Elabora tabella Export</button>
             </div>
             <div class="home-actions-sep"></div>
             <div class="home-actions-group">
-                <button class="btn btn-ghost" id="btnCopyPrevWeek">📋 Copia settimana precedente</button>
-                <button class="btn btn-ghost" id="btnTodayTop">📅 Settimana corrente</button>
-                <button class="btn btn-ghost" id="btnClear">🗑 Svuota</button>
+                <button class="btn btn-ghost" id="btnCopyPrevWeek" title="Copia su questa settimana i turni della settimana prima"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2.5"/><path d="M16 8V5.5A2.5 2.5 0 0 0 13.5 3h-8A2.5 2.5 0 0 0 3 5.5v8A2.5 2.5 0 0 0 5.5 16H8"/></svg>Copia settimana precedente</button>
+                <button class="btn btn-ghost btn-danger-ghost" id="btnClear" title="Cancella tutti i turni della settimana mostrata"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 12.5A1.5 1.5 0 0 0 8.5 21h7a1.5 1.5 0 0 0 1.5-1.5L18 7"/><path d="M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7"/></svg>Svuota</button>
             </div>
         </div>
 
@@ -26,11 +25,13 @@
         <!-- PANNELLO LATERALE FILE CSV -->
         <aside class="csv-panel">
             <div class="csv-panel-head">
-                <span class="csv-panel-title">File CSV caricati</span>
-                <button class="btn btn-ghost btn-small" id="btnClearAllFiles" title="Elimina tutti i file dalla lista">🗑 Elimina tutti</button>
+                <span class="csv-panel-title">File CSV caricati
+                    <button type="button" class="info-tip" aria-label="A cosa serve" data-tip="I file delle disponibilità importati. Selezionane uno e usa «Elabora file selezionato» per rigenerare i turni di quella settimana. Toglierli dalla lista non cambia i turni.">i</button>
+                </span>
+                <button class="btn btn-ghost btn-small" id="btnClearAllFiles" title="Togli tutti i file dalla lista (i turni non cambiano)">Svuota lista</button>
             </div>
             <div class="csv-file-list" id="csvFileList">
-                <div class="csv-empty-hint">Nessun file caricato</div>
+                <div class="csv-empty-hint"><div class="csv-empty-title">Caricamento…</div></div>
             </div>
             <div id="availabilityActions"></div>
         </aside>
@@ -43,14 +44,14 @@
                     <div class="calendar-left">
                         <div class="calendar-meta" id="weekLabel">Settimana:</div>
                         <div class="week-nav">
-                            <button class="btn btn-small btn-ghost" id="btnPrevWeek">←</button>
-                            <button class="btn btn-small btn-ghost" id="btnNextWeek">→</button>
-                            <button class="btn btn-small" id="btnToday">Oggi</button>
+                            <button class="btn btn-small btn-ghost btn-icon" id="btnPrevWeek" aria-label="Settimana precedente" title="Settimana precedente"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+                            <button class="btn btn-small btn-ghost btn-icon" id="btnNextWeek" aria-label="Settimana successiva" title="Settimana successiva"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+                            <button class="btn btn-small" id="btnToday" title="Vai alla settimana in corso">Oggi</button>
                         </div>
                     </div>
                     <div class="calendar-right">
-                        <button class="btn btn-small qi-open-btn" id="btnQuickInsert" title="Aggiungi un dipendente a un turno su più slot in una volta">➕ Aggiungi turno</button>
-                        <button class="btn btn-small btn-ghost" id="btnQuickRemove" title="Rimuovi un dipendente da tutti gli slot di una fascia">➖ Rimuovi turno</button>
+                        <button class="btn btn-small primary" id="btnQuickInsert" title="Aggiungi un dipendente a un turno su più slot in una volta"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Aggiungi turno</button>
+                        <button class="btn btn-small btn-ghost" id="btnQuickRemove" title="Rimuovi un dipendente da tutti gli slot di una fascia"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>Rimuovi turno</button>
                     </div>
                 </div>
 
@@ -62,12 +63,16 @@
                     <span class="role-legend-item"><span class="tl-role-pill tl-role-comande">Co</span> Comande</span>
                     <span class="role-legend-item"><span class="tl-role-pill tl-role-accoglienza">A</span> Accoglienza</span>
                     <span class="role-legend-item"><span class="tl-role-pill tl-role-jolly">J</span> Jolly</span>
-                    <span class="role-legend-hint">Clicca giorno (header) per riepilogo · clicca cella per gestire il turno</span>
+                    <span class="role-legend-hint">Clicca un giorno per il riepilogo · clicca una cella per modificare il turno
+                        <button type="button" class="info-tip" aria-label="Come leggere il calendario" data-tip="Ogni riga è una fascia oraria, ogni colonna un giorno. Il pallino sotto il giorno indica la copertura rispetto alle Squadre: verde = tutti i ruoli coperti, giallo = coperto almeno a metà, rosso = coperto meno della metà, grigio = nessun fabbisogno.">i</button>
+                    </span>
                 </div>
 
                 <!-- FILTRO TIMELINE (solo visivo: evidenzia, non modifica i turni) -->
                 <div class="tl-filter-bar">
-                    <span class="tl-filter-label">Filtra:</span>
+                    <span class="tl-filter-label">Filtra
+                        <button type="button" class="info-tip" aria-label="Come funziona il filtro" data-tip="Evidenzia nel calendario un dipendente, un ruolo o una fascia. È solo una vista: i turni non vengono modificati.">i</button>
+                    </span>
                     <input type="text" id="tlFilterName" class="tl-filter-input" placeholder="🔎 Nome dipendente…" autocomplete="off">
                     <select id="tlFilterRole" class="tl-filter-select">
                         <option value="">Tutti i ruoli</option>
@@ -94,7 +99,9 @@
             <!-- RIEPILOGO TIPOLOGIA GIORNATA -->
             <section class="calendar-card day-summary-card day-summary-card--bar">
                 <div class="calendar-head">
-                    <div class="calendar-meta">Tipologia giornata settimana</div>
+                    <div class="calendar-meta">Tipologia giornata
+                        <button type="button" class="info-tip" aria-label="Cos'è la tipologia giornata" data-tip="Quanto è impegnativo ogni giorno (Leggera, Normale, Pesante). Si sceglie nella pagina Squadre e imposta il fabbisogno di personale di quel giorno.">i</button>
+                    </div>
                 </div>
                 <div class="day-summary-body" id="daySummaryBody"></div>
             </section>

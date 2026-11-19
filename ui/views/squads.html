@@ -3,28 +3,28 @@
     <header class="page-header">
         <div class="page-title">
             <h1>Squadre</h1>
-            <p>Configura il fabbisogno di personale per ogni giorno e fascia oraria</p>
+            <p>Quante persone servono per ogni ruolo, giorno e fascia oraria.</p>
         </div>
 
         <div class="squads-header-actions">
 
             <div class="squads-action-group">
-                <div class="squads-group-label">Template settimana</div>
+                <div class="squads-group-label">Template settimana <button type="button" class="info-tip" aria-label="Cos'è un template" data-tip="Un template è una tabella del fabbisogno salvata con un nome (es. Estate, Inverno). «Applica» la copia nella tabella qui sotto; «Annulla modifica» ripristina i valori di prima.">i</button></div>
                 <div class="squads-group-row">
                     <select id="squadsTemplateSelect" class="squads-select"></select>
-                    <button class="btn squads-btn-apply" id="btnSquadsApplyTemplate">Applica</button>
-                    <button class="btn btn-ghost squads-btn-undo" id="btnSquadsUndo" disabled>↩ Annulla</button>
+                    <button class="btn primary" id="btnSquadsApplyTemplate">Applica</button>
+                    <button class="btn btn-ghost" id="btnSquadsUndo" disabled title="Ripristina la tabella com'era prima dell'ultimo template o tipo giornata applicato">↩ Annulla modifica</button>
                 </div>
             </div>
 
             <div class="squads-action-sep"></div>
 
             <div class="squads-action-group">
-                <div class="squads-group-label">Gestione template</div>
+                <div class="squads-group-label">Gestione template <button type="button" class="info-tip" aria-label="Come si salvano i template" data-tip="«Salva template» memorizza la tabella attuale con un nome. «Elimina» cancella il template scelto nell'elenco; la tabella non cambia.">i</button></div>
                 <div class="squads-group-row">
-                    <button class="btn squads-btn-save" id="btnSquadsSaveTemplate">+ Salva template</button>
-                    <button class="btn squads-btn-del" id="btnSquadsDeleteTemplate">Elimina</button>
-                    <span class="chip" id="squadsSaveStatus">Pronto</span>
+                    <button class="btn btn-ghost" id="btnSquadsSaveTemplate">+ Salva template</button>
+                    <button class="btn btn-danger" id="btnSquadsDeleteTemplate">Elimina</button>
+                    <span class="chip" id="squadsSaveStatus" title="Stato del salvataggio automatico della tabella">Pronto</span>
                 </div>
             </div>
 
@@ -48,9 +48,9 @@
     <section class="calendar-card day-types-card">
         <div class="calendar-head">
             <div class="calendar-left">
-                <div class="calendar-meta">Tipi giornata — applica un preset ai giorni</div>
+                <div class="calendar-meta">Tipi giornata <button type="button" class="info-tip" aria-label="Cosa sono i tipi giornata" data-tip="Leggera, Normale e Pesante sono fabbisogni pronti. Scegliendone uno per un giorno, i suoi valori vengono copiati nella tabella qui sopra per quel giorno.">i</button></div>
             </div>
-            <button class="btn btn-ghost btn-small" id="btnEditDayTypes">✏️ Modifica preset (salvare per ogni scheda)</button>
+            <button class="btn btn-ghost btn-small" id="btnEditDayTypes" title="Modifica i valori di Leggera, Normale e Pesante">Modifica preset</button>
         </div>
 
 
@@ -80,7 +80,7 @@
             </div>
             <div class="modal-actions">
                 <button class="btn btn-ghost" id="dayTypeEditCancel">Fine</button>
-                <button class="btn" id="dayTypeEditSave">Salva preset</button>
+                <button class="btn primary" id="dayTypeEditSave">Salva preset</button>
             </div>
         </div>
     </div>
@@ -119,13 +119,13 @@
                         placeholder="Nome univoco (es. 'Inverno 2026')"
                 />
                 <div class="modal-hint">
-                    Il nome deve essere unico. Il template salva i valori attuali della settimana.
+                    Salva i valori attuali della tabella. Se il nome esiste già, ti viene chiesto se sostituire quel template.
                 </div>
             </div>
 
             <div class="modal-actions">
                 <button class="btn btn-ghost" id="tplCancel">Annulla</button>
-                <button class="btn" id="tplSave">Salva</button>
+                <button class="btn primary" id="tplSave">Salva</button>
             </div>
 
         </div>

@@ -38,6 +38,10 @@ class Api:
     def ping(self) -> Dict[str, Any]:
         return {"ok": True}
 
+    def app_version(self) -> str:
+        from cn_turni import __version__
+        return __version__
+
     # =========================
     # Gemini API Key (cifrata in DB)
     # =========================

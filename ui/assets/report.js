@@ -71,10 +71,12 @@ window.initReportPage = async function initReportPage() {
     });
   });
 
-  // Media ore / settimana
+  // Media ore / settimana: SOLO sulle settimane che hanno turni (le settimane prima dell'uso
+  // dell'app abbasserebbero la media a torto)
+  const weeksWithData = histResults.filter(r => Array.isArray(r) && r.length > 0).length;
   const empAvgHours = {};
   empList.forEach(e => {
-    empAvgHours[String(e.id)] = (empTotalSlots[String(e.id)] * 0.5) / RPT_HIST_WEEKS;
+    empAvgHours[String(e.id)] = weeksWithData ? (empTotalSlots[String(e.id)] * 0.5) / weeksWithData : 0;
   });
 
   // Ordina: prima chi lavora sett. prossima, poi per media ore decrescente
@@ -89,13 +91,24 @@ window.initReportPage = async function initReportPage() {
   // Render
   bodyEl.innerHTML = "";
 
+  if (!empList.length) {
+    bodyEl.innerHTML = `
+      <div class="rpt-empty">
+        <strong>Nessun dipendente.</strong><br>
+        Aggiungi il personale nella pagina «Dipendenti»: qui vedrai chi lavora e quante ore fa.
+      </div>`;
+    return;
+  }
+
   const nextLabel = `${formatDate(nextMon)} → ${formatDate(nextWeekEnd)}`;
 
   const listHeader = document.createElement("div");
   listHeader.className = "rpt-list-header";
   listHeader.innerHTML = `
-    <span class="rpt-list-title">Dipendenti</span>
-    <span class="rpt-list-subtitle">Sett. prossima: <strong>${nextLabel}</strong></span>
+    <span class="rpt-list-title">Dipendenti ${infoTip(`«Lavora sett. prossima»: ha turni nella settimana ${nextLabel}.
+Ore/sett.: media delle ore assegnate nelle ultime ${RPT_HIST_WEEKS} settimane, contando solo quelle con turni (${weeksWithData}).
+Apri una scheda per i turni e i ruoli più frequenti.`)}</span>
+    <span class="rpt-list-subtitle">Settimana prossima: <strong>${nextLabel}</strong></span>
   `;
   bodyEl.appendChild(listHeader);
 
@@ -112,9 +125,9 @@ window.initReportPage = async function initReportPage() {
     card.innerHTML = `
       <div class="rpt-emp-card-header">
         <div class="rpt-emp-card-left">
-          <span class="rpt-emp-initial">${(emp.name || "?")[0].toUpperCase()}</span>
+          <span class="rpt-emp-initial">${uiEscape((emp.name || "?")[0].toUpperCase())}</span>
           <div class="rpt-emp-info">
-            <span class="rpt-emp-name">${emp.name}</span>
+            <span class="rpt-emp-name">${uiEscape(emp.name)}</span>
             <div class="rpt-emp-tags">
               ${emp.is_permanent ? '<span class="rpt-perm-badge">Ind.</span>' : ""}
               ${hasNext ? '<span class="rpt-next-badge">Lavora sett. prossima</span>' : ""}
@@ -125,7 +138,7 @@ window.initReportPage = async function initReportPage() {
           ${avgH > 0
             ? `<span class="rpt-avg-hours">${avgH.toFixed(1)}<span class="rpt-avg-unit">h/sett.</span></span>`
             : `<span class="rpt-avg-hours rpt-avg-zero">—</span>`}
-          <button class="rpt-expand-btn">▶</button>
+          <button type="button" class="rpt-expand-btn" aria-label="Mostra dettagli di ${uiEscape(emp.name)}" aria-expanded="false">▶</button>
         </div>
       </div>
       <div class="rpt-emp-card-body" style="display:none">
@@ -169,6 +182,7 @@ window.initReportPage = async function initReportPage() {
       open = !open;
       body.style.display = open ? "block" : "none";
       btn.textContent = open ? "▼" : "▶";
+      btn.setAttribute("aria-expanded", String(open));
       card.classList.toggle("expanded", open);
     });
 
@@ -179,11 +193,20 @@ window.initReportPage = async function initReportPage() {
   const searchEl = document.getElementById("rptSearch");
   if (searchEl) {
     searchEl.value = "";
+    const noRes = document.createElement("div");
+    noRes.className = "rpt-empty";
+    noRes.hidden = true;
+    bodyEl.appendChild(noRes);
     searchEl.oninput = () => {
       const q = searchEl.value.trim().toLowerCase();
+      let shown = 0;
       document.querySelectorAll(".rpt-emp-card").forEach(c => {
-        c.style.display = (!q || c.dataset.name.includes(q)) ? "" : "none";
+        const ok = !q || c.dataset.name.includes(q);
+        c.style.display = ok ? "" : "none";
+        if (ok) shown++;
       });
+      noRes.hidden = shown > 0;
+      noRes.innerHTML = `<strong>Nessun dipendente corrisponde a «${uiEscape(searchEl.value.trim())}».</strong>`;
     };
   }
 };

@@ -111,3 +111,14 @@ def test_copy_from_empty_week_keeps_destination(tmp_path):
     ])
     assert db.overrides_copy_week("2026-05-05", "2026-05-12") == 0
     assert len(db.overrides_week_get("2026-05-12")) == 1
+
+
+def test_squads_single_table_wins_over_old_week_copy(tmp_path):
+    db = _db(tmp_path)
+    # salvataggio fatto "nella settimana A": scrive A e la tabella globale
+    db.squads_week_set("2026-05-05", {"1": {"morning": {"Cassa": 1}}})
+    # più tardi la tabella cambia, salvata "nella settimana B"
+    db.squads_week_set("2026-05-12", {"1": {"morning": {"Cassa": 3}}})
+    # la settimana A deve vedere la tabella unica attuale, non la sua copia vecchia
+    assert db.squads_week_get("2026-05-05")["1"]["morning"]["Cassa"] == 3
+    assert db.squads_week_get("2026-06-30")["1"]["morning"]["Cassa"] == 3

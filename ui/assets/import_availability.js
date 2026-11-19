@@ -1,184 +1,236 @@
 // ui/assets/import_availability.js
-// Gestisce import CSV availability (UI + chiamata API + refresh calendario + gestione lista file)
+// Import CSV disponibilità: scelta file, risoluzione nomi/celle, generazione turni,
+// aggiornamento calendario e lista dei file caricati.
 
-// ── Bottone "Importa CSV": apre picker Windows via Python, legge il file, avvia import ──
+/* ---------- date leggibili ---------- */
+/** "2026-05-25" (lunedì) -> "25/05 → 31/05" */
+function _csvWeekText(weekKey) {
+  if (!weekKey || typeof mondayDateFromWeekKey !== "function") return weekKey || "";
+  return weekRangeText(mondayDateFromWeekKey(weekKey));
+}
+/** SQLite datetime('now') è in UTC ("2026-05-24 11:40:12"): lo mostro in ora locale. */
+function _csvLocalDateTime(utcText) {
+  if (!utcText) return "";
+  const d = new Date(String(utcText).replace(" ", "T") + "Z");
+  if (Number.isNaN(d.getTime())) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* ---------- stato "import in corso" ---------- */
+let _importBusy = false;
+function _setImportBusy(busy) {
+  _importBusy = busy;
+  ["btnImportAvailability", "btnElaboraSelectedFile"].forEach((id) => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    b.classList.toggle("is-busy", busy);
+    if (busy) b.disabled = true;
+    else if (id === "btnImportAvailability") b.disabled = false;
+    else b.disabled = !window._selectedCsvFile;
+  });
+  document.getElementById("timelineWrap")?.classList.toggle("is-loading", busy);
+}
+
+// ── Bottone "Importa CSV": apre il selettore file di Windows, legge il file, avvia l'import ──
 window.bindImportAvailability = function bindImportAvailability() {
   const btn = document.getElementById("btnImportAvailability");
   if (!btn || btn.dataset.bound === "1") return;
   btn.dataset.bound = "1";
 
   btn.addEventListener("click", async () => {
-    // Apre il file dialog lato Python (tkinter) — restituisce path e filename
+    if (_importBusy) return;
     const picked = await apiCall("imported_files_open_dialog");
-    if (!picked || !picked.ok) return; // utente ha annullato
+    if (!picked || !picked.ok) return; // annullato dall'utente
 
-    // Legge il contenuto del CSV dal path reale su disco
     const content = await apiCall("imported_files_read_path", picked.path);
     if (!content?.ok) {
-      alert("Errore lettura file: " + (content?.error || ""));
+      await uiAlert({ kind: "error", title: "File non leggibile", message: content?.error || "Il file scelto non si può leggere." });
       return;
     }
-
-    // Avvia il processo di import — salverà anche i metadati in DB
     await _runImport(content.csv_text, picked.filename, picked.path, null);
   });
 };
 
-// ── Bottone "Elabora file selezionato": legge dal path già salvato in DB, nessun picker ──
+// ── Bottone "Elabora file selezionato": rilegge il file già in lista, senza selettore ──
 window.bindElaboraSelectedFile = function bindElaboraSelectedFile() {
   const btn = document.getElementById("btnElaboraSelectedFile");
   if (!btn || btn.dataset.bound === "1") return;
   btn.dataset.bound = "1";
 
   btn.addEventListener("click", async () => {
+    if (_importBusy) return;
     const selected = window._selectedCsvFile;
     if (!selected) {
-      alert("Seleziona prima un file dalla lista.");
+      await uiAlert({ message: "Seleziona prima un file dalla lista «File CSV caricati»." });
       return;
     }
-
-    // Legge il file direttamente dal path salvato — NESSUN picker Windows
     const content = await apiCall("imported_files_get_content", selected.id);
     if (!content?.ok) {
-      alert("Impossibile leggere il file: " + (content?.error || "path non trovato su disco"));
+      await uiAlert({
+        kind: "error",
+        title: "File non trovato",
+        message: `${content?.error || "Il file non è più nella posizione in cui era stato importato."}\nSe è stato spostato, importalo di nuovo con «Importa CSV».`,
+      });
       return;
     }
-
-    // Ri-elabora usando la week_key già associata al file
     await _runImport(content.csv_text, selected.filename, null, selected.week_key);
   });
 };
 
 // ── Funzione centrale di import — usata da entrambi i bottoni ──
 async function _runImport(csvText, filename, filePath, forceWeekKey) {
+  if (_importBusy) return;
+  const api = window.pywebview?.api;
+  if (!api) {
+    await uiAlert({ kind: "error", message: "L'app non è ancora pronta. Riprova tra qualche secondo." });
+    return;
+  }
+  const weekKey = forceWeekKey || weekKeyOf(currentWeekStart);
+
+  // 0) L'import rigenera la settimana del CSV e SOSTITUISCE i turni salvati, anche quelli fatti a mano.
   try {
-    const weekKey = forceWeekKey || weekKeyOf(currentWeekStart);
+    const targetWeek = (await api.import_detect_week(weekKey, csvText)) || weekKey;
+    const existing = await api.overrides_get_week(targetWeek);
+    if (Array.isArray(existing) && existing.length > 0) {
+      const ok = await uiConfirm({
+        title: "Rigenerare i turni?",
+        message: `La settimana ${_csvWeekText(targetWeek)} ha già dei turni salvati.\nL'import li rigenera e sostituisce anche le modifiche fatte a mano.`,
+        confirmText: "Rigenera turni",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+  } catch (e) {
+    console.warn("[Import] controllo turni esistenti non riuscito:", e);
+  }
+
+  _setImportBusy(true);
+  try {
     let resolutions = null;
     let customResolutions = null;
 
-    // 0) L'import rigenera la settimana e SOVRASCRIVE i turni salvati, comprese le modifiche manuali.
-    try {
-      // Controlla la settimana del CSV (quella che l'import userà davvero),
-      // non quella aperta a schermo.
-      const targetWeek = (await window.pywebview.api.import_detect_week(weekKey, csvText)) || weekKey;
-      const existing = await window.pywebview.api.overrides_get_week(targetWeek);
-      if (Array.isArray(existing) && existing.length > 0) {
-        const ok = confirm(
-          "La settimana ha già dei turni salvati.\n" +
-          "L'import li rigenera e sostituisce anche le modifiche fatte a mano.\n\nContinuare?"
-        );
-        if (!ok) return;
-      }
-    } catch (e) {
-      console.warn("[Import] controllo turni esistenti non riuscito:", e);
-    }
-
     // 1) Prima chiamata
-    let res = await window.pywebview.api.import_availability_and_autofill(weekKey, csvText, null, null);
+    let res = await api.import_availability_and_autofill(weekKey, csvText, null, null);
 
-    // 2) Nomi sconosciuti → risolvi alias
+    // 2) Nomi sconosciuti → collega o crea dipendenti
     if (res && res.needs_resolution) {
-      if (typeof window.resolveUnknownUsersModal !== "function")
-        throw new Error("resolveUnknownUsersModal non disponibile (import_resolver.js non caricato).");
+      _setImportBusy(false);
       resolutions = await window.resolveUnknownUsersModal(res.unknown || [], res.employees || []);
       if (!resolutions) return;
-      res = await window.pywebview.api.import_availability_and_autofill(weekKey, csvText, resolutions, null);
+      _setImportBusy(true);
+      res = await api.import_availability_and_autofill(weekKey, csvText, resolutions, null);
     }
 
-    // 3) Celle custom → risolvi slot
+    // 3) Celle non interpretabili → orario scelto dall'utente
     if (res && res.needs_custom_slot_resolution) {
-      if (typeof window.resolveCustomSlotsModal !== "function")
-        throw new Error("resolveCustomSlotsModal non disponibile (custom_slot_resolver.js non caricato).");
+      _setImportBusy(false);
       customResolutions = await window.resolveCustomSlotsModal(res.custom_cells || []);
       if (!customResolutions) return;
-      res = await window.pywebview.api.import_availability_and_autofill(weekKey, csvText, resolutions, customResolutions);
+      _setImportBusy(true);
+      res = await api.import_availability_and_autofill(weekKey, csvText, resolutions, customResolutions);
     }
 
-    if (!res || !res.ok) throw new Error(res?.error || "Import fallito");
-
-    if (res.availability_preview) window._lastAvailabilityPreview = res.availability_preview;
+    if (!res || !res.ok) throw new Error(res?.error || "Il file non è stato elaborato.");
 
     const wk = res.week_key_used || weekKey;
-
     if (res.availability_preview) {
-      await apiCall("availability_save", wk, JSON.stringify(res.availability_preview));
+      window._lastAvailabilityPreview = res.availability_preview;
+      try {
+        await apiWrite("availability_save", wk, JSON.stringify(res.availability_preview));
+      } catch (err) {
+        // i turni sono salvati; manca solo l'anteprima disponibilità alla prossima apertura
+        showToast("Turni salvati, ma l'anteprima disponibilità non è stata memorizzata", "err");
+      }
     }
-    if (typeof mondayDateFromWeekKey === "function") currentWeekStart = mondayDateFromWeekKey(wk);
+
+    currentWeekStart = mondayDateFromWeekKey(wk);
     window.currentWeekKey = wk;
-    localStorage.setItem('lastWeekKey', wk);
-    apiCall('settings_set', 'lastWeekKey', wk);
+    try { localStorage.setItem("lastWeekKey", wk); } catch (_) {}
+    apiCall("settings_set", "lastWeekKey", wk);
 
-    const defCount = Array.isArray(res.deficits) ? res.deficits.length : 0;
-    console.log(`[Import] AutoSchedule completato -> settimana=${wk}, deficit=${defCount}`);
-
-    // Salva metadati in DB solo se è un import nuovo (filePath presente).
-    // Se è una ri-elaborazione di file già in lista, il record esiste già.
+    // Metadati in lista solo per un file nuovo (per una rielaborazione il record c'è già)
     if (filePath) {
-      await importedFilesAdd(filename, filePath, wk);
+      try { await importedFilesAdd(filename, filePath, wk); }
+      catch (err) { showToast("Turni generati, ma il file non è stato aggiunto alla lista", "err"); }
     }
 
     await loadWeekFromDb(wk);
+    recalcSegmentsFromAssignments(wk);
     renderEmployees();
     renderWeekLabel();
     renderCalendar();
+    window.chatAiUpdateContext?.();
     window.bindAvailabilityViewer?.();
     await window.renderCsvFilePanel?.();
+    await renderDaySummary?.();
 
-    alert("Import completato ✅");
+    showToast(`Turni generati per la settimana ${_csvWeekText(wk)}`);
   } catch (e) {
-    console.error(e);
-    alert("Errore import: " + (e?.message || String(e)));
+    console.error("[Import]", e);
+    const detail = String(e?.message || e || "").replace(/^\w*Error:\s*/, "");
+    await uiAlert({
+      kind: "error",
+      title: "Import non riuscito",
+      message: `${detail || "Errore sconosciuto."}\nI turni già salvati non sono stati modificati.`,
+    });
+  } finally {
+    _setImportBusy(false);
   }
 }
 
-// ── Renderizza il pannello laterale con la lista dei file CSV caricati ──
+// ── Pannello laterale con la lista dei file CSV caricati ──
 window.renderCsvFilePanel = async function renderCsvFilePanel() {
   const list = document.getElementById("csvFileList");
   if (!list) return;
 
   const files = await importedFilesList();
+  const elaboraBtn = document.getElementById("btnElaboraSelectedFile");
 
-  if (!files || files.length === 0) {
-    list.innerHTML = `<div class="csv-empty-hint">Nessun file caricato</div>`;
-    const btn = document.getElementById("btnElaboraSelectedFile");
-    if (btn) btn.disabled = true;
+  // il file selezionato resta selezionato solo se esiste ancora
+  if (window._selectedCsvFile && !files.some((f) => f.id === window._selectedCsvFile.id)) {
     window._selectedCsvFile = null;
+  }
+  if (elaboraBtn && !_importBusy) elaboraBtn.disabled = !window._selectedCsvFile;
+
+  if (!files.length) {
+    list.innerHTML = `
+      <div class="csv-empty-hint">
+        <div class="csv-empty-title">Nessun file caricato</div>
+        <div>Usa <strong>Importa CSV</strong> per caricare le disponibilità della settimana.</div>
+      </div>`;
     return;
   }
 
   list.innerHTML = "";
-  files.forEach(f => {
+  files.forEach((f) => {
     const item = document.createElement("div");
     item.className = "csv-file-item";
     item.dataset.id = f.id;
-
-    const dateStr = f.imported_at ? f.imported_at.slice(0, 16).replace("T", " ") : "";
+    if (window._selectedCsvFile?.id === f.id) item.classList.add("selected");
 
     item.innerHTML = `
-      <div class="csv-file-info" title="${f.filename}">
-        <div class="csv-file-name">${f.filename}</div>
-        <div class="csv-file-meta">Sett. ${f.week_key} · ${dateStr}</div>
-      </div>
-      <button class="csv-file-delete" data-id="${f.id}" title="Rimuovi dalla lista">✕</button>
+      <button type="button" class="csv-file-info" title="Seleziona «${uiEscape(f.filename)}»">
+        <span class="csv-file-name">${uiEscape(f.filename)}</span>
+        <span class="csv-file-meta">Sett. ${uiEscape(_csvWeekText(f.week_key))} · ${uiEscape(_csvLocalDateTime(f.imported_at))}</span>
+      </button>
+      <button type="button" class="csv-file-delete" aria-label="Rimuovi ${uiEscape(f.filename)} dalla lista" title="Rimuovi dalla lista (i turni non vengono toccati)">✕</button>
     `;
 
-    // Click sulla parte info → seleziona il file e abilita "Elabora file selezionato"
     item.querySelector(".csv-file-info").addEventListener("click", () => {
-      document.querySelectorAll(".csv-file-item").forEach(el => el.classList.remove("selected"));
+      document.querySelectorAll(".csv-file-item").forEach((el) => el.classList.remove("selected"));
       item.classList.add("selected");
       window._selectedCsvFile = { id: f.id, filename: f.filename, week_key: f.week_key };
-      const btn = document.getElementById("btnElaboraSelectedFile");
-      if (btn) btn.disabled = false;
+      if (elaboraBtn && !_importBusy) elaboraBtn.disabled = false;
     });
 
-    // Click sulla X → elimina solo il record dalla lista (non tocca il calendario)
     item.querySelector(".csv-file-delete").addEventListener("click", async (e) => {
       e.stopPropagation();
-      await importedFilesDelete(f.id);
-      if (window._selectedCsvFile?.id === f.id) {
-        window._selectedCsvFile = null;
-        const btn = document.getElementById("btnElaboraSelectedFile");
-        if (btn) btn.disabled = true;
+      try {
+        await importedFilesDelete(f.id);
+        showToast(`«${f.filename}» rimosso dalla lista`);
+      } catch (err) {
+        showToast(err.message, "err");
       }
       await window.renderCsvFilePanel();
     });
@@ -187,18 +239,31 @@ window.renderCsvFilePanel = async function renderCsvFilePanel() {
   });
 };
 
-// ── Bind del bottone "Elimina tutti" nel pannello CSV ──
+// ── "Elimina tutti" nel pannello CSV ──
 window.bindCsvPanelActions = function bindCsvPanelActions() {
   const btnClear = document.getElementById("btnClearAllFiles");
   if (!btnClear || btnClear.dataset.bound === "1") return;
   btnClear.dataset.bound = "1";
 
   btnClear.addEventListener("click", async () => {
-    if (!confirm("Eliminare tutti i file dalla lista? I dati nel calendario non verranno toccati.")) return;
-    await importedFilesClear();
+    const files = await importedFilesList();
+    if (!files.length) {
+      showToast("La lista è già vuota", "info");
+      return;
+    }
+    const ok = await uiConfirm({
+      title: "Svuotare la lista dei file?",
+      message: `${files.length === 1 ? "Il file viene rimosso" : `I ${files.length} file vengono rimossi`} dalla lista.\nI turni nel calendario e i file sul disco non vengono toccati.`,
+      confirmText: "Svuota lista",
+    });
+    if (!ok) return;
+    try {
+      await importedFilesClear();
+      showToast("Lista dei file svuotata");
+    } catch (err) {
+      showToast(err.message, "err");
+    }
     window._selectedCsvFile = null;
-    const btn = document.getElementById("btnElaboraSelectedFile");
-    if (btn) btn.disabled = true;
     await window.renderCsvFilePanel();
   });
 };
