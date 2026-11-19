@@ -27,6 +27,9 @@
     <a class="guide-toc-item" href="#chat" onclick="guideTo('chat',this)">
       <span class="guide-toc-icon">✦</span> Assistente
     </a>
+    <a class="guide-toc-item" href="#impostazioni" onclick="guideTo('impostazioni',this)">
+      <span class="guide-toc-icon">⚙</span> Impostazioni
+    </a>
     <a class="guide-toc-item" href="#glossario" onclick="guideTo('glossario',this)">
       <span class="guide-toc-icon">📖</span> Glossario
     </a>
@@ -86,7 +89,7 @@
               <div class="guide-step-num">D</div>
               <div class="guide-step-body">
                 <div class="guide-step-title">Dipendenti</div>
-                <div class="guide-step-desc">Anagrafica del personale con skill per ruolo e ore settimanali target.</div>
+                <div class="guide-step-desc">Anagrafica del personale con skill per ruolo, giorni e limiti di ore.</div>
               </div>
             </div>
             <div class="guide-step">
@@ -163,8 +166,8 @@
           <div class="guide-step">
             <div class="guide-step-num">4</div>
             <div class="guide-step-body">
-              <div class="guide-step-title">Imposta le ore settimanali target</div>
-              <div class="guide-step-desc">In <strong>Ore settimanali</strong> indica il massimo di ore che la persona può fare nella settimana: l'algoritmo non la assegna oltre questo limite. Vuoto = nessun limite. Per gli indeterminati le ore della settimana si impostano con il pulsante <strong>"Indeterminati"</strong>.</div>
+              <div class="guide-step-title">Imposta i limiti di ore</div>
+              <div class="guide-step-desc"><strong>Ore max al giorno</strong>: vuoto = il predefinito della pagina Impostazioni. <strong>Ore settimanali</strong> (solo turnisti): il massimo della settimana, vuoto = nessun limite. Per gli indeterminati le ore della settimana si impostano con il pulsante <strong>«Indeterminati»</strong>.</div>
             </div>
           </div>
           <div class="guide-step">
@@ -537,7 +540,12 @@
         <span class="guide-callout-icon">ℹ️</span>
         <div class="guide-callout-body">
           <div class="guide-callout-title">Come funziona l'algoritmo di assegnazione</div>
-          L'algoritmo opera in 3 fasi: (1) assegna i dipendenti indeterminati ai loro giorni fissi; (2) riempie i turni restanti in base a disponibilità, skill e ore settimanali target; (3) esegue uno scambio ottimizzato (2-opt) per migliorare ulteriormente la qualità degli abbinamenti ruolo-persona.
+          L'obiettivo è <strong>coprire più turni possibile con la squadra più equilibrata</strong>: meglio due persone da 6 e 7
+          che una da 10 e una da 1. In ordine: (1) assegna prima gli indeterminati, rispettando riposo e ore della settimana;
+          (2) assegna i turnisti in base a disponibilità, skill e limiti di ore; (3) tappa i buchi rimasti mezz'ora per mezz'ora;
+          (4) per ogni fascia ridistribuisce i ruoli tra chi fa lo stesso orario e chi è libero, scegliendo la combinazione che
+          alza il più possibile la skill più bassa, senza mai ridurre la copertura; (5) toglie i pezzi di turno troppo corti.
+          Limiti e regole (ore massime, riposo, turni spezzati…) si scelgono nella pagina <strong>Impostazioni</strong>.
         </div>
       </div>
     </section>
@@ -697,6 +705,40 @@
       </div>
     </section>
 
+    <!-- ═══════════════ IMPOSTAZIONI ═══════════════ -->
+    <section class="guide-section" id="impostazioni">
+      <div class="guide-section-header">
+        <div class="guide-section-icon blue">⚙</div>
+        <div>
+          <div class="guide-section-title">Impostazioni</div>
+          <div class="guide-section-sub">Le regole che l'algoritmo rispetta, scelte da te</div>
+        </div>
+      </div>
+      <div class="guide-card">
+        <div class="guide-card-title">Cosa si può regolare</div>
+        <table class="guide-table">
+          <thead><tr><th>Impostazione</th><th>Effetto</th><th>Predefinito</th></tr></thead>
+          <tbody>
+            <tr><td>Turnisti · ore massime al giorno</td><td>Per chi non ha un limite nella scheda: mattina e pomeriggio insieme non superano questo valore</td><td>10 ore</td></tr>
+            <tr><td>Indeterminati · ore settimanali</td><td>Ore della settimana se non indicate nella finestra «Indeterminati»</td><td>40 ore</td></tr>
+            <tr><td>Indeterminati · ore massime al giorno</td><td>Per chi non ha un limite nella scheda</td><td>8 ore</td></tr>
+            <tr><td>Indeterminati assenti dal CSV</td><td>Se attivo, chi non compila il modulo è considerato disponibile tutto il giorno</td><td>Attivo</td></tr>
+            <tr><td>Riposo minimo tra due turni</td><td>Ore tra la fine di un turno e l'inizio di quello del giorno dopo (0 = non controllato)</td><td>0</td></tr>
+            <tr><td>Durata minima di un turno</td><td>I pezzi più corti non vengono creati</td><td>2 ore</td></tr>
+            <tr><td>Turni spezzati</td><td>Se spento, ognuno fa un solo turno continuo al giorno</td><td>Consentiti</td></tr>
+            <tr><td>Giorni di apertura</td><td>Giorni mostrati nell'export PDF ed Excel</td><td>Mar–Dom</td></tr>
+            <tr><td>Conserva le settimane per</td><td>Le settimane più vecchie vengono cancellate all'avvio, dopo un backup (0 = mai)</td><td>6 mesi</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="guide-callout tip">
+        <span class="guide-callout-icon">💡</span>
+        <div class="guide-callout-body">
+          Le impostazioni valgono dal prossimo import (o «Elabora file selezionato»): i turni già generati non cambiano da soli.
+        </div>
+      </div>
+    </section>
+
     <!-- ═══════════════ GLOSSARIO ═══════════════ -->
     <section class="guide-section" id="glossario">
       <div class="guide-section-header">
@@ -742,8 +784,8 @@
             <div class="guide-glossary-def">Simbolo usato nel CSV per indicare la fine turno a chiusura locale, equivalente alle 24:00.</div>
           </div>
           <div class="guide-glossary-item">
-            <div class="guide-glossary-term">2-opt swap</div>
-            <div class="guide-glossary-def">Ottimizzazione post-assegnazione: l'algoritmo verifica se scambiare due dipendenti tra due ruoli diversi (nello stesso giorno e orario) migliora la qualità totale delle assegnazioni.</div>
+            <div class="guide-glossary-term">Bilanciamento</div>
+            <div class="guide-glossary-def">Ultima fase dell'algoritmo: per ogni fascia ridistribuisce i ruoli tra chi fa lo stesso orario (e chi è libero) per alzare il più possibile la skill più bassa della squadra, senza ridurre la copertura. Meglio 6 + 7 che 10 + 1.</div>
           </div>
           <div class="guide-glossary-item">
             <div class="guide-glossary-term">Template</div>

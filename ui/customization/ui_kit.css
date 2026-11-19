@@ -572,3 +572,10 @@ input:focus, select:focus, textarea:focus {
 .dt-dot--leggera { background: #10b981; }
 .dt-dot--normale { background: #f59e0b; }
 .dt-dot--pesante { background: #ef4444; }
+
+/* Campi disattivati: grigi e non modificabili a colpo d'occhio */
+input:disabled, select:disabled, textarea:disabled {
+  background: var(--slate-50) !important;
+  color: var(--slate-500) !important;
+  cursor: not-allowed;
+}

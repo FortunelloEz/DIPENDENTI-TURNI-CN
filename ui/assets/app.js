@@ -4,6 +4,17 @@
 
 /* ---------- ROUTING ---------- */
 async function loadView(route) {
+  // Impostazioni con modifiche non salvate: si chiede prima di cambiare pagina
+  if (window.settingsHasUnsaved?.()) {
+    const ok = await uiConfirm({
+      title: "Uscire senza salvare?",
+      message: "Le modifiche alle impostazioni non sono state salvate e andranno perse.",
+      confirmText: "Esci senza salvare",
+      cancelText: "Resta qui",
+      danger: true,
+    });
+    if (!ok) return;
+  }
   window.uiHideTip?.();
   const viewEl = document.getElementById("view");
   const html = await fetch(`./views/${route}.html`).then(r => r.text());
@@ -19,6 +30,7 @@ async function loadView(route) {
     window.initExportView?.();
   }
   if (route === "report") window.initReportPage?.();
+  if (route === "settings") window.initSettingsPage?.();
 }
 
 /* ---------- BARRA LATERALE ---------- */

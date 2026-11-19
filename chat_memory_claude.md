@@ -30,6 +30,7 @@ cn_turni/
   api.py               classe Api (tutti i metodi chiamabili da JS)
   db.py                classe Db (schema SQLite + queries)
   paths.py             singleton Paths (root, data_dir, db_path)
+  app_settings.py      impostazioni modificabili: schema unico (predefiniti, limiti, testi) + validazione
   services/
     assistant.py       assistente locale: risposte dal DB, modifiche con anteprima + apply atomico
     auto_scheduler.py  build_plan: scheduling macro-slot morning/evening
@@ -37,7 +38,7 @@ cn_turni/
     csv_availability.py  parsing CSV disponibilità
     export_service.py  build_week_export / build_week_export_simple
     pdf_export.py      build_pdf_from_export / build_pdf_from_export_simple
-    swap_optimizer.py  two_opt_swap: 2-opt local search post-assegnazione
+    balance_optimizer.py  bilanciamento esatto dei ruoli per fascia (max-min skill, poi somma)
 
 ui/
   index.html           shell: sidebar (brand, nav con icone SVG, versione) + <div id="view"> + script tags
@@ -60,8 +61,9 @@ ui/
                             finestre, notifiche, (i), barra laterale
 
 tests/
-  test_two_opt.py           swap_optimizer
-  test_skill_upgrade.py     skill_upgrade_pass
+  test_balance_optimizer.py bilanciamento (6+7 meglio di 10+1, scelta del ruolo da lasciare scoperto)
+  test_settings_rules.py    ogni impostazione cambia davvero il risultato
+  test_assistant.py         assistente locale
   test_csv_availability.py  parser CSV (mezz'ore, "18-01", Capodanno)
   test_import_service.py    import end-to-end su DB temporaneo (alias, riposi, squadre, copia settimana)
   test_export_service.py    orari dell'export con mezz'ore
@@ -147,16 +149,27 @@ squads_need = {int(k): v for k, v in (self.db.squads_week_get(week_id) or {}).it
 
 ---
 
-## 2-opt swap post-assegnazione (`swap_optimizer.py`)
+## Bilanciamento dei ruoli (`balance_optimizer.py`) — sostituisce skill-upgrade e 2-opt (2026-11-19)
 
-Best-improvement local search, max 50 iterazioni. Per ogni coppia `(emp_a@role_A, emp_b@role_B)` stesso giorno:
-- `common = times_a ∩ times_b` (mezz'ore dove entrambi lavorano a ruoli diversi)
-- `delta = (skill_aB + skill_bA − skill_aA − skill_bB) × len(common)`
-- Applica solo se `delta > 0` e `skill > 0` per entrambi i nuovi ruoli
-- Non modifica `busy_by_time` / `daily_halfhours` (ore totali invariate)
-- Log: `[2-opt #N] g=D NomeA@roleA ↔ NomeB@roleB (K hh, Δ=X)`
+- Obiettivo dell'utente: a parità di copertura la squadra più EQUILIBRATA (6+7 meglio di 10+1).
+- Per giorno e fascia: gruppi = persone con lo stesso orario esatto e un solo ruolo. Posti del gruppo =
+  ruoli dei membri + posti ancora scoperti per tutto quell'orario. Candidati = membri + liberi che rispettano
+  tutti i limiti (`_free_for` in import_service).
+- Soluzione esatta: priorità 1) più posti coperti 2) skill minima più alta (soglia decrescente) 3) somma più alta
+  4) mansione preferita 5) nessun cambio inutile. Algoritmo ungherese con colonne "posto vuoto".
+- Verifica: confronto con la soluzione ottima su 300 casi casuali → 300/300 (prima 191/300; 81 casi con
+  skill minima più bassa del necessario).
+- Dopo il bilanciamento: pulizia dei pezzi < «Durata minima» e, se non consentiti, dei turni spezzati;
+  poi scoperti calcolati sul risultato FINALE (`deficits` della risposta di import).
 
----
+## Impostazioni (`app_settings.py`, pagina `settings`)
+
+- Schema unico Python → la UI costruisce il modulo da `Api.app_settings_get`; `app_settings_save` valida tutto
+  e salva in una transazione (`Db.settings_set_many`, chiavi `cfg.<chiave>`).
+- Usate da: import (max ore/giorno turnisti e indeterminati, ore settimanali indeterminati, indeterminati assenti
+  dal CSV, riposo minimo, durata minima, turni spezzati), export (giorni di apertura), avvio (conservazione mesi).
+- Indeterminati: le ore settimanali vengono SOLO dalla finestra «Indeterminati» o dal predefinito; 0 ore = 0
+  (prima diventava 40 sia in import sia in `permanent_week_set`).
 
 ## Export PDF (`export_service.py`, `pdf_export.py`, `api.py`)
 
@@ -211,3 +224,4 @@ Best-improvement local search, max 50 iterazioni. Per ogni coppia `(emp_a@role_A
 | 2026-11-19 | Design system premium (`ui_kit.css`/`ui_kit.js`): sidebar nuova con icone e stato ridotto, gerarchia pulsanti, finestre e notifiche dell'app al posto di alert/confirm, icone (i) con spiegazioni, stati vuoti/caricamento/errore, `apiWrite` per tutte le scritture con riallineamento al DB, finestre import (nomi e orari) rifatte, Indeterminati senza rischio di cancellazione, Squadre lette sempre dalla tabella unica, media ore del Report corretta, guida in-app allineata all'app reale |
 | 2026-11-19 | Rifinitura finestre interne: dettaglio giorno con riepilogo copertura (scoperti per fascia), gestione turno e scheda dipendente con conferma se si chiude senza salvare, preset tipi giornata con bozza unica (niente perdite cambiando scheda), Aggiungi/Rimuovi turno con icone SVG, giorno proposto utile e "già in turno: Ruolo orario", Disponibilità rifatta (gruppi libero/in turno, niente listener persi), eliminazione dipendente che libera i turni futuri e lascia lo storico come «Ex dipendente» (`employee_usage`/`employee_delete`), Esc chiude ogni finestra, X accessibili |
 | 2026-11-19 | Chat Gemini sostituita da un assistente locale senza rete né chiavi (`assistant.py`/`assistant.js`): informazioni dal DB e modifiche con anteprima, conferma e scrittura atomica (`overrides_set_cells`); rimosso il codice Gemini (API chiave, cifratura, `chat_ai.*`) |
+| 2026-11-19 | Algoritmo: bilanciamento esatto (300/300 ottimi), impostazioni modificabili (pagina Impostazioni), max ore/giorno turnisti (predef. 10), riposo minimo, durata minima, turni spezzati, giorni di apertura, conservazione; scoperti finali; fix «0 ore = 40» |

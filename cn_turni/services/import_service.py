@@ -10,8 +10,8 @@ import re
 from cn_turni.db import week_id_from_ui_weekkey
 from .auto_scheduler import Employee, PermanentSettings, BalanceWarning, build_plan, ROLES, _allowed_by_work_days
 from .csv_availability import DayAvailability, norm_name, parse_availability_csv
-from .swap_optimizer import two_opt_swap
-from .skill_upgrade import skill_upgrade_pass
+from .balance_optimizer import rebalance
+from cn_turni import app_settings
 
 
 def _monday_of_iso(iso_day: str) -> str:
@@ -332,9 +332,33 @@ class ImportService:
                 labels = set(_half_hours(start_h, end_h))
                 availability.setdefault(csv_name, {})[iso_day] = DayAvailability(labels)
 
-        # 7) costruisco lista employees (planner lavora sugli employee del DB)
-        employees = [
-            Employee(
+        # 7) impostazioni dell'utente (pagina «Impostazioni»)
+        cfg = app_settings.load(self.db)
+
+        # 8) indeterminati della settimana (USA week_id). 0 ore è un valore valido (es. ferie):
+        #    solo un valore mancante prende il predefinito delle Impostazioni.
+        perm_rows = self.db.permanent_week_get(week_id)
+        perm_settings = [
+            PermanentSettings(
+                employee_id=int(r["employee_id"]),
+                day_off=(None if r.get("day_off") is None else int(r["day_off"])),
+                target_hours=int(r["target_hours"]) if r.get("target_hours") is not None else cfg["perm_weekly_hours"],
+            )
+            for r in perm_rows
+        ]
+        perm_ids_set = {p.employee_id for p in perm_settings}
+
+        # 7b) dipendenti per l'algoritmo, con i limiti già risolti:
+        #     - ore max al giorno: quelle della scheda, altrimenti il predefinito (turnisti / indeterminati)
+        #     - ore settimanali: per gli indeterminati valgono SOLO quelle della finestra «Indeterminati»
+        #       (o il predefinito); il campo della scheda vale per i turnisti
+        employees = []
+        for r in emp_rows:
+            is_perm = (int(r.get("is_permanent", 0) or 0) == 1) or int(r["id"]) in perm_ids_set
+            max_daily = r.get("max_daily_hours")
+            if max_daily is None:
+                max_daily = cfg["perm_max_daily_hours"] if is_perm else cfg["temp_max_daily_hours"]
+            employees.append(Employee(
                 id=int(r["id"]),
                 name=str(r["name"]),
                 is_permanent=(int(r.get("is_permanent", 0) or 0) == 1),
@@ -343,24 +367,13 @@ class ImportService:
                 slot_evening=int(r.get("slot_evening", 1) or 0),
                 skills=r.get("skills") or {},
                 work_days=str(r.get("work_days") or ""),
-                max_daily_hours=r.get("max_daily_hours"),
-                weekly_hours_target=int(r["weekly_hours_target"]) if r.get("weekly_hours_target") is not None else None,
-            )
-            for r in emp_rows
-        ]
+                max_daily_hours=float(max_daily),
+                weekly_hours_target=(None if is_perm else
+                                     (int(r["weekly_hours_target"]) if r.get("weekly_hours_target") is not None else None)),
+            ))
         emp_by_id = {e.id: e for e in employees}
-
-        # 8) permanents settings (USA week_id)
-        perm_rows = self.db.permanent_week_get(week_id)
-        perm_settings = [
-            PermanentSettings(
-                employee_id=int(r["employee_id"]),
-                day_off=(None if r.get("day_off") is None else int(r["day_off"])),
-                target_hours=int(r.get("target_hours", 40) or 40),
-            )
-            for r in perm_rows
-        ]
-        perm_ids_set = {p.employee_id for p in perm_settings}
+        perm_available_if_missing = bool(cfg["perm_available_if_missing"])
+        min_rest_hh = int(cfg["min_rest_hours"]) * 2  # in mezz'ore
 
         # 9) squads need (USA week_id) — chiavi normalizzate a int per coerenza con enumerate()
         squads_need = {int(k): v for k, v in (self.db.squads_week_get(week_id) or {}).items()}
@@ -379,12 +392,19 @@ class ImportService:
         # 8.5) remap availability keys (CSV nicknames/alias) -> canonical DB full-name keys
         availability_for_sched = self._remap_availability_to_canonical_keys(availability, emp_rows, name_to_id)
 
+        def _missing_ok(emp: Employee) -> bool:
+            """Chi non compare nel CSV è disponibile solo se è indeterminato e l'impostazione lo prevede."""
+            return (emp.is_permanent or emp.id in perm_ids_set) and perm_available_if_missing
+
         plan, deficits, balance_warnings = build_plan(
             week_days_iso=week_days_iso,
             employees=employees,
             permanent_settings=perm_settings,
             availability=availability_for_sched,
             squads_need=squads_need,
+            perm_default_hours=cfg["perm_weekly_hours"],
+            perm_available_if_missing=perm_available_if_missing,
+            min_rest_hh=min_rest_hh,
         )
 
         # 10) salva overrides in un'unica transazione atomica
@@ -417,7 +437,7 @@ class ImportService:
                         if not emp or emp.id not in emp_max_halfhours:
                             continue
                         for t in labels:
-                            if self._is_available_label(availability_for_sched, emp.name, iso_day, t, emp.is_permanent or emp.id in perm_ids_set):
+                            if self._is_available_label(availability_for_sched, emp.name, iso_day, t, _missing_ok(emp)):
                                 emp_first_available[emp.id] = t
                                 break
 
@@ -438,7 +458,7 @@ class ImportService:
                                 used = emp_halfhour_count.get(emp.id, 0)
                                 if used >= emp_max_halfhours[emp.id]:
                                     continue
-                            if self._is_available_label(availability_for_sched, emp.name, iso_day, t, emp.is_permanent or emp.id in perm_ids_set):
+                            if self._is_available_label(availability_for_sched, emp.name, iso_day, t, _missing_ok(emp)):
                                 filtered.append(emp.id)
                                 if emp.id in emp_max_halfhours:
                                     emp_halfhour_count[emp.id] = emp_halfhour_count.get(emp.id, 0) + 1
@@ -457,6 +477,24 @@ class ImportService:
         by_cell: dict[tuple[int, str, str], list[int]] = {}
         busy_by_time: dict[tuple[int, str], set[int]] = {}
         daily_halfhours: dict[tuple[int, int], int] = {}
+        # mezz'ore lavorate da ogni persona in ogni giorno (indici 16..47): serve al riposo minimo
+        worked: dict[tuple[int, int], set[int]] = {}
+
+        def _hidx(t: str) -> int:
+            return int(t[:2]) * 2 + (1 if t[3:5] == "30" else 0)
+
+        def _rest_ok(emp_id: int, d: int, t: str) -> bool:
+            """Riposo minimo (Impostazioni) tra la fine del giorno prima e l'inizio del giorno dopo."""
+            if min_rest_hh <= 0:
+                return True
+            i = _hidx(t)
+            prev = worked.get((emp_id, d - 1))
+            if prev and (48 - (max(prev) + 1)) + i < min_rest_hh:
+                return False
+            nxt = worked.get((emp_id, d + 1))
+            if nxt and (48 - (i + 1)) + min(nxt) < min_rest_hh:
+                return False
+            return True
 
         for item in all_override_items:
             d = int(item["day_index"])
@@ -469,29 +507,27 @@ class ImportService:
 
             for eid in ids:
                 daily_halfhours[(eid, d)] = daily_halfhours.get((eid, d), 0) + 1
+                worked.setdefault((eid, d), set()).add(_hidx(t))
 
         def _role_skill(emp: Employee, role_name: str) -> int:
             return int((emp.skills or {}).get(role_name, 0) or 0)
 
         perm_by_id = {p.employee_id: p for p in perm_settings}
-        PERM_DEFAULT_DAILY_HALFHOURS = 16  # 8h: come build_plan, un indeterminato fa un turno al giorno
 
         def _permanent_limits_ok(emp: Employee, d: int) -> bool:
             """
             Vincoli degli indeterminati che build_plan rispetta e che valgono anche
             nel riempimento a mezz'ore e nello skill-upgrade:
             - niente turni nel giorno di riposo
-            - niente oltre le ore settimanali (target_hours, default 40)
-            - max 8h al giorno se max_daily_hours non è impostato
+            - niente oltre le ore settimanali (finestra «Indeterminati» o predefinito delle Impostazioni)
+            (il massimo giornaliero è già in emp.max_daily_hours)
             """
             if not (emp.is_permanent or emp.id in perm_ids_set):
                 return True
             p = perm_by_id.get(emp.id)
             if p is not None and p.day_off == d:
                 return False
-            if emp.max_daily_hours is None and daily_halfhours.get((emp.id, d), 0) >= PERM_DEFAULT_DAILY_HALFHOURS:
-                return False
-            target = int(p.target_hours) if p is not None else 40
+            target = int(p.target_hours) if p is not None else int(cfg["perm_weekly_hours"])
             weekly_hh = sum(daily_halfhours.get((emp.id, dd), 0) for dd in range(7))
             if weekly_hh / 2.0 >= target:
                 return False
@@ -514,7 +550,7 @@ class ImportService:
                     emp.name,
                     iso_day,
                     t,
-                    emp.is_permanent or emp.id in perm_ids_set,
+                    _missing_ok(emp),
             ):
                 return False
 
@@ -522,6 +558,9 @@ class ImportService:
                 return False
 
             if not _permanent_limits_ok(emp, d):
+                return False
+
+            if not _rest_ok(emp.id, d, t):
                 return False
 
             if emp.max_daily_hours is not None:
@@ -619,48 +658,114 @@ class ImportService:
                                 cell.append(emp.id)
                             busy_by_time.setdefault((d, t), set()).add(emp.id)
                             daily_halfhours[(emp.id, d)] = daily_halfhours.get((emp.id, d), 0) + 1
+                            worked.setdefault((emp.id, d), set()).add(_hidx(t))
                             open_roles[role] = max(0, open_roles[role] - 1)
 
-        # ── Skill-upgrade pass ──
-        def _is_avail_for_upgrade(emp: Employee, d: int, t: str) -> bool:
-            slot_name = "morning" if int(t.split(":")[0]) < 16 else "evening"
-            if slot_name == "morning" and not emp.slot_morning:
-                return False
-            if slot_name == "evening" and not emp.slot_evening:
-                return False
-            if not _allowed_by_work_days(emp, d):
-                return False
-            if not self._is_available_label(
-                    availability_for_sched, emp.name, week_days_iso[d], t,
-                    emp.is_permanent or emp.id in perm_ids_set):
-                return False
-            if not _permanent_limits_ok(emp, d):
-                return False
-            if emp.max_daily_hours is not None:
-                if daily_halfhours.get((emp.id, d), 0) >= round(float(emp.max_daily_hours) * 2):
-                    return False
-            if emp.weekly_hours_target is not None:
-                weekly_hh = sum(daily_halfhours.get((emp.id, dd), 0) for dd in range(7))
-                if weekly_hh / 2.0 >= emp.weekly_hours_target:
-                    return False
-            return True
+        # ── Bilanciamento dei ruoli (squadra equilibrata: meglio 6 + 7 che 10 + 1) ──
+        def _free_for(d: int, labels: set[str]) -> list[int]:
+            """Persone libere che possono coprire TUTTE queste mezz'ore, con tutti i limiti rispettati."""
+            iso_day = week_days_iso[d]
+            add_hh = len(labels)
+            out = []
+            for emp in employees:
+                if not _allowed_by_work_days(emp, d):
+                    continue
+                if any(emp.id in busy_by_time.get((d, t), set()) for t in labels):
+                    continue
+                if any((int(t[:2]) < 16 and not emp.slot_morning) or (int(t[:2]) >= 16 and not emp.slot_evening) for t in labels):
+                    continue
+                if not all(self._is_available_label(availability_for_sched, emp.name, iso_day, t, _missing_ok(emp)) for t in labels):
+                    continue
+                if not all(_rest_ok(emp.id, d, t) for t in labels):
+                    continue
+                day_hh = daily_halfhours.get((emp.id, d), 0)
+                week_hh = sum(daily_halfhours.get((emp.id, dd), 0) for dd in range(7))
+                if emp.max_daily_hours is not None and day_hh + add_hh > round(float(emp.max_daily_hours) * 2):
+                    continue
+                if emp.weekly_hours_target is not None and (week_hh + add_hh) / 2.0 > emp.weekly_hours_target:
+                    continue
+                if emp.is_permanent or emp.id in perm_ids_set:
+                    p = perm_by_id.get(emp.id)
+                    if p is not None and p.day_off == d:
+                        continue
+                    target = int(p.target_hours) if p is not None else int(cfg["perm_weekly_hours"])
+                    if (week_hh + add_hh) / 2.0 > target:
+                        continue
+                out.append(emp.id)
+            return out
 
-        _upgrade_count = skill_upgrade_pass(
+        def _on_replace(d: int, out_id, in_id, labels: set[str]) -> None:
+            """Aggiorna occupazione e ore: out_id esce dall'orario, in_id entra (uno dei due può mancare)."""
+            for t in labels:
+                if out_id is not None:
+                    busy_by_time.setdefault((d, t), set()).discard(out_id)
+                    worked.get((out_id, d), set()).discard(_hidx(t))
+                if in_id is not None:
+                    busy_by_time.setdefault((d, t), set()).add(in_id)
+                    worked.setdefault((in_id, d), set()).add(_hidx(t))
+            if out_id is not None:
+                daily_halfhours[(out_id, d)] = max(0, daily_halfhours.get((out_id, d), 0) - len(labels))
+            if in_id is not None:
+                daily_halfhours[(in_id, d)] = daily_halfhours.get((in_id, d), 0) + len(labels)
+
+        _moves = rebalance(
             by_cell=by_cell,
-            emp_by_id=emp_by_id,
-            employees=employees,
-            busy_by_time=busy_by_time,
-            daily_halfhours=daily_halfhours,
-            squads_need=squads_need,
-            is_available=_is_avail_for_upgrade,
+            days=range(7),
+            shifts={"morning": MORNING_LABELS, "evening": EVENING_LABELS},
+            skill=lambda e, r: _role_skill(emp_by_id[e], r) if e in emp_by_id else 0,
+            preferred=lambda e: emp_by_id[e].preferred_role if e in emp_by_id else None,
+            free_candidates=_free_for,
+            on_replace=_on_replace,
+            required=lambda d, shift, role: int(((squads_need.get(d, {}) or {}).get(shift, {}) or {}).get(role, 0) or 0),
+            roles=ROLES,
         )
-        if _upgrade_count:
-            print(f"[SkillUpgrade] {_upgrade_count} rimpiazzi di qualità applicati", flush=True)
+        if _moves:
+            print(f"[Bilanciamento] {_moves} persone spostate per una squadra più equilibrata", flush=True)
 
-        # ── 2-opt swap post-assegnazione ──
-        _swap_count, _swap_gain = two_opt_swap(by_cell=by_cell, emp_by_id=emp_by_id)
-        if _swap_count:
-            print(f"[2-opt] {_swap_count} swap applicati, guadagno skill totale={_swap_gain:.0f}", flush=True)
+        # ── Turni troppo corti e turni spezzati (Impostazioni) ──
+        min_block_hh = int(cfg["min_shift_hours"]) * 2
+        allow_split = bool(cfg["allow_split_shifts"])
+        _trimmed = 0
+        for d in range(7):
+            per_emp: dict[int, set[int]] = {}
+            for (dd, t, role), ids in by_cell.items():
+                if dd == d:
+                    for e in ids:
+                        per_emp.setdefault(e, set()).add(_hidx(t))
+            for e, idxs in per_emp.items():
+                # blocchi continui della giornata (anche se cambiano ruolo)
+                blocks, cur = [], []
+                for i in sorted(idxs):
+                    if cur and i != cur[-1] + 1:
+                        blocks.append(cur)
+                        cur = []
+                    cur.append(i)
+                blocks.append(cur)
+                keep = [b for b in blocks if len(b) >= min_block_hh] if min_block_hh > 0 else blocks
+                if not allow_split and len(keep) > 1:
+                    keep = [max(keep, key=len)]
+                drop = {i for b in blocks if b not in keep for i in b}
+                if not drop:
+                    continue
+                for (dd, t, role), ids in by_cell.items():
+                    if dd == d and e in ids and _hidx(t) in drop:
+                        ids.remove(e)
+                _trimmed += len(drop)
+        if _trimmed:
+            print(f"[Pulizia] tolte {_trimmed} mezz'ore di turni troppo corti o spezzati", flush=True)
+
+        # ── Scoperti sul risultato FINALE (stessa regola dei pallini del calendario) ──
+        final_deficits = []
+        for d in range(7):
+            for shift, labels in (("morning", MORNING_LABELS), ("evening", EVENING_LABELS)):
+                need = (squads_need.get(d, {}) or {}).get(shift, {}) or {}
+                for role in ROLES:
+                    req = int(need.get(role, 0) or 0)
+                    if req <= 0:
+                        continue
+                    people = {e for t in labels for e in by_cell.get((d, t, role), [])}
+                    if len(people) < req:
+                        final_deficits.append({"day": d, "slot": shift, "role": role, "missing": req - len(people)})
 
         all_override_items = [
             {
@@ -684,7 +789,7 @@ class ImportService:
 
         return {
             "ok": True,
-            "deficits": [asdict(d) for d in deficits],
+            "deficits": final_deficits,
             "balance_warnings": [asdict(w) for w in balance_warnings],
             "week_key_used": week_key,
             "week_id_used": week_id,

@@ -207,12 +207,13 @@ def _is_available_slot(
         iso_day: str,
         slot: str,
         permanent_ids: Optional[Set[int]] = None,
+        allow_missing: bool = True,
 ) -> bool:
     labels = _day_labels(availability, emp.name, iso_day)
     if labels is None:
-        # Non nel CSV: disponibile solo se permanente
+        # Non nel CSV: disponibile solo se indeterminato e se l'impostazione lo prevede
         is_perm = bool(emp.is_permanent) or (permanent_ids is not None and emp.id in permanent_ids)
-        return is_perm
+        return is_perm and allow_missing
     if not labels:
         # Nel CSV ma con labels vuote = non disponibile
         return False
@@ -369,7 +370,44 @@ def build_plan(
         permanent_settings: List[PermanentSettings],
         availability: dict,
         squads_need: dict,
+        perm_default_hours: int = 40,
+        perm_available_if_missing: bool = True,
+        min_rest_hh: int = 0,
 ) -> Tuple[Plan, List[NeedDeficit], List[BalanceWarning]]:
+    allow_missing = perm_available_if_missing
+
+    # intervallo (mezz'ore) che una persona farebbe in una fascia: disponibilità ∩ fascia
+    def _span(emp: Employee, iso: str, slot: str) -> Optional[Tuple[int, int]]:
+        labels = _day_labels(availability, emp.name, iso)
+        usable = _slot_labels(slot) if labels is None else (labels & _slot_labels(slot))
+        if not usable:
+            return None
+        idx = sorted(int(t[:2]) * 2 + (1 if t[3:] == "30" else 0) for t in usable)
+        return idx[0], idx[-1] + 1
+
+    worked_span: Dict[Tuple[int, int], Tuple[int, int]] = {}  # (persona, giorno) -> (inizio, fine)
+
+    def _rest_ok(emp: Employee, d: int, iso: str, slot: str) -> bool:
+        """Riposo minimo (Impostazioni) tra il giorno prima / dopo e questo turno."""
+        if min_rest_hh <= 0:
+            return True
+        sp = _span(emp, iso, slot)
+        if sp is None:
+            return True
+        prev = worked_span.get((emp.id, d - 1))
+        if prev and (48 - prev[1]) + sp[0] < min_rest_hh:
+            return False
+        nxt = worked_span.get((emp.id, d + 1))
+        if nxt and (48 - sp[1]) + nxt[0] < min_rest_hh:
+            return False
+        return True
+
+    def _mark(emp: Employee, d: int, iso: str, slot: str) -> None:
+        sp = _span(emp, iso, slot)
+        if sp is None:
+            return
+        old = worked_span.get((emp.id, d))
+        worked_span[(emp.id, d)] = sp if old is None else (min(old[0], sp[0]), max(old[1], sp[1]))
 
     perm_map = {p.employee_id: p for p in permanent_settings}
     perm_ids = set(perm_map.keys())
@@ -396,8 +434,8 @@ def build_plan(
     temp_used_slot: Dict[Tuple[int, int, str], bool] = {}
 
     for e in permanents:
-        p = perm_map.get(e.id, PermanentSettings(e.id, None, 40))
-        perm_targets[e.id] = int(p.target_hours or 40)
+        p = perm_map.get(e.id, PermanentSettings(e.id, None, perm_default_hours))
+        perm_targets[e.id] = int(p.target_hours) if p.target_hours is not None else int(perm_default_hours)
         perm_dayoff[e.id] = p.day_off
 
     # ── 1) PERMANENTI ──
@@ -428,11 +466,11 @@ def build_plan(
                         1 for emp in permanents
                         if _can_cover_role(emp, r)
                         and _allowed_by_profile(emp, slot)
-                        and _is_available_slot(availability, emp, iso, slot, perm_ids)
+                        and _is_available_slot(availability, emp, iso, slot, perm_ids, allow_missing)
                         and perm_dayoff.get(emp.id) != d
                         and not perm_used_day.get((emp.id, d))
                         and not indiff_used_slot.get((emp.id, d, slot))
-                        and (perm_hours.get(emp.id, 0) + _effective_available_slot_hours(emp, availability, iso, slot) <= perm_targets.get(emp.id, 40))
+                        and (perm_hours.get(emp.id, 0) + _effective_available_slot_hours(emp, availability, iso, slot) <= perm_targets.get(emp.id, perm_default_hours))
                     ),
                     -int(need.get(r, 0) or 0)
                 )
@@ -465,7 +503,7 @@ def build_plan(
                         continue
                     if not _allowed_by_work_days(emp, d):
                         continue
-                    if not _is_available_slot(availability, emp, iso, slot, perm_ids):
+                    if not _is_available_slot(availability, emp, iso, slot, perm_ids, allow_missing):
                         continue
                     if not _can_cover_role(emp, role):
                         continue
@@ -473,7 +511,9 @@ def build_plan(
                     if slot_hours <= 0:
                         continue
 
-                    if perm_hours.get(emp.id, 0) + slot_hours > perm_targets.get(emp.id, 40):
+                    if perm_hours.get(emp.id, 0) + slot_hours > perm_targets.get(emp.id, perm_default_hours):
+                        continue
+                    if not _rest_ok(emp, d, iso, slot):
                         continue
 
                     candidates.append(emp)
@@ -501,10 +541,12 @@ def build_plan(
 
                     perm_hours[emp.id] = perm_hours.get(emp.id, 0) + _effective_available_slot_hours(emp, availability, iso, slot)
                     perm_used_day[(emp.id, d)] = True
+                    _mark(emp, d, iso, slot)
 
     # ── 2) DETERMINATI ──
     temp_slots_worked: Dict[int, int] = {e.id: 0 for e in temps}
     temp_hours: Dict[int, float] = {e.id: 0.0 for e in temps}
+    temp_day_hours: Dict[Tuple[int, int], float] = {}
 
     # FIX: i determinati con disponibilità ESPLICITA per entrambi i slot
     # possono lavorare in entrambi (es. 08-24). Non vengono bloccati sul giorno intero.
@@ -538,7 +580,7 @@ def build_plan(
                         1 for emp in temps
                         if _can_cover_role(emp, r)
                         and _allowed_by_profile(emp, slot)
-                        and _is_available_slot(availability, emp, iso, slot, perm_ids)
+                        and _is_available_slot(availability, emp, iso, slot, perm_ids, allow_missing)
                         and not temp_used_slot.get((emp.id, d, slot))
                         and not (_is_indifferent_day(availability, emp.name, iso) and (
                             indiff_used_slot.get((emp.id, d, "morning")) or indiff_used_slot.get((emp.id, d, "evening"))
@@ -569,7 +611,7 @@ def build_plan(
                         continue
                     if not _allowed_by_work_days(emp, d):
                         continue
-                    if not _is_available_slot(availability, emp, iso, slot, perm_ids):
+                    if not _is_available_slot(availability, emp, iso, slot, perm_ids, allow_missing):
                         continue
                     if not _can_cover_role(emp, role):
                         continue
@@ -578,6 +620,11 @@ def build_plan(
                         continue
 
                     if emp.weekly_hours_target is not None and temp_hours.get(emp.id, 0) + slot_hours > emp.weekly_hours_target:
+                        continue
+                    # massimo giornaliero sull'intera giornata (mattina + pomeriggio), non solo sulla fascia
+                    if emp.max_daily_hours is not None and temp_day_hours.get((emp.id, d), 0) + slot_hours > float(emp.max_daily_hours):
+                        continue
+                    if not _rest_ok(emp, d, iso, slot):
                         continue
                     candidates.append(emp)
 
@@ -601,6 +648,8 @@ def build_plan(
                     temp_used_slot[(emp.id, d, slot)] = True
                     temp_slots_worked[emp.id] = temp_slots_worked.get(emp.id, 0) + 1
                     temp_hours[emp.id] = temp_hours.get(emp.id, 0) + _effective_available_slot_hours(emp, availability, iso, slot)
+                    temp_day_hours[(emp.id, d)] = temp_day_hours.get((emp.id, d), 0) + _effective_available_slot_hours(emp, availability, iso, slot)
+                    _mark(emp, d, iso, slot)
                     if _is_indifferent_day(availability, emp.name, iso):
                         indiff_used_slot[(emp.id, d, slot)] = True
                         if slot == "morning":

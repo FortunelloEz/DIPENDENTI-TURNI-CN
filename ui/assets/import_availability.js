@@ -165,7 +165,11 @@ async function _runImport(csvText, filename, filePath, forceWeekKey) {
     await window.renderCsvFilePanel?.();
     await renderDaySummary?.();
 
-    showToast(`Turni generati per la settimana ${_csvWeekText(wk)}`);
+    // scoperti calcolati sul risultato finale (stessa regola dei pallini del calendario)
+    const gaps = Array.isArray(res.deficits) ? res.deficits.length : 0;
+    showToast(gaps
+      ? `Turni generati per la settimana ${_csvWeekText(wk)} · ${gaps === 1 ? "1 fascia" : `${gaps} fasce`} con personale mancante`
+      : `Turni generati per la settimana ${_csvWeekText(wk)} · tutto coperto`, gaps ? "info" : "ok");
   } catch (e) {
     console.error("[Import]", e);
     const detail = String(e?.message || e || "").replace(/^\w*Error:\s*/, "");

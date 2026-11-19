@@ -9,7 +9,7 @@ if sys.stderr and hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 from cn_turni.api import Api
-from cn_turni.db import init_db, apply_retention
+from cn_turni.db import init_db
 from cn_turni.paths import paths
 
 
@@ -19,9 +19,7 @@ def main():
     # crea tabelle se non esistono
     init_db()
 
-    # retention settimane > 6 mesi
-    apply_retention(months=6)
-
+    # la pulizia delle settimane vecchie la fa Api() leggendo le Impostazioni
     api = Api()
 
     webview.create_window(

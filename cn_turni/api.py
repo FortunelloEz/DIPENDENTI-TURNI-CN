@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 from cn_turni.services.import_service import ImportService
 from cn_turni.services.assistant import Assistant
+from cn_turni import app_settings
 from cn_turni.db import Db, default_db_path, week_id_from_ui_weekkey
 from cn_turni.services.export_service import build_week_export, build_week_export_simple
 from cn_turni.services.pdf_export import build_pdf_from_export, build_pdf_from_export_simple
@@ -17,8 +18,10 @@ class Api:
     def __init__(self, db_path: Optional[str] = None):
         # compatibile con main.py che fa Api()
         self.db = Db(db_path or default_db_path())
-        # retention safety (anche se la fai in main non rompe)
-        self.db.purge_old_weeks(months=6)
+        # pulizia delle settimane vecchie: mesi dalle Impostazioni (0 = mai), con backup prima
+        months = app_settings.load(self.db)["retention_months"]
+        if months > 0:
+            self.db.purge_old_weeks(months=months)
         self.import_service = ImportService(self.db)
         self.assistant = Assistant(self.db)
     # =========================
@@ -55,6 +58,16 @@ class Api:
     def assistant_apply(self, week_key: str, action: Dict[str, Any]) -> Dict[str, Any]:
         """Ricalcola la modifica confermata sul DB attuale e la scrive in una transazione."""
         return self.assistant.apply(str(week_key), dict(action or {}))
+
+    # =========================
+    # Impostazioni dell'app (pagina «Impostazioni»)
+    # =========================
+    def app_settings_get(self) -> Dict[str, Any]:
+        return {"schema": app_settings.schema_for_ui(), "values": app_settings.load(self.db)}
+
+    def app_settings_save(self, values: Dict[str, Any]) -> Dict[str, Any]:
+        """Valida tutto e salva in una transazione; un valore non valido blocca il salvataggio."""
+        return {"ok": True, "values": app_settings.save(self.db, dict(values or {}))}
 
     # =========================
     # Settings generici (non cifrati)

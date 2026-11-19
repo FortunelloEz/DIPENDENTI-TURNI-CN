@@ -295,6 +295,11 @@
     if (E.inpWeeklyHours) {
       E.inpWeeklyHours.value = (emp?.weekly_hours_target != null) ? String(emp.weekly_hours_target) : "";
     }
+    applyHoursFieldsState(E);
+    if (E.chkPermanent && E.chkPermanent.dataset.hoursBound !== "1") {
+      E.chkPermanent.dataset.hoursBound = "1";
+      E.chkPermanent.addEventListener("change", () => applyHoursFieldsState(E));
+    }
     showModalBanner(E, "", "");
     // stato iniziale del modulo: serve a capire se ci sono modifiche non salvate alla chiusura
     E._formSnap = empFormSnapshot(E);
@@ -322,6 +327,34 @@
     closeEmpModal(E);
   }
 
+  // Predefiniti delle Impostazioni, letti una volta per apertura della pagina Dipendenti
+  let _empCfg = null;
+  async function loadEmpCfg() {
+    const data = await apiCall("app_settings_get");
+    _empCfg = data?.values || null;
+  }
+
+  /**
+   * Coerenza con l'algoritmo:
+   * - «Ore max al giorno» vuoto = predefinito delle Impostazioni (turnisti / indeterminati)
+   * - «Ore settimanali» non vale per gli indeterminati: per loro conta la finestra «Indeterminati»
+   *   (il valore non viene cancellato, solo ignorato finché la persona è indeterminata)
+   */
+  function applyHoursFieldsState(E) {
+    const perm = !!E.chkPermanent?.checked;
+    if (E.inpMaxDailyHours && _empCfg) {
+      const def = perm ? _empCfg.perm_max_daily_hours : _empCfg.temp_max_daily_hours;
+      E.inpMaxDailyHours.placeholder = `Vuoto = ${def} h`;
+    }
+    if (E.inpWeeklyHours) {
+      E.inpWeeklyHours.disabled = perm;
+      E.inpWeeklyHours.placeholder = perm ? "Da «Indeterminati»" : "Vuoto = nessun limite";
+      E.inpWeeklyHours.title = perm
+        ? "Per gli indeterminati valgono le ore della finestra «Indeterminati» della settimana"
+        : "";
+    }
+  }
+
   function closeEmpModal(E) {
     E.backdrop.style.display = "none";
     E._formSnap = undefined;
@@ -340,7 +373,7 @@
   function formatPermInfo(emp) {
     const days = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
     const d = (emp.perm_day_off === null || emp.perm_day_off === undefined) ? "—" : (days[Number(emp.perm_day_off)] || "—");
-    const h = Number(emp.perm_target_hours ?? 40);
+    const h = Number(emp.perm_target_hours ?? _empCfg?.perm_weekly_hours ?? 40);
     return `Riposo: ${d} · Ore Settimana: ${h}`;
   }
   function formatSlots(emp) {
@@ -463,14 +496,14 @@
         (permRows || []).forEach(r => {
           permMap.set(Number(r.employee_id), {
             day_off: (r.day_off === null || r.day_off === undefined) ? null : Number(r.day_off),
-            target_hours: Number(r.target_hours ?? 40)
+            target_hours: Number(r.target_hours ?? _empCfg?.perm_weekly_hours ?? 40)
           });
         });
 
         list.forEach(emp => {
           const p = permMap.get(Number(emp.id));
           emp.perm_day_off = p ? p.day_off : null;
-          emp.perm_target_hours = p ? p.target_hours : 40;
+          emp.perm_target_hours = p ? p.target_hours : (_empCfg?.perm_weekly_hours ?? 40);
         });
       }
     } catch (e) {
@@ -591,6 +624,7 @@
       console.warn("[employees] elementi mancanti. Attesi ID: btnEmpNew, empTbody, empModalBackdrop");
       return;
     }
+    loadEmpCfg();
 
     // 1) Bind bottoni SEMPRE
     E.btnNew.onclick = () => openEmpModal(E, "new", {});
@@ -711,7 +745,8 @@ function openPermanentModal(){
     <div class="modal-body">
       <p class="perm-hint">
         Il <strong>giorno di riposo</strong> esclude la persona da quel giorno.
-        Le <strong>ore settimanali</strong> sono il massimo che l'algoritmo può assegnarle (0–80, vuoto = 40).
+        Le <strong>ore settimanali</strong> sono il massimo che l'algoritmo può assegnarle (0–80; 0 = nessuna ora, es. ferie;
+        vuoto = <span class="perm-def-hours">40</span>, il predefinito delle Impostazioni).
         Valgono per la generazione dei turni di questa settimana.
       </p>
       <div class="perm-list" id="permList"><div class="perm-state">Caricamento…</div></div>
@@ -742,7 +777,12 @@ function openPermanentModal(){
     return;
   }
 
+  let defHours = 40;
   (async () => {
+    // ore predefinite dalle Impostazioni (stesso valore usato dall'algoritmo)
+    const cfg = await apiCall("app_settings_get");
+    defHours = Number(cfg?.values?.perm_weekly_hours ?? 40);
+    modal.querySelectorAll(".perm-def-hours").forEach(el => { el.textContent = `${defHours} ore`; });
     const rows = await apiCall("permanent_week_get", weekKey);
     if (!Array.isArray(rows)) {
       // lettura fallita: NON si offre il salvataggio, che sostituirebbe i dati con valori vuoti
@@ -768,11 +808,11 @@ function openPermanentModal(){
         <label class="perm-field">
           <span>Ore settimanali</span>
           <input type="number" min="0" max="80" step="1" inputmode="numeric"
-                 aria-label="Ore settimanali di ${uiEscape(emp.label)}" placeholder="40">
+                 aria-label="Ore settimanali di ${uiEscape(emp.label)}" placeholder="${defHours}">
         </label>`;
       const sel = row.querySelector("select");
       sel.value = (saved?.day_off === null || saved?.day_off === undefined) ? "" : String(saved.day_off);
-      row.querySelector("input").value = String(Number(saved?.target_hours ?? 40));
+      row.querySelector("input").value = String(Number(saved?.target_hours ?? defHours));
       list.appendChild(row);
     });
     btnSave.disabled = false; // si salva solo dopo aver caricato i valori esistenti
@@ -783,11 +823,11 @@ function openPermanentModal(){
       const sel = row.querySelector("select");
       const inp = row.querySelector("input");
       // ore settimanali: intero tra 0 e 80, vuoto = 40
-      const raw = inp.value === "" ? 40 : Math.round(Number(inp.value));
+      const raw = inp.value === "" ? defHours : Math.round(Number(inp.value));
       return {
         employee_id: Number(sel.dataset.emp),
         day_off: sel.value === "" ? null : Number(sel.value),
-        target_hours: Number.isFinite(raw) ? Math.min(80, Math.max(0, raw)) : 40,
+        target_hours: Number.isFinite(raw) ? Math.min(80, Math.max(0, raw)) : defHours,
       };
     });
     btnSave.disabled = true;

@@ -36,10 +36,6 @@ def init_db() -> None:
     get_db()
 
 
-def apply_retention(months: int = 6) -> int:
-    """Usata da main.py: elimina settimane vecchie."""
-    return get_db().purge_old_weeks(months=months)
-
 
 class Db:
     def squads_template_save(self, name: str, payload: dict) -> None:
@@ -264,6 +260,16 @@ class Db:
 
     def settings_delete(self, key: str) -> None:
         self._setting_delete(key)
+
+    def settings_set_many(self, values: Dict[str, str]) -> None:
+        """Più impostazioni in una sola transazione."""
+        with self._connect() as conn:
+            for key, value in values.items():
+                conn.execute(
+                    "INSERT INTO settings(key, value) VALUES (?,?) "
+                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                    (str(key), str(value)),
+                )
 
     # ---------- Availability cache ----------
     def availability_save(self, week_id: str, preview_json: str) -> None:
@@ -577,7 +583,7 @@ class Db:
             for it in items:
                 conn.execute(
                     "INSERT INTO permanent_week(week_id, employee_id, day_off, target_hours) VALUES (?,?,?,?)",
-                    (week_id, int(it["employee_id"]), it.get("day_off"), int(it.get("target_hours") or 40)),
+                    (week_id, int(it["employee_id"]), it.get("day_off"), (40 if it.get("target_hours") is None else int(it["target_hours"]))),  # 0 = nessuna ora (es. ferie)
                 )
 
     # ---------- Overrides (calendario) ----------

@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from typing import Any, Dict, List, Optional
 
 from cn_turni.db import week_id_from_ui_weekkey
+from cn_turni import app_settings
 
 
 def _week_days_iso(week_key: str) -> list[str]:
@@ -124,7 +125,8 @@ def build_week_export_simple(db: Any, week_key: str) -> dict:
             by_role = grid.setdefault(eid, {}).setdefault(day_index, {})
             by_role.setdefault(role, set()).add(time_label)
 
-    day_indices = [1, 2, 3, 4, 5, 6]
+    # giorni di apertura dalle Impostazioni (predefinito martedì–domenica)
+    day_indices = list(app_settings.load(db)["open_days"])
     headers = []
     for di in day_indices:
         iso = days_iso[di]
@@ -188,8 +190,8 @@ def build_week_export(db: Any, week_key: str) -> dict:
             # ruolo: teniamo il più frequente (in caso di conflitto, il primo vince)
             if not slot_data["role"]:
                 slot_data["role"] = role
-    # Martedì->Domenica come nel tuo esempio
-    day_indices = [1, 2, 3, 4, 5, 6]
+    # giorni di apertura dalle Impostazioni (predefinito martedì–domenica)
+    day_indices = list(app_settings.load(db)["open_days"])
     headers = []
     for di in day_indices:
         iso = days_iso[di]

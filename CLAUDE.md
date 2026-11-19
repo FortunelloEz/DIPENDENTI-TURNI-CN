@@ -63,6 +63,12 @@ Da revisore che cerca come si rompe, non da autore. Prove da cercare sempre:
   con `await`, `showToast(err.message, "err")` e riallineamento dello schermo al DB (`resyncWeekFromDb`
   o ricarica della tabella): prima si scrive nel DB, poi si aggiorna lo schermo. Più scritture collegate =
   una sola transazione. Mai salvare prima di aver caricato i valori esistenti (si sovrascriverebbero con vuoto).
+- **Regole di business incerte → impostazione**: quando non è certo come debba comportarsi l'app (limiti di
+  ore, riposi, giorni, durate…), la regola non si scrive fissa nel codice: si aggiunge a
+  `cn_turni/app_settings.py` (SCHEMA con predefinito, limiti e spiegazione) e compare da sola nella pagina
+  Impostazioni. Il predefinito è il comportamento più prudente; ogni impostazione ha un test che ne dimostra l'effetto.
+- **Algoritmo turni**: obiettivo = massima copertura, poi squadra equilibrata (alzare la skill più bassa: 6+7
+  meglio di 10+1). Ogni modifica all'assegnazione si verifica con il confronto contro l'ottimo su casi casuali.
 - **Navigazione**: ogni schermata ha la sua route (`data-route` in `ui/index.html`, vista in `ui/views/`).
 - **Dati sensibili**: il DB e i CSV contengono nomi ed email dei dipendenti: non vanno nel repository
   né nell'installer (`TurniCN.spec` include solo `ui/`).
