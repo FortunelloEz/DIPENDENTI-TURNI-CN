@@ -28,6 +28,21 @@ def _half_hours(start_h: int, end_h: int) -> list[str]:
     return out
 
 
+def _fmt_hh(idx: int) -> str:
+    """Indice di mezz'ora -> "16" oppure "12:30" (le ore intere restano corte come prima)."""
+    h, half = divmod(idx, 2)
+    return f"{h:02d}:30" if half else f"{h:02d}"
+
+
+def _labels_to_range(labels: set[str]) -> str:
+    """
+    Range compatto per l'anteprima, es. {"12:30",...,"15:30"} -> "12:30-16".
+    Le ore intere restano nel vecchio formato "08-16", letto anche da app.js.
+    """
+    idxs = sorted(int(t[:2]) * 2 + (1 if t[3:5] == "30" else 0) for t in labels)
+    return f"{_fmt_hh(idxs[0])}-{_fmt_hh(idxs[-1] + 1)}"
+
+
 def _week_days_iso_from_week_key(week_key: str) -> list[str]:
     d0 = date.fromisoformat(week_key)
     return [(d0 + timedelta(days=i)).isoformat() for i in range(7)]
@@ -98,8 +113,17 @@ class ImportService:
                 if not existing:
                     tgt[iso_day] = day_av
                 else:
-                    # merge labels (union)
-                    existing.labels |= getattr(day_av, "labels", set()) or set()
+                    # merge (unione delle mezz'ore) in un NUOVO oggetto: non modifica
+                    # la disponibilità originale dell'altro alias.
+                    both_indifferent = (
+                        getattr(existing, "mode", "normal") == "indifferent"
+                        and getattr(day_av, "mode", "normal") == "indifferent"
+                    )
+                    tgt[iso_day] = DayAvailability(
+                        set(getattr(existing, "labels", set()) or set())
+                        | set(getattr(day_av, "labels", set()) or set()),
+                        mode="indifferent" if both_indifferent else "normal",
+                    )
 
         return canonical
 
@@ -128,15 +152,7 @@ class ImportService:
 
                 name = id_to_label.get(int(emp_id), csv_name_norm.title())
 
-                lab_sorted = sorted(labels)
-                start = lab_sorted[0]        # es "16:00"
-                end_last = lab_sorted[-1]    # es "23:30"
-                end_h = int(end_last.split(":")[0])
-                end_m = int(end_last.split(":")[1])
-                end = end_h + 1
-                start_h = int(start.split(":")[0])
-
-                items.append({"name": name, "range": f"{start_h:02d}-{end:02d}"})
+                items.append({"name": name, "range": _labels_to_range(labels)})
 
             days.append({
                 "day_index": i,
@@ -145,6 +161,16 @@ class ImportService:
             })
 
         return {"days": days}
+
+    def detect_week_key(self, week_key: str, csv_text: str) -> Optional[str]:
+        """Lunedì della settimana a cui si riferisce il CSV (la stessa che userà l'import)."""
+        ref = date.fromisoformat(week_key)
+        try:
+            availability = parse_availability_csv(csv_text, year=ref.year, ref_date=ref)
+        except ValueError:
+            return None
+        all_days = sorted({d for days in (availability or {}).values() for d in (days or {})})
+        return _monday_of_iso(all_days[0]) if all_days else None
 
     # ---- Main entrypoint ----
     def import_availability_and_autofill(self, week_key: str, csv_text: str, resolutions=None, custom_resolutions=None):

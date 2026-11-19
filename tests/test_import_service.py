@@ -69,3 +69,36 @@ def test_permanent_capped_at_8h_per_day_without_max_daily(tmp_path):
         if ov["day_index"] == 1 and perm_id in ov["employee_ids"]
     )
     assert 0 < halfhours <= 16
+
+
+def test_preview_range_keeps_half_hours():
+    from cn_turni.services.import_service import _labels_to_range
+    from cn_turni.services.csv_availability import _half_hours
+
+    assert _labels_to_range(set(_half_hours(8, 16))) == "08-16"
+    assert _labels_to_range({"12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30"}) == "12:30-16"
+    assert _labels_to_range({"10:00", "10:30", "11:00", "11:30", "12:00"}) == "10-12:30"
+
+
+def test_detect_week_matches_csv_week(tmp_path):
+    svc = ImportService(_db(tmp_path))
+    # UI aperta su un'altra settimana: conta quella del CSV
+    assert svc.detect_week_key("2026-04-06", CSV) == WEEK_KEY
+    assert svc.detect_week_key(WEEK_KEY, "solo,intestazione\n") is None
+
+
+def test_alias_merge_does_not_mutate_original(tmp_path):
+    from cn_turni.services.csv_availability import DayAvailability
+
+    db = _db(tmp_path)
+    emp_id = db.employee_create({"name": "Luca Rossi", "aliases": "LUCA | LUKE"})
+    svc = ImportService(db)
+    a = DayAvailability({"10:00"})
+    b = DayAvailability({"18:00"})
+    availability = {"LUCA": {"2026-05-05": a}, "LUKE": {"2026-05-05": b}}
+    name_to_id = {"LUCA": emp_id, "LUKE": emp_id}
+
+    out = svc._remap_availability_to_canonical_keys(availability, db.employees_list(), name_to_id)
+
+    assert out["LUCA ROSSI"]["2026-05-05"].labels == {"10:00", "18:00"}
+    assert a.labels == {"10:00"} and b.labels == {"18:00"}

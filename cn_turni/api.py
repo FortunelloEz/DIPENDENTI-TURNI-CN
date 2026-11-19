@@ -79,6 +79,10 @@ class Api:
         self.db.availability_clear(week_id)
         return {"ok": True}
 
+    def import_detect_week(self, week_key: str, csv_text: str) -> Optional[str]:
+        """Settimana (lunedì, YYYY-MM-DD) che l'import userà per questo CSV."""
+        return self.import_service.detect_week_key(week_key, csv_text)
+
     def import_availability_and_autofill(
             self,
             week_key: str,

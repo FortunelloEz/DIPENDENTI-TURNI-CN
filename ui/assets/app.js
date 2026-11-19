@@ -254,6 +254,32 @@ function computeTimeSegmentsForDay(weekKey, dayIndex){
 
 /* ---------- DISPONIBILITÀ HELPER ---------- */
 /**
+ * Legge un range dell'anteprima disponibilità in ore decimali.
+ * Accetta il vecchio formato "08-16" e il nuovo con mezz'ore "12:30-16".
+ * "12:30-16" -> [12.5, 16]. Ritorna null se non leggibile.
+ */
+function parseAvRange(range) {
+  const parts = String(range || "").split("-");
+  if (parts.length < 2) return null;
+  const toHours = s => {
+    const [h, m] = s.trim().split(":");
+    const v = Number(h) + (m ? Number(m) / 60 : 0);
+    return Number.isFinite(v) ? v : NaN;
+  };
+  const start = toHours(parts[0]);
+  const end = toHours(parts[1]);
+  if (Number.isNaN(start) || Number.isNaN(end)) return null;
+  return [start, end];
+}
+
+/** Ore decimali -> "HH:MM" (12.5 -> "12:30"). */
+function hoursToLabel(hours) {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/**
  * Dato il preview disponibilità e un dayIndex+seg, restituisce:
  * [{ name, range, empId|null }] — chi è disponibile in quella fascia
  * I dati vengono dal _lastAvailabilityPreview salvato dopo l'import.
@@ -265,17 +291,13 @@ function getAvailableForSlot(dayIndex, seg) {
   const dayData = preview.days.find(d => d.day_index === dayIndex);
   if (!dayData) return [];
 
-  // Converti seg in ore di inizio/fine
-  const segStartH = Math.floor(seg.startMin / 60);
-  const segEndH   = Math.floor(seg.endMin   / 60);
-
   return (dayData.items || []).filter(item => {
-    // range = "08-16" o "16-24" ecc.
-    const parts = (item.range || "").split("-").map(Number);
-    if (parts.length < 2) return false;
+    // range = "08-16", "16-24", "12:30-16" ecc.
+    const parts = parseAvRange(item.range);
+    if (!parts) return false;
     const [avStart, avEnd] = parts;
-    // Sovrappone con il segmento?
-    return avStart < segEndH && avEnd > segStartH;
+    // Sovrappone con il segmento? (confronto in ore decimali, es. 12.5)
+    return avStart < seg.endMin / 60 && avEnd > seg.startMin / 60;
   }).map(item => {
     // Cerca l'empId corrispondente al nome
     const emp = employees.find(e =>
@@ -1341,8 +1363,8 @@ function initQuickInsert() {
 
     if (!avItem) { _qiAvRange = null; return; } // nessun dato CSV → tutti i pulsanti abilitati, nessuna selezione automatica
 
-    const parts = (avItem.range || "").split("-").map(Number);
-    if (parts.length < 2) { _qiAvRange = null; return; }
+    const parts = parseAvRange(avItem.range);
+    if (!parts) { _qiAvRange = null; return; }
     const [avS, avE] = parts;
     _qiAvRange = { start: avS, end: avE };
     const hasMorning = avS < 16 && avE > 8;
@@ -1361,8 +1383,8 @@ function initQuickInsert() {
     _qiShift = shift;
     document.getElementById("qiCustomTimes").style.display = shift === "custom" ? "block" : "none";
     if (shift === "custom" && _qiAvRange) {
-      const s = `${String(_qiAvRange.start).padStart(2,'0')}:00`;
-      const e = `${String(_qiAvRange.end).padStart(2,'0')}:00`;
+      const s = hoursToLabel(_qiAvRange.start);
+      const e = hoursToLabel(_qiAvRange.end);
       if (startSel && [...startSel.options].some(o => o.value === s)) startSel.value = s;
       if (endSel   && [...endSel.options].some(o => o.value === e))   endSel.value   = e;
     }

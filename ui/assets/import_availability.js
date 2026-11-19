@@ -58,7 +58,10 @@ async function _runImport(csvText, filename, filePath, forceWeekKey) {
 
     // 0) L'import rigenera la settimana e SOVRASCRIVE i turni salvati, comprese le modifiche manuali.
     try {
-      const existing = await window.pywebview.api.overrides_get_week(weekKey);
+      // Controlla la settimana del CSV (quella che l'import userà davvero),
+      // non quella aperta a schermo.
+      const targetWeek = (await window.pywebview.api.import_detect_week(weekKey, csvText)) || weekKey;
+      const existing = await window.pywebview.api.overrides_get_week(targetWeek);
       if (Array.isArray(existing) && existing.length > 0) {
         const ok = confirm(
           "La settimana ha già dei turni salvati.\n" +

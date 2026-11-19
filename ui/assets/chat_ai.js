@@ -248,9 +248,10 @@ async function _chatCallGemini(userText) {
 
   let resp, data;
   try {
-    resp = await fetch(`${CHAT_GEMINI_URL}?key=${apiKey}`, {
+    // Chiave nell'header (non nell'URL): non finisce in log o cronologie delle richieste.
+    resp = await fetch(CHAT_GEMINI_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: sysText }] },
         contents,
