@@ -12,6 +12,7 @@ Output/
 
 # Dati locali (contengono dati dei dipendenti)
 data/*.db
+data/*.csv
 data/*.sqbpro
 data/backups/
 data/logs/

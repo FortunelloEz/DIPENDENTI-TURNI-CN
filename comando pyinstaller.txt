@@ -1,0 +1,1 @@
+pyinstaller --name "TurniCN" --noconsole --icon "icona.ico" --add-data "ui;ui" --collect-submodules webview cn_turni/main.py
