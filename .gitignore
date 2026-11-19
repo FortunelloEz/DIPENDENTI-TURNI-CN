@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Build PyInstaller / Inno Setup
+build/TurniCN/
+dist/
+Output/
+
+# Dati locali (contengono dati dei dipendenti)
+data/*.db
+data/*.sqbpro
+data/backups/
+data/logs/
+data/imports/
+data/exports/
+
+# IDE
+.idea/workspace.xml

@@ -1,0 +1,275 @@
+/* =========================================
+   report.css — Pagina Report
+   ========================================= */
+
+.report-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ---------- TOOLBAR RICERCA ---------- */
+.rpt-toolbar {
+  padding: 10px 20px 0;
+  flex-shrink: 0;
+}
+.rpt-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 12px;
+  max-width: 340px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.rpt-search-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.10);
+}
+.rpt-search-icon { font-size: 13px; flex-shrink: 0; }
+.rpt-search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+}
+.rpt-search-input::placeholder { color: var(--muted); }
+
+/* ---------- BODY SCROLLABILE ---------- */
+.rpt-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 20px 20px;
+}
+
+.rpt-loading-state {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 40px;
+  font-style: italic;
+}
+
+/* ---------- INTESTAZIONE LISTA ---------- */
+.rpt-list-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 2px 2px 10px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+.rpt-list-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--muted);
+}
+.rpt-list-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---------- CARD DIPENDENTE ---------- */
+.rpt-emp-card {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: box-shadow .15s, border-color .15s;
+  margin-bottom: 8px;
+}
+.rpt-emp-card:last-child { margin-bottom: 0; }
+.rpt-emp-card:hover { box-shadow: 0 2px 10px rgba(15,23,42,.07); }
+.rpt-emp-card.expanded { border-color: rgba(37,99,235,.30); }
+
+/* Header cliccabile */
+.rpt-emp-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  gap: 12px;
+}
+.rpt-emp-card-header:hover { background: rgba(37,99,235,.03); }
+
+.rpt-emp-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Iniziale avatar */
+.rpt-emp-initial {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(37,99,235,.11);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rpt-emp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.rpt-emp-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rpt-emp-tags {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+/* Badge Ind. */
+.rpt-perm-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(37,99,235,.12);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+/* Badge "Lavora sett. prossima" */
+.rpt-next-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(16,185,129,.13);
+  color: #059669;
+  white-space: nowrap;
+}
+
+/* Lato destro header */
+.rpt-emp-card-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.rpt-avg-hours {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+.rpt-avg-unit  { font-size: 11px; font-weight: 400; color: var(--muted); }
+.rpt-avg-zero  { color: var(--muted); font-weight: 400; font-size: 14px; }
+
+.rpt-expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background .12s;
+}
+.rpt-expand-btn:hover { background: var(--panel2); color: var(--text); }
+
+/* ---------- CORPO ESPANSO ---------- */
+.rpt-emp-card-body {
+  border-top: 1px solid var(--line);
+  background: #f8fafc;
+}
+
+.rpt-detail-section {
+  padding: 12px 14px;
+}
+.rpt-detail-section + .rpt-detail-section {
+  border-top: 1px solid var(--line);
+}
+.rpt-detail-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+/* Turni settimana prossima */
+.rpt-next-shifts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.rpt-turno-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.rpt-turno-day   { font-weight: 700; color: var(--text); }
+.rpt-turno-icon  { font-size: 12px; }
+.rpt-turno-range { font-family: monospace; font-size: 11px; color: var(--muted); }
+.rpt-no-turni    { font-size: 12px; color: var(--muted); font-style: italic; }
+
+/* Storico riassunto */
+.rpt-storico-summary {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.rpt-storico-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rpt-storico-stat-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+.rpt-storico-stat-label {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+.rpt-storico-roles {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}

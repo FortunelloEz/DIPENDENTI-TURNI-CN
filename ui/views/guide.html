@@ -1,0 +1,805 @@
+<div class="guide-page">
+
+  <!-- ── Sommario laterale ── -->
+  <nav class="guide-toc">
+    <div class="guide-toc-title">In questa guida</div>
+    <a class="guide-toc-item active" href="#panoramica" onclick="guideTo('panoramica',this)">
+      <span class="guide-toc-icon">🏠</span> Panoramica
+    </a>
+    <a class="guide-toc-item" href="#dipendenti" onclick="guideTo('dipendenti',this)">
+      <span class="guide-toc-icon">👥</span> Dipendenti
+    </a>
+    <a class="guide-toc-item" href="#squadre" onclick="guideTo('squadre',this)">
+      <span class="guide-toc-icon">📋</span> Squadre
+    </a>
+    <a class="guide-toc-item" href="#home" onclick="guideTo('home',this)">
+      <span class="guide-toc-icon">📅</span> Home &amp; Calendario
+    </a>
+    <a class="guide-toc-item" href="#import" onclick="guideTo('import',this)">
+      <span class="guide-toc-icon">📂</span> Importa CSV
+    </a>
+    <a class="guide-toc-item" href="#export" onclick="guideTo('export',this)">
+      <span class="guide-toc-icon">📤</span> Export
+    </a>
+    <a class="guide-toc-item" href="#report" onclick="guideTo('report',this)">
+      <span class="guide-toc-icon">📊</span> Report
+    </a>
+    <a class="guide-toc-item" href="#chat" onclick="guideTo('chat',this)">
+      <span class="guide-toc-icon">🤖</span> Chat AI
+    </a>
+    <a class="guide-toc-item" href="#glossario" onclick="guideTo('glossario',this)">
+      <span class="guide-toc-icon">📖</span> Glossario
+    </a>
+  </nav>
+
+  <!-- ── Corpo ── -->
+  <div class="guide-body" id="guideBody">
+
+    <!-- ═══════════════ HERO ═══════════════ -->
+    <div class="guide-hero">
+      <div class="guide-hero-title">Guida all'uso — Turni CN</div>
+      <div class="guide-hero-sub">Tutto quello che ti serve per gestire i turni settimanali di Cascina Nascosta in pochi minuti.</div>
+      <div class="guide-flow">
+        <div class="guide-flow-step"><span class="guide-flow-step-num">1</span> Configura dipendenti</div>
+        <div class="guide-flow-arrow">→</div>
+        <div class="guide-flow-step"><span class="guide-flow-step-num">2</span> Imposta squadre</div>
+        <div class="guide-flow-arrow">→</div>
+        <div class="guide-flow-step"><span class="guide-flow-step-num">3</span> Importa disponibilità</div>
+        <div class="guide-flow-arrow">→</div>
+        <div class="guide-flow-step"><span class="guide-flow-step-num">4</span> Elabora &amp; correggi</div>
+        <div class="guide-flow-arrow">→</div>
+        <div class="guide-flow-step"><span class="guide-flow-step-num">5</span> Esporta</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PANORAMICA ═══════════════ -->
+    <section class="guide-section" id="panoramica">
+      <div class="guide-section-header">
+        <div class="guide-section-icon purple">🏠</div>
+        <div>
+          <div class="guide-section-title">Panoramica dell'applicazione</div>
+          <div class="guide-section-sub">Cosa fa TurniCN e come è organizzata</div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Cos'è TurniCN</div>
+        <p style="font-size:13px;color:#475569;line-height:1.65;margin:0">
+          TurniCN è un'applicazione desktop Windows per la gestione automatizzata dei turni settimanali del personale di Cascina Nascosta.
+          Partendo dalle disponibilità del personale (importate tramite CSV) e dal fabbisogno definito per ogni giorno e fascia oraria,
+          il sistema assegna automaticamente i dipendenti ai ruoli più adatti. Il risultato è modificabile manualmente prima di essere esportato in PDF o Excel.
+        </p>
+      </div>
+
+      <div class="guide-grid2">
+        <div class="guide-card">
+          <div class="guide-card-title">Le sezioni dell'app</div>
+          <div class="guide-steps">
+            <div class="guide-step">
+              <div class="guide-step-num">H</div>
+              <div class="guide-step-body">
+                <div class="guide-step-title">Home</div>
+                <div class="guide-step-desc">Calendario settimanale con assegnazioni, import CSV, navigazione settimane.</div>
+              </div>
+            </div>
+            <div class="guide-step">
+              <div class="guide-step-num">D</div>
+              <div class="guide-step-body">
+                <div class="guide-step-title">Dipendenti</div>
+                <div class="guide-step-desc">Anagrafica del personale con skill per ruolo e ore settimanali target.</div>
+              </div>
+            </div>
+            <div class="guide-step">
+              <div class="guide-step-num">S</div>
+              <div class="guide-step-body">
+                <div class="guide-step-title">Squadre</div>
+                <div class="guide-step-desc">Fabbisogno per giorno e fascia (quante persone per ogni ruolo).</div>
+              </div>
+            </div>
+            <div class="guide-step">
+              <div class="guide-step-num">E</div>
+              <div class="guide-step-body">
+                <div class="guide-step-title">Export</div>
+                <div class="guide-step-desc">Visualizzazione tabellare e salvataggio PDF/Excel dei turni elaborati.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-card">
+          <div class="guide-card-title">I ruoli del personale</div>
+          <div class="guide-roles">
+            <span class="guide-role-chip role-cassa">Cassa</span>
+            <span class="guide-role-chip role-runner">Runner</span>
+            <span class="guide-role-chip role-bar">Bar</span>
+            <span class="guide-role-chip role-comande">Comande</span>
+            <span class="guide-role-chip role-accoglienza">Accoglienza</span>
+            <span class="guide-role-chip role-jolly">Jolly</span>
+          </div>
+          <div class="guide-callout info" style="margin-top:10px">
+            <span class="guide-callout-icon">ℹ️</span>
+            <div class="guide-callout-body">
+              Ogni dipendente ha una <strong>skill (0–10)</strong> per ogni ruolo. Skill 0 significa che non può coprire quel ruolo. L'algoritmo preferisce chi ha skill più alta.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ DIPENDENTI ═══════════════ -->
+    <section class="guide-section" id="dipendenti">
+      <div class="guide-section-header">
+        <div class="guide-section-icon blue">👥</div>
+        <div>
+          <div class="guide-section-title">Dipendenti</div>
+          <div class="guide-section-sub">Come configurare il personale</div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Aggiungere un nuovo dipendente</div>
+        <div class="guide-steps">
+          <div class="guide-step">
+            <div class="guide-step-num">1</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Apri la sezione Dipendenti</div>
+              <div class="guide-step-desc">Clicca su <strong>Dipendenti</strong> nella barra laterale sinistra.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">2</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Clicca "+ Nuovo dipendente"</div>
+              <div class="guide-step-desc">Si apre il form nella barra destra. Inserisci nome e cognome esattamente come appaiono nel CSV delle disponibilità.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">3</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Imposta le skill</div>
+              <div class="guide-step-desc">Per ogni ruolo scegli un valore da 0 (non idoneo) a 10 (esperto). Lo skill 0 esclude completamente il dipendente da quel ruolo.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">4</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Imposta le ore settimanali target</div>
+              <div class="guide-step-desc">Indica quante ore settimanali dovrebbe lavorare. L'algoritmo usa questo dato per distribuire equamente il carico.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">5</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Salva</div>
+              <div class="guide-step-desc">Il dipendente viene salvato e appare immediatamente nella lista.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-grid2">
+        <div class="guide-card">
+          <div class="guide-card-title">Modificare un dipendente</div>
+          <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+            Clicca sul dipendente nella lista per selezionarlo. Il form a destra si popola con i dati attuali.
+            Modifica i campi che vuoi e clicca <strong>Salva</strong>. Le modifiche sono immediate.
+          </p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title">Eliminare un dipendente</div>
+          <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+            Seleziona il dipendente e clicca il pulsante <strong>Elimina</strong> (rosso). Viene richiesta conferma prima della cancellazione definitiva.
+          </p>
+          <div class="guide-callout warning" style="margin-top:10px">
+            <span class="guide-callout-icon">⚠️</span>
+            <div class="guide-callout-body">L'eliminazione rimuove il dipendente dall'anagrafica ma non cancella i turni già salvati nelle settimane passate.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Impostazione skill per ruolo — guida rapida</div>
+        <table class="guide-table">
+          <thead>
+            <tr>
+              <th>Valore skill</th>
+              <th>Significato</th>
+              <th>Quando usarlo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>0</strong></td>
+              <td>Non idoneo / non abilitato</td>
+              <td>Il dipendente non può coprire questo ruolo in nessun caso</td>
+            </tr>
+            <tr>
+              <td><strong>1–3</strong></td>
+              <td>Bassa competenza</td>
+              <td>Può coprire il ruolo solo in emergenza, preferisci altri</td>
+            </tr>
+            <tr>
+              <td><strong>4–6</strong></td>
+              <td>Competenza media</td>
+              <td>Adeguato per il ruolo, nessuna preferenza speciale</td>
+            </tr>
+            <tr>
+              <td><strong>7–9</strong></td>
+              <td>Alta competenza</td>
+              <td>Preferito per questo ruolo, viene assegnato per primo</td>
+            </tr>
+            <tr>
+              <td><strong>10</strong></td>
+              <td>Esperto / riferimento</td>
+              <td>Massima priorità per quel ruolo</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="guide-callout tip">
+        <span class="guide-callout-icon">💡</span>
+        <div class="guide-callout-body">
+          <div class="guide-callout-title">Consiglio importante</div>
+          Se un dipendente è assegnato raramente a un ruolo (es. Runner) ma viene scartato dall'algoritmo, controlla che la sua skill non sia 0. Anche skill=1 è sufficiente perché venga considerato.
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ SQUADRE ═══════════════ -->
+    <section class="guide-section" id="squadre">
+      <div class="guide-section-header">
+        <div class="guide-section-icon green">📋</div>
+        <div>
+          <div class="guide-section-title">Squadre (Fabbisogno)</div>
+          <div class="guide-section-sub">Quante persone servono per ogni ruolo, giorno e fascia</div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Come funziona la sezione Squadre</div>
+        <p style="font-size:13px;color:#475569;line-height:1.65;margin:0 0 12px">
+          In questa sezione definisci il <strong>fabbisogno</strong>: quante persone per ogni ruolo sono necessarie ogni giorno, divise in mattina (08–16) e pomeriggio/sera (16–24).
+          Questi numeri guidano l'algoritmo di assegnazione automatica.
+        </p>
+        <div class="guide-steps">
+          <div class="guide-step">
+            <div class="guide-step-num">1</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Seleziona la settimana</div>
+              <div class="guide-step-desc">La settimana corrente è già selezionata. Puoi navigare con le frecce.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">2</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Compila la tabella</div>
+              <div class="guide-step-desc">Per ogni giorno e fascia, inserisci il numero di persone richieste per ogni ruolo. Inserisci 0 per i ruoli non necessari.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">3</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Usa un template</div>
+              <div class="guide-step-desc">Se usi spesso la stessa configurazione, salva un template con il nome che preferisci e ricaricalo le settimane successive.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">4</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Salva</div>
+              <div class="guide-step-desc">I dati vengono salvati nel database. Il calendario Home mostrerà immediatamente i semafori di copertura aggiornati.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-grid2">
+        <div class="guide-card">
+          <div class="guide-card-title">Template squadre <span class="gtag gtag-blue">Scorciatoia</span></div>
+          <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+            Puoi salvare la configurazione attuale come template con un nome (es. "Weekend normale") e ricaricarla
+            in una settimana successiva con un clic. I template sono globali: funzionano per qualsiasi settimana.
+          </p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title">Tipo giornata <span class="gtag gtag-orange">Leggera/Normale/Pesante</span></div>
+          <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+            In Home, nella barra "Riepilogo giornate", puoi assegnare a ogni giorno un tipo (Leggera, Normale, Pesante).
+            Questo è solo un riferimento visivo — non modifica automaticamente il fabbisogno squadre.
+          </p>
+        </div>
+      </div>
+
+      <div class="guide-callout warning">
+        <span class="guide-callout-icon">⚠️</span>
+        <div class="guide-callout-body">
+          <div class="guide-callout-title">Prima di importare le disponibilità</div>
+          Imposta sempre il fabbisogno squadre <strong>prima</strong> di elaborare la settimana. Se modifichi i numeri dopo l'elaborazione, dovrai rielaborare o correggere manualmente i turni.
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ HOME ═══════════════ -->
+    <section class="guide-section" id="home">
+      <div class="guide-section-header">
+        <div class="guide-section-icon orange">📅</div>
+        <div>
+          <div class="guide-section-title">Home &amp; Calendario</div>
+          <div class="guide-section-sub">Il centro di controllo dei turni settimanali</div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Il calendario settimanale</div>
+        <p style="font-size:13px;color:#475569;line-height:1.65;margin:0 0 12px">
+          La tabella centrale mostra i turni della settimana corrente. Le righe rappresentano le fasce orarie, le colonne i giorni della settimana.
+          Ogni cella mostra i dipendenti assegnati per ruolo in quella fascia.
+        </p>
+        <table class="guide-table">
+          <thead>
+            <tr><th>Elemento</th><th>Significato</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>🟢 Punto verde (colonna giorno)</td><td>Copertura ≥ 90% del fabbisogno</td></tr>
+            <tr><td>🟡 Punto giallo</td><td>Copertura tra 50% e 89%</td></tr>
+            <tr><td>🔴 Punto rosso</td><td>Copertura inferiore al 50%</td></tr>
+            <tr><td>— (trattino)</td><td>Nessun dipendente assegnato in quella fascia</td></tr>
+            <tr><td>C, R, B, Co, A, J</td><td>Abbreviazioni: Cassa, Runner, Bar, Comande, Accoglienza, Jolly</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Navigazione settimane</div>
+        <div class="guide-steps">
+          <div class="guide-step">
+            <div class="guide-step-num">◀</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Settimana precedente</div>
+              <div class="guide-step-desc">Torna alla settimana precedente. I turni salvati vengono caricati automaticamente dal database.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">⊙</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Oggi</div>
+              <div class="guide-step-desc">Torna alla settimana corrente (quella che include oggi).</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">▶</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Settimana successiva</div>
+              <div class="guide-step-desc">Avanza alla settimana successiva. All'avvio l'app carica automaticamente la settimana prossima.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-grid2">
+        <div class="guide-card">
+          <div class="guide-card-title">Dettaglio giorno <span class="gtag gtag-purple">Clic sulla colonna</span></div>
+          <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+            Clicca sull'intestazione di un giorno nel calendario per aprire il <strong>modal dettaglio</strong>.
+            Mostra per ogni fascia oraria: chi è assegnato, i ruoli coperti vs richiesti, e un pulsante "Gestisci →" per modificare direttamente.
+          </p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title">Modifica cella <span class="gtag gtag-blue">Clic sulla cella</span></div>
+          <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+            Clicca su qualsiasi cella del calendario per aprire il <strong>modal gestione turno</strong>.
+            Puoi aggiungere o rimuovere dipendenti da ogni ruolo in quella fascia e salvare immediatamente.
+          </p>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Inserimento rapido e rimozione rapida</div>
+        <div class="guide-grid2">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px">➕ Inserimento rapido</div>
+            <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+              Usa il pulsante <strong>"+ Inserimento rapido"</strong> per aggiungere un dipendente a un turno in 4 passi guidati:
+              scegli giorno → ruolo → dipendente → fascia oraria. Il sistema mostra automaticamente chi è disponibile secondo il CSV e preseleziona la fascia quando possibile.
+            </p>
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px">✕ Rimozione rapida</div>
+            <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+              Usa il pulsante <strong>"✕ Rimozione rapida"</strong> per togliere un dipendente da un turno.
+              Il dropdown mostra solo chi è effettivamente in turno quel giorno, con indicazione delle fasce coperte.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Copia settimana precedente <span class="gtag gtag-orange">Scorciatoia</span></div>
+        <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+          Il pulsante <strong>"Copia settimana prec."</strong> duplica tutti i turni della settimana precedente sulla settimana corrente.
+          Utile quando la struttura dei turni è simile di settimana in settimana. I turni esistenti vengono sovrascritti dopo conferma.
+        </p>
+      </div>
+
+      <div class="guide-callout tip">
+        <span class="guide-callout-icon">💡</span>
+        <div class="guide-callout-body">
+          <div class="guide-callout-title">Indeterminati</div>
+          Con il pulsante <strong>"Indeterminati"</strong> puoi configurare per la settimana i dipendenti a tempo indeterminato,
+          specificando i giorni fissi in cui lavorano. Questi vengono pre-assegnati automaticamente dall'algoritmo.
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ IMPORT ═══════════════ -->
+    <section class="guide-section" id="import">
+      <div class="guide-section-header">
+        <div class="guide-section-icon teal">📂</div>
+        <div>
+          <div class="guide-section-title">Importa disponibilità CSV</div>
+          <div class="guide-section-sub">Come caricare le disponibilità del personale e avviare l'elaborazione</div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Flusso di importazione</div>
+        <div class="guide-steps">
+          <div class="guide-step">
+            <div class="guide-step-num">1</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Seleziona il file CSV</div>
+              <div class="guide-step-desc">Nella sezione Home, nella card "File CSV disponibilità", clicca <strong>"Carica CSV"</strong> e scegli il file dal tuo computer. Il file viene salvato nel database per riuso futuro.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">2</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Risoluzione nomi (se necessario)</div>
+              <div class="guide-step-desc">Se un nome nel CSV non corrisponde esattamente a un dipendente in anagrafica, l'app mostra un dialog di risoluzione. Abbina manualmente il nome CSV al dipendente corretto.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">3</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Elabora settimana</div>
+              <div class="guide-step-desc">Clicca <strong>"Elabora settimana"</strong>. L'algoritmo assegna automaticamente i dipendenti ai turni sulla base di disponibilità, skill e fabbisogno.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">4</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Controlla e correggi</div>
+              <div class="guide-step-desc">Verifica il calendario. I punti colorati indicano la copertura per giorno. Clicca sulle celle per correggere manualmente eventuali turni incompleti.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Formato del file CSV</div>
+        <p style="font-size:13px;color:#475569;line-height:1.6;margin:0 0 10px">
+          Il file CSV deve contenere una riga per ogni disponibilità del dipendente con le colonne:
+        </p>
+        <table class="guide-table">
+          <thead><tr><th>Colonna</th><th>Contenuto</th><th>Esempio</th></tr></thead>
+          <tbody>
+            <tr><td>Nome</td><td>Nome e cognome del dipendente</td><td>Mario Rossi</td></tr>
+            <tr><td>Giorno</td><td>Nome del giorno della settimana</td><td>Lunedì</td></tr>
+            <tr><td>Disponibilità</td><td>Fascia oraria disponibile</td><td>8-16 oppure 16-ch</td></tr>
+          </tbody>
+        </table>
+        <div class="guide-callout note" style="margin-top:10px">
+          <span class="guide-callout-icon">📝</span>
+          <div class="guide-callout-body">
+            Il simbolo <strong>"ch"</strong> (chiusura) è equivalente alle ore 24:00. Una disponibilità <code class="gcode">16-ch</code> significa dalle 16 fino alla chiusura (24:00).
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-grid2">
+        <div class="guide-card">
+          <div class="guide-card-title">Visualizza disponibilità <span class="gtag gtag-green">Utile</span></div>
+          <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+            Dopo il caricamento, clicca <strong>"Visualizza disponibilità"</strong> per vedere una tabella riepilogativa
+            di chi è disponibile per ogni giorno e fascia. Aiuta a identificare subito lacune prima di elaborare.
+          </p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title">Gestione file salvati</div>
+          <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+            I file CSV caricati vengono memorizzati nel database. Puoi riusarli per settimane successive senza ricaricarli,
+            oppure eliminarli dalla lista se non servono più.
+          </p>
+        </div>
+      </div>
+
+      <div class="guide-callout info">
+        <span class="guide-callout-icon">ℹ️</span>
+        <div class="guide-callout-body">
+          <div class="guide-callout-title">Come funziona l'algoritmo di assegnazione</div>
+          L'algoritmo opera in 3 fasi: (1) assegna i dipendenti indeterminati ai loro giorni fissi; (2) riempie i turni restanti in base a disponibilità, skill e ore settimanali target; (3) esegue uno scambio ottimizzato (2-opt) per migliorare ulteriormente la qualità degli abbinamenti ruolo-persona.
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ EXPORT ═══════════════ -->
+    <section class="guide-section" id="export">
+      <div class="guide-section-header">
+        <div class="guide-section-icon red">📤</div>
+        <div>
+          <div class="guide-section-title">Export</div>
+          <div class="guide-section-sub">Salva i turni in PDF o Excel</div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Come esportare i turni</div>
+        <div class="guide-steps">
+          <div class="guide-step">
+            <div class="guide-step-num">1</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Elabora la settimana</div>
+              <div class="guide-step-desc">Prima di poter esportare, assicurati di aver cliccato "Elabora settimana" in Home. I turni devono essere presenti nel calendario.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">2</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Vai in Export</div>
+              <div class="guide-step-desc">La tabella mostra la settimana elaborata con tutti i dipendenti, giorni, fasce orarie e ruoli assegnati con colori.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">3</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Scegli il formato</div>
+              <div class="guide-step-desc">Usa il menu a tendina <strong>"Formato"</strong> per scegliere tra <strong>PDF</strong> ed <strong>Excel</strong>.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">4</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Scegli il tipo di export</div>
+              <div class="guide-step-desc">Clicca <strong>"Esporta completo"</strong> o <strong>"Esporta semplificato"</strong>. Si apre la dialog di salvataggio per scegliere dove salvare il file.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-grid2">
+        <div class="guide-card">
+          <div class="guide-card-title">Export completo</div>
+          <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+            Tabella con <strong>2 colonne per ogni giorno</strong>: Mattina (08–16) e Pomeriggio (16–24).
+            Per ogni dipendente e fascia mostra l'orario esatto e il ruolo. Ideale per la gestione interna dettagliata.
+          </p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title">Export semplificato</div>
+          <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+            Tabella con <strong>1 colonna per ogni giorno</strong>. Se un dipendente lavora mattina e pomeriggio (es. 10–16 e 16–19), viene mostrato come unico slot (10–19). Più leggibile per i dipendenti.
+          </p>
+        </div>
+      </div>
+
+      <div class="guide-callout tip">
+        <span class="guide-callout-icon">💡</span>
+        <div class="guide-callout-body">
+          <div class="guide-callout-title">Colori nell'export</div>
+          Ogni ruolo ha un colore diverso nelle celle: <span style="background:rgba(245,201,60,.35);padding:1px 6px;border-radius:4px">Cassa</span>,
+          <span style="background:rgba(96,165,250,.30);padding:1px 6px;border-radius:4px">Runner</span>,
+          <span style="background:rgba(52,211,153,.30);padding:1px 6px;border-radius:4px">Bar</span>,
+          <span style="background:rgba(167,139,250,.30);padding:1px 6px;border-radius:4px">Comande</span>,
+          <span style="background:rgba(251,113,133,.30);padding:1px 6px;border-radius:4px">Accoglienza</span>,
+          <span style="background:rgba(148,163,184,.25);padding:1px 6px;border-radius:4px">Jolly</span>.
+          La legenda è visibile in cima alla tabella.
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ REPORT ═══════════════ -->
+    <section class="guide-section" id="report">
+      <div class="guide-section-header">
+        <div class="guide-section-icon indigo">📊</div>
+        <div>
+          <div class="guide-section-title">Report</div>
+          <div class="guide-section-sub">Analisi delle ore e della copertura settimanale</div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Cosa mostra il Report</div>
+        <p style="font-size:13px;color:#475569;line-height:1.65;margin:0 0 12px">
+          La sezione Report offre una panoramica quantitativa dei turni elaborati. Puoi vedere quante ore sono state assegnate a ogni dipendente e confrontarle con il target settimanale.
+        </p>
+        <table class="guide-table">
+          <thead><tr><th>Dato</th><th>Descrizione</th></tr></thead>
+          <tbody>
+            <tr><td>Ore assegnate</td><td>Totale ore di turno assegnate al dipendente nella settimana selezionata</td></tr>
+            <tr><td>Ore target</td><td>Ore settimanali target configurate in anagrafica</td></tr>
+            <tr><td>Differenza</td><td>Scostamento positivo o negativo rispetto al target</td></tr>
+            <tr><td>Copertura ruoli</td><td>Percentuale di slot coperti rispetto al fabbisogno per ogni ruolo</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="guide-callout info">
+        <span class="guide-callout-icon">ℹ️</span>
+        <div class="guide-callout-body">
+          Il report è generato a partire dai dati della settimana attualmente caricata in Home. Naviga alla settimana desiderata e poi apri il Report per analizzarla.
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ CHAT AI ═══════════════ -->
+    <section class="guide-section" id="chat">
+      <div class="guide-section-header">
+        <div class="guide-section-icon purple">🤖</div>
+        <div>
+          <div class="guide-section-title">Chat AI (Gemini)</div>
+          <div class="guide-section-sub">Assistente intelligente per analisi e consigli sui turni</div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Cos'è la Chat AI</div>
+        <p style="font-size:13px;color:#475569;line-height:1.65;margin:0">
+          La Chat AI è un assistente basato su Google Gemini che conosce il contesto dei turni della settimana corrente.
+          Puoi fargli domande in linguaggio naturale su assegnazioni, coperture, dipendenti disponibili e molto altro.
+          La chat mantiene la memoria delle ultime 12 domande e risposte.
+        </p>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Configurazione — API Key Gemini</div>
+        <div class="guide-steps">
+          <div class="guide-step">
+            <div class="guide-step-num">1</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Ottieni una API Key gratuita</div>
+              <div class="guide-step-desc">Vai su Google AI Studio (aistudio.google.com) e crea una API key gratuita per Gemini.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">2</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Inserisci la chiave nell'app</div>
+              <div class="guide-step-desc">Nella sezione Chat AI, clicca l'icona ingranaggio (⚙️) in alto a destra e incolla la tua API key. Viene salvata in modo sicuro nel database locale.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">3</div>
+            <div class="guide-step-body">
+              <div class="guide-step-title">Inizia a chattare</div>
+              <div class="guide-step-desc">Scrivi la tua domanda nel campo di testo e premi Invio o il pulsante Invia.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-card-title">Esempi di domande utili</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:13px;color:#374151">
+            "Chi lavora sabato sera come Runner?"
+          </div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:13px;color:#374151">
+            "Quali turni sono scoperti questa settimana?"
+          </div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:13px;color:#374151">
+            "Mario Rossi quante ore ha questa settimana?"
+          </div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:13px;color:#374151">
+            "Chi è disponibile domenica mattina ma non è ancora assegnato?"
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-callout note">
+        <span class="guide-callout-icon">📝</span>
+        <div class="guide-callout-body">
+          <div class="guide-callout-title">Nota sulla privacy</div>
+          I dati dei turni (nomi dipendenti, orari, ruoli) vengono inviati a Google Gemini per generare la risposta. Non vengono inviati dati sensibili come email, stipendi o informazioni personali.
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ GLOSSARIO ═══════════════ -->
+    <section class="guide-section" id="glossario">
+      <div class="guide-section-header">
+        <div class="guide-section-icon teal">📖</div>
+        <div>
+          <div class="guide-section-title">Glossario</div>
+          <div class="guide-section-sub">Termini usati nell'applicazione</div>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <div class="guide-glossary">
+          <div class="guide-glossary-item">
+            <div class="guide-glossary-term">Settimana</div>
+            <div class="guide-glossary-def">Identificata dal lunedì di inizio. Esempio: la settimana del 19/05/2025 va da lunedì 19 a domenica 25 maggio.</div>
+          </div>
+          <div class="guide-glossary-item">
+            <div class="guide-glossary-term">Fascia oraria</div>
+            <div class="guide-glossary-def">Intervallo di tempo (es. 08–16, 16–24) in cui vengono raggruppate le assegnazioni. Le fasce si adattano dinamicamente alle assegnazioni presenti.</div>
+          </div>
+          <div class="guide-glossary-item">
+            <div class="guide-glossary-term">Fabbisogno (Squadra)</div>
+            <div class="guide-glossary-def">Numero di persone necessarie per ogni ruolo in ogni fascia di ogni giorno. Configurato nella sezione Squadre.</div>
+          </div>
+          <div class="guide-glossary-item">
+            <div class="guide-glossary-term">Skill</div>
+            <div class="guide-glossary-def">Valore da 0 a 10 che indica la competenza di un dipendente per un ruolo specifico. Skill 0 = non idoneo; skill 10 = esperto massimo.</div>
+          </div>
+          <div class="guide-glossary-item">
+            <div class="guide-glossary-term">Disponibilità</div>
+            <div class="guide-glossary-def">Fascia oraria in cui un dipendente dichiara di essere disponibile a lavorare, fornita tramite file CSV.</div>
+          </div>
+          <div class="guide-glossary-item">
+            <div class="guide-glossary-term">Indeterminati</div>
+            <div class="guide-glossary-def">Dipendenti a contratto a tempo indeterminato con giorni fissi di lavoro. Vengono pre-assegnati automaticamente prima degli altri.</div>
+          </div>
+          <div class="guide-glossary-item">
+            <div class="guide-glossary-term">Override</div>
+            <div class="guide-glossary-def">Assegnazione manuale salvata nel database. Sovrascrive l'elaborazione automatica. Tutte le modifiche manuali al calendario sono degli override.</div>
+          </div>
+          <div class="guide-glossary-item">
+            <div class="guide-glossary-term">ch (chiusura)</div>
+            <div class="guide-glossary-def">Simbolo usato nel CSV per indicare la fine turno a chiusura locale, equivalente alle 24:00.</div>
+          </div>
+          <div class="guide-glossary-item">
+            <div class="guide-glossary-term">2-opt swap</div>
+            <div class="guide-glossary-def">Ottimizzazione post-assegnazione: l'algoritmo verifica se scambiare due dipendenti tra due ruoli diversi (nello stesso giorno e orario) migliora la qualità totale delle assegnazioni.</div>
+          </div>
+          <div class="guide-glossary-item">
+            <div class="guide-glossary-term">Template</div>
+            <div class="guide-glossary-def">Configurazione squadre salvata con un nome. Può essere ricaricata in qualsiasi settimana per non dover reinserire i numeri ogni volta.</div>
+          </div>
+          <div class="guide-glossary-item">
+            <div class="guide-glossary-term">Export completo</div>
+            <div class="guide-glossary-def">File PDF/Excel con due colonne per giorno (Mattina + Pomeriggio), che mostra orari e ruoli precisi per ogni dipendente.</div>
+          </div>
+          <div class="guide-glossary-item">
+            <div class="guide-glossary-term">Export semplificato</div>
+            <div class="guide-glossary-def">File PDF/Excel con una colonna per giorno, con orario unificato (es. 10–19 invece di 10–16 + 16–19). Più leggibile dal personale.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /guide-body -->
+</div><!-- /guide-page -->
+
+<script>
+(function() {
+  function guideTo(id, linkEl) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.querySelectorAll(".guide-toc-item").forEach(a => a.classList.remove("active"));
+    if (linkEl) linkEl.classList.add("active");
+  }
+  window.guideTo = guideTo;
+
+  // Scroll spy
+  const body = document.getElementById("guideBody");
+  if (body) {
+    body.addEventListener("scroll", function() {
+      const sections = body.querySelectorAll(".guide-section");
+      const links    = document.querySelectorAll(".guide-toc-item");
+      let active = null;
+      sections.forEach(sec => {
+        const top = sec.getBoundingClientRect().top - body.getBoundingClientRect().top;
+        if (top <= 60) active = sec.id;
+      });
+      if (active) {
+        links.forEach(a => {
+          const href = a.getAttribute("href")?.replace("#","");
+          a.classList.toggle("active", href === active);
+        });
+      }
+    });
+  }
+})();
+</script>

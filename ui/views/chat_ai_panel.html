@@ -1,0 +1,77 @@
+<!-- Pulsante FAB fisso in basso a destra -->
+<button class="chat-ai-fab" id="chatAiFab" title="Apri Assistente AI Turni">
+  🤖 <span class="chat-ai-fab-label">AI Assistente</span>
+</button>
+
+<!-- Pannello chat laterale — position:fixed, fuori dal flusso .app -->
+<div class="chat-ai-panel" id="chatAiPanel" role="complementary" aria-label="Assistente AI Turni">
+
+  <!-- Header -->
+  <div class="chat-ai-header">
+    <div class="chat-ai-header-left">
+      <span class="chat-ai-header-icon">🤖</span>
+      <div>
+        <div class="chat-ai-header-title">Assistente Turni</div>
+        <div class="chat-ai-header-sub">Powered by Gemini AI</div>
+      </div>
+    </div>
+    <div class="chat-ai-header-right">
+      <button class="chat-ai-hbtn" id="chatAiSettingsBtn" title="Imposta API key">⚙</button>
+      <button class="chat-ai-hbtn" id="chatAiNewBtn" title="Nuova conversazione">🔄</button>
+      <button class="chat-ai-hbtn chat-ai-hbtn--close" id="chatAiCloseBtn" title="Chiudi (Esc)">✕</button>
+    </div>
+  </div>
+
+  <!-- Sezione impostazioni API key (collassabile) -->
+  <div class="chat-ai-settings-section hidden" id="chatAiSettingsSection">
+    <div class="chat-ai-settings-label">Gemini API Key</div>
+    <div class="chat-ai-settings-row">
+      <input
+        type="password"
+        class="chat-ai-key-input"
+        id="chatAiKeyInput"
+        placeholder="AIza..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button class="chat-ai-key-save-btn" id="chatAiKeySaveBtn">Salva</button>
+      <button class="chat-ai-key-del-btn" id="chatAiKeyDelBtn" title="Rimuovi key">✕</button>
+    </div>
+    <div class="chat-ai-settings-note">
+      Chiave salvata nel database locale dell'app — non inviata al backend Python.
+      Ottieni la tua key gratuita su
+      <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>.
+    </div>
+  </div>
+
+  <!-- Barra contesto settimana corrente -->
+  <div class="chat-ai-ctx-bar">
+    Settimana: <strong id="chatAiCtxWeek">—</strong>
+    &nbsp;·&nbsp;<span id="chatAiCtxInfo">...</span>
+  </div>
+
+  <!-- Area messaggi scrollabile -->
+  <div class="chat-ai-messages" id="chatAiMessages"></div>
+
+  <!-- Typing indicator (nascosto di default) -->
+  <div class="chat-ai-typing" id="chatAiTyping" style="display:none">
+    <div class="chat-typing-dots">
+      <span class="chat-typing-dot"></span>
+      <span class="chat-typing-dot"></span>
+      <span class="chat-typing-dot"></span>
+    </div>
+    <span class="chat-typing-label">Sto elaborando...</span>
+  </div>
+
+  <!-- Input testo + invio -->
+  <div class="chat-ai-input-area">
+    <textarea
+      class="chat-ai-input"
+      id="chatAiInput"
+      placeholder="Chiedi qualcosa sui turni… (Invio = invia, Shift+Invio = a capo)"
+      rows="2"
+    ></textarea>
+    <button class="chat-ai-send-btn" id="chatAiSendBtn" title="Invia (Invio)">↑</button>
+  </div>
+
+</div>

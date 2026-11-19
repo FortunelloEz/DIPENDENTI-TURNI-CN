@@ -1,0 +1,411 @@
+/* ===== GUIDA ===== */
+
+.guide-page {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+/* ── Sommario laterale ── */
+.guide-toc {
+  width: 220px;
+  min-width: 220px;
+  background: #fff;
+  border-right: 1px solid rgba(15,23,42,.10);
+  overflow-y: auto;
+  padding: 24px 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.guide-toc-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--muted);
+  text-transform: uppercase;
+  padding: 0 16px 10px;
+}
+
+.guide-toc-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+  border: none;
+  background: none;
+  text-align: left;
+  width: 100%;
+  border-radius: 0;
+  transition: background .12s, color .12s;
+  text-decoration: none;
+}
+
+.guide-toc-item:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.guide-toc-item.active {
+  background: linear-gradient(90deg, rgba(99,102,241,.10) 0%, transparent 100%);
+  color: #6366f1;
+  font-weight: 600;
+  border-right: 2px solid #6366f1;
+}
+
+.guide-toc-icon { font-size: 14px; width: 18px; text-align: center; }
+
+/* ── Corpo ── */
+.guide-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 36px 48px 60px;
+  max-width: 860px;
+}
+
+/* ── Hero ── */
+.guide-hero {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 20px;
+  padding: 36px 40px;
+  color: #fff;
+  margin-bottom: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+.guide-hero::before {
+  content: '';
+  position: absolute;
+  right: -40px; top: -40px;
+  width: 200px; height: 200px;
+  background: rgba(255,255,255,.07);
+  border-radius: 50%;
+}
+
+.guide-hero::after {
+  content: '';
+  position: absolute;
+  right: 60px; bottom: -60px;
+  width: 140px; height: 140px;
+  background: rgba(255,255,255,.05);
+  border-radius: 50%;
+}
+
+.guide-hero-title {
+  font-size: 26px;
+  font-weight: 900;
+  margin: 0 0 8px;
+  position: relative;
+}
+
+.guide-hero-sub {
+  font-size: 15px;
+  opacity: .85;
+  margin: 0 0 24px;
+  position: relative;
+}
+
+.guide-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  position: relative;
+}
+
+.guide-flow-step {
+  background: rgba(255,255,255,.18);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.guide-flow-step-num {
+  background: rgba(255,255,255,.3);
+  border-radius: 50%;
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.guide-flow-arrow {
+  font-size: 14px;
+  opacity: .7;
+  align-self: center;
+}
+
+/* ── Sezione ── */
+.guide-section {
+  margin-bottom: 40px;
+  scroll-margin-top: 20px;
+}
+
+.guide-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.guide-section-icon {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.guide-section-icon.purple  { background: rgba(99,102,241,.12); }
+.guide-section-icon.blue    { background: rgba(37,99,235,.12); }
+.guide-section-icon.green   { background: rgba(16,185,129,.12); }
+.guide-section-icon.orange  { background: rgba(245,158,11,.12); }
+.guide-section-icon.red     { background: rgba(239,68,68,.12); }
+.guide-section-icon.teal    { background: rgba(20,184,166,.12); }
+.guide-section-icon.indigo  { background: rgba(79,70,229,.12); }
+
+.guide-section-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+
+.guide-section-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 2px 0 0;
+}
+
+/* ── Card contenuto ── */
+.guide-card {
+  background: #fff;
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+
+.guide-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-card-title .gtag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: .04em;
+}
+
+.gtag-green  { background: #dcfce7; color: #15803d; }
+.gtag-blue   { background: #dbeafe; color: #1d4ed8; }
+.gtag-orange { background: #fef3c7; color: #b45309; }
+.gtag-red    { background: #fee2e2; color: #b91c1c; }
+.gtag-purple { background: #ede9fe; color: #6d28d9; }
+
+/* ── Steps ── */
+.guide-steps { display: flex; flex-direction: column; gap: 10px; }
+
+.guide-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.guide-step-num {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.guide-step-body { flex: 1; }
+
+.guide-step-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 3px;
+}
+
+.guide-step-desc {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ── Callout box ── */
+.guide-callout {
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  gap: 12px;
+  margin: 12px 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.guide-callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+.guide-callout-body { flex: 1; color: #374151; }
+
+.guide-callout-title {
+  font-weight: 700;
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+
+.guide-callout.tip     { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.guide-callout.tip .guide-callout-title { color: #15803d; }
+
+.guide-callout.warning { background: #fffbeb; border: 1px solid #fde68a; }
+.guide-callout.warning .guide-callout-title { color: #b45309; }
+
+.guide-callout.info    { background: #eff6ff; border: 1px solid #bfdbfe; }
+.guide-callout.info .guide-callout-title { color: #1d4ed8; }
+
+.guide-callout.note    { background: #faf5ff; border: 1px solid #e9d5ff; }
+.guide-callout.note .guide-callout-title { color: #6d28d9; }
+
+/* ── Tabella ── */
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 12px 0;
+}
+
+.guide-table th {
+  background: #f1f5f9;
+  font-weight: 700;
+  color: #475569;
+  padding: 9px 14px;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.guide-table td {
+  padding: 9px 14px;
+  border: 1px solid #e2e8f0;
+  color: #374151;
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.guide-table tr:nth-child(even) td { background: #f8fafc; }
+
+/* ── Kbd / code ── */
+.gkbd {
+  display: inline-block;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 7px;
+  font-size: 12px;
+  font-family: monospace;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.gcode {
+  background: #f1f5f9;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-family: monospace;
+  color: #6366f1;
+}
+
+/* ── Grid 2 colonne ── */
+.guide-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+/* ── Chip ruoli ── */
+.guide-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.guide-role-chip {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.role-cassa      { background: rgba(245,201,60,.3);  border-color: rgba(245,158,11,.4); color: #92400e; }
+.role-runner     { background: rgba(96,165,250,.3);  border-color: rgba(37,99,235,.4);  color: #1e40af; }
+.role-bar        { background: rgba(52,211,153,.3);  border-color: rgba(16,185,129,.4); color: #065f46; }
+.role-comande    { background: rgba(167,139,250,.3); border-color: rgba(139,92,246,.4); color: #5b21b6; }
+.role-accoglienza{ background: rgba(251,113,133,.3); border-color: rgba(244,63,94,.4);  color: #9f1239; }
+.role-jolly      { background: rgba(148,163,184,.3); border-color: rgba(100,116,139,.4);color: #334155; }
+
+/* ── Glossario ── */
+.guide-glossary { display: flex; flex-direction: column; gap: 8px; }
+
+.guide-glossary-item {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.guide-glossary-term {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  min-width: 130px;
+  flex-shrink: 0;
+}
+
+.guide-glossary-def {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .guide-toc { display: none; }
+  .guide-body { padding: 20px; }
+  .guide-grid2 { grid-template-columns: 1fr; }
+}
