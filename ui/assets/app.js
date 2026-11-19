@@ -408,6 +408,7 @@ function renderCalendar(){
     const timeLabels = segmentToSlots(seg);
     const tr = document.createElement("tr");
     tr.className = "tl-row";
+    tr.dataset.band = seg.startMin < 16 * 60 ? "morning" : "evening";
 
     const tdTime = document.createElement("td");
     tdTime.className = "tl-time";
@@ -433,10 +434,13 @@ function renderCalendar(){
       } else {
         td.classList.add("tl-filled");
         td.innerHTML = Object.entries(byRole).map(([role, ids]) => {
-          const names = ids.map(id => getEmployeeById(id)?.label || String(id));
-          return `<div class="tl-role-group">
+          const namesHtml = ids.map(id => {
+            const label = getEmployeeById(id)?.label || String(id);
+            return `<span class="tl-name" data-emp-id="${id}" data-emp-name="${label.toLowerCase()}">${label}</span>`;
+          }).join(", ");
+          return `<div class="tl-role-group" data-role="${role}">
             <span class="tl-role-pill tl-role-${roleCss(role)}">${ROLE_SHORT[role] || role}</span>
-            <span class="tl-names">${names.join(", ")}</span>
+            <span class="tl-names">${namesHtml}</span>
           </div>`;
         }).join("");
       }
@@ -454,6 +458,67 @@ function renderCalendar(){
   table.appendChild(tbody);
   wrap.innerHTML = "";
   wrap.appendChild(table);
+
+  applyTimelineFilter();
+}
+
+/* ===========================================
+   FILTRO TIMELINE (solo visivo: evidenzia/sbiadisce)
+   Non tocca dati né scheduler.
+   =========================================== */
+const timelineFilter = { name: "", role: "", band: "" };
+
+function applyTimelineFilter(){
+  const table = document.getElementById("timelineWrap")?.querySelector(".timeline-table");
+  if (!table) return;
+  const q    = (timelineFilter.name || "").trim().toLowerCase();
+  const role = timelineFilter.role || "";
+  const band = timelineFilter.band || "";
+  const active = !!(q || role || band);
+
+  table.classList.toggle("tl-filtering", active);
+
+  table.querySelectorAll(".tl-row").forEach(row => {
+    row.classList.toggle("tl-row-dim", active && !!band && row.dataset.band !== band);
+  });
+  table.querySelectorAll(".tl-role-group").forEach(group => {
+    group.classList.toggle("tl-group-dim", active && !!role && group.dataset.role !== role);
+  });
+  table.querySelectorAll(".tl-name").forEach(nameEl => {
+    const match = !q || (nameEl.dataset.empName || "").includes(q);
+    nameEl.classList.toggle("tl-name-dim", active && !!q && !match);
+    nameEl.classList.toggle("tl-name-hit", active && !!q && match);
+  });
+}
+
+function bindTimelineFilter(){
+  const nameEl  = document.getElementById("tlFilterName");
+  const roleEl  = document.getElementById("tlFilterRole");
+  const bandEl  = document.getElementById("tlFilterBand");
+  const clearEl = document.getElementById("tlFilterClear");
+
+  if (nameEl && !nameEl.dataset.bound){
+    nameEl.dataset.bound = "1";
+    nameEl.addEventListener("input", () => { timelineFilter.name = nameEl.value; applyTimelineFilter(); });
+  }
+  if (roleEl && !roleEl.dataset.bound){
+    roleEl.dataset.bound = "1";
+    roleEl.addEventListener("change", () => { timelineFilter.role = roleEl.value; applyTimelineFilter(); });
+  }
+  if (bandEl && !bandEl.dataset.bound){
+    bandEl.dataset.bound = "1";
+    bandEl.addEventListener("change", () => { timelineFilter.band = bandEl.value; applyTimelineFilter(); });
+  }
+  if (clearEl && !clearEl.dataset.bound){
+    clearEl.dataset.bound = "1";
+    clearEl.addEventListener("click", () => {
+      timelineFilter.name = ""; timelineFilter.role = ""; timelineFilter.band = "";
+      if (nameEl) nameEl.value = "";
+      if (roleEl) roleEl.value = "";
+      if (bandEl) bandEl.value = "";
+      applyTimelineFilter();
+    });
+  }
 }
 
 /* ===========================================
@@ -988,6 +1053,7 @@ async function initHome(){
   renderEmployees();
   renderWeekLabel();
   renderCalendar();
+  bindTimelineFilter();
   window.chatAiUpdateContext?.();
   renderDaySummary();
 

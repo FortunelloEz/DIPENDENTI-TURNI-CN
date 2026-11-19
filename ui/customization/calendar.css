@@ -543,6 +543,41 @@
   flex: 1;
 }
 
+/* ---------- FILTRO TIMELINE (solo visivo) ---------- */
+.tl-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: var(--card-2, rgba(255,255,255,.03));
+  border: 1px solid var(--border, rgba(255,255,255,.08));
+}
+.tl-filter-label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.tl-filter-input,
+.tl-filter-select {
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border, rgba(255,255,255,.12));
+  background: var(--input-bg, rgba(0,0,0,.15));
+  color: var(--text);
+}
+.tl-filter-input { min-width: 180px; }
+
+/* Effetti del filtro (solo opacità + evidenziazione, nessuna modifica ai dati) */
+.tl-row-dim   { opacity: .25; transition: opacity .15s; }
+.tl-group-dim { opacity: .2;  transition: opacity .15s; }
+.tl-name-dim  { opacity: .3; }
+.tl-name-hit {
+  background: rgba(250, 204, 21, .28);
+  border-radius: 4px;
+  padding: 0 3px;
+  font-weight: 800;
+}
+
 /* ---------- PICKER: barra ruoli ---------- */
 .picker-role-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
 .picker-role-btn {

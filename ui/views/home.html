@@ -65,6 +65,27 @@
                     <span class="role-legend-hint">Clicca giorno (header) per riepilogo · clicca cella per gestire il turno</span>
                 </div>
 
+                <!-- FILTRO TIMELINE (solo visivo: evidenzia, non modifica i turni) -->
+                <div class="tl-filter-bar">
+                    <span class="tl-filter-label">Filtra:</span>
+                    <input type="text" id="tlFilterName" class="tl-filter-input" placeholder="🔎 Nome dipendente…" autocomplete="off">
+                    <select id="tlFilterRole" class="tl-filter-select">
+                        <option value="">Tutti i ruoli</option>
+                        <option value="Cassa">Cassa</option>
+                        <option value="Runner">Runner</option>
+                        <option value="Bar">Bar</option>
+                        <option value="Comande">Comande</option>
+                        <option value="Accoglienza">Accoglienza</option>
+                        <option value="Jolly">Jolly</option>
+                    </select>
+                    <select id="tlFilterBand" class="tl-filter-select">
+                        <option value="">Tutte le fasce</option>
+                        <option value="morning">☀️ Mattina</option>
+                        <option value="evening">🌙 Pomeriggio</option>
+                    </select>
+                    <button id="tlFilterClear" class="btn btn-small btn-ghost">Azzera</button>
+                </div>
+
                 <div class="timeline-wrap" id="timelineWrap">
                     <table class="timeline-table" id="timelineTable"></table>
                 </div>
