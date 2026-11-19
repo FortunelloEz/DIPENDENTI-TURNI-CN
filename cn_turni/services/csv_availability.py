@@ -79,11 +79,32 @@ def _extract_month_day(header: str) -> Optional[Tuple[int, int]]:
     return None
 
 def _labels_between(start_h: int, end_h: int) -> Set[str]:
-    start_h = max(8, min(24, start_h))
-    end_h = max(8, min(24, end_h))
-    if end_h <= start_h:
+    return _labels_between_hh(start_h * 2, end_h * 2)
+
+
+def _labels_between_hh(start_idx: int, end_idx: int) -> Set[str]:
+    """Labels tra due indici di mezz'ora (idx = ore*2 + 1 se :30), limitati a 08:00-24:00."""
+    start_idx = max(16, min(48, start_idx))
+    end_idx = max(16, min(48, end_idx))
+    if end_idx <= start_idx:
         return set()
-    return set(_half_hours(start_h, end_h))
+    return {f"{i // 2:02d}:{'30' if i % 2 else '00'}" for i in range(start_idx, end_idx)}
+
+
+# Orario: "18", "12:30", "12.30", "9,30"
+_TIME_RE = re.compile(r"\b(\d{1,2})(?:\s*[:.,]\s*(\d{2}))?\b")
+
+
+def _extract_times_hh(s: str) -> list[int]:
+    """Estrae gli orari dalla cella come indici di mezz'ora. I minuti >= 30 contano come mezz'ora."""
+    out: list[int] = []
+    for m in _TIME_RE.finditer(s):
+        h = int(m.group(1))
+        mins = int(m.group(2)) if m.group(2) else 0
+        if h > 24 or mins > 59:
+            continue
+        out.append(h * 2 + (1 if mins >= 30 else 0))
+    return out
 
 def _parse_cell(value: str) -> DayAvailability:
     raw = value or ""
@@ -95,31 +116,69 @@ def _parse_cell(value: str) -> DayAvailability:
     if any(tok in s for tok in {"INDIFFERENTE", "FULL", "TUTTO IL GIORNO", "INTERA GIORNATA"}):
         return DayAvailability((MORNING | EVENING), raw=value, needs_resolution=False, mode="indifferent")
 
-    if any(tok in s for tok in {"MATTINA", "MATT"}):
+    has_morning = any(tok in s for tok in {"MATTINA", "MATT"})
+    has_evening = any(tok in s for tok in {"POMERIGGIO", "POME", "SERA", "PM"})
+
+    if has_morning and has_evening:
+        return DayAvailability(MORNING | EVENING)
+
+    if has_morning:
         return DayAvailability(set(MORNING))
 
-    if any(tok in s for tok in {"POMERIGGIO", "POME", "SERA", "PM"}):
+    if has_evening:
         return DayAvailability(set(EVENING))
 
-    nums = [int(x) for x in re.findall(r"\b(\d{1,2})\b", s)]
+    times = _extract_times_hh(s)
 
-    if "CHIUSURA" in s and len(nums) >= 1:
-        start = nums[0]
-        return DayAvailability(_labels_between(start, 24))
+    if "CHIUSURA" in s and len(times) >= 1:
+        labels = _labels_between_hh(times[0], 48)
+        if labels:
+            return DayAvailability(labels)
+        return DayAvailability(set(), raw=value, needs_resolution=True)
 
-    if len(nums) >= 2:
-        start, end = nums[0], nums[1]
-        return DayAvailability(_labels_between(start, end))
+    if len(times) >= 2:
+        labels = _labels_between_hh(times[0], times[1])
+        if labels:
+            return DayAvailability(labels)
+        # es. "18-01": fine dopo mezzanotte o intervallo incoerente -> lo chiede all'utente
+        return DayAvailability(set(), raw=value, needs_resolution=True)
 
     return DayAvailability(set(), raw=value, needs_resolution=True)
 
-def parse_availability_csv(csv_text: str, *, year: Optional[int] = None) -> AvailabilityMap:
+def _resolve_year(month: int, day: int, year: int, ref: Optional[date]) -> date:
+    """
+    Sceglie l'anno della data. Con una data di riferimento (la settimana scelta in UI)
+    prende tra anno-1, anno e anno+1 quello più vicino: così un CSV a cavallo di
+    Capodanno (30 dicembre / 2 gennaio) resta nella stessa settimana.
+    """
+    if ref is None:
+        return date(year, month, day)
+    best: Optional[date] = None
+    for y in (year - 1, year, year + 1):
+        try:
+            cand = date(y, month, day)
+        except ValueError:  # es. 29 febbraio in anno non bisestile
+            continue
+        if best is None or abs((cand - ref).days) < abs((best - ref).days):
+            best = cand
+    if best is None:
+        raise ValueError(f"CSV: data non valida {day}/{month}.")
+    return best
+
+
+def parse_availability_csv(
+        csv_text: str,
+        *,
+        year: Optional[int] = None,
+        ref_date: Optional[date] = None,
+) -> AvailabilityMap:
     """
     Legge il CSV (tipo Google Forms) e ritorna:
       availability[name][iso_date] = DayAvailability(labels=set([...]))
+    ref_date: data di riferimento per scegliere l'anno vicino a Capodanno.
     """
     if year is None:
-        year = date.today().year
+        year = ref_date.year if ref_date else date.today().year
 
     f = io.StringIO(csv_text)
     reader = csv.reader(f)
@@ -149,7 +208,7 @@ def parse_availability_csv(csv_text: str, *, year: Optional[int] = None) -> Avai
         md = _extract_month_day(h)
         if md:
             month, day = md
-            iso = date(year, month, day).isoformat()
+            iso = _resolve_year(month, day, year, ref_date).isoformat()
             date_cols.append((i, iso))
 
     if not date_cols:

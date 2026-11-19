@@ -148,7 +148,8 @@ class ImportService:
 
     # ---- Main entrypoint ----
     def import_availability_and_autofill(self, week_key: str, csv_text: str, resolutions=None, custom_resolutions=None):
-        ui_year = date.fromisoformat(week_key).year
+        ui_ref = date.fromisoformat(week_key)
+        ui_year = ui_ref.year
 
         # 1) employees dal DB
         emp_rows = self.db.employees_list()
@@ -167,7 +168,7 @@ class ImportService:
                         name_to_id[a_norm] = emp_id
 
         # 3) parse CSV
-        availability = parse_availability_csv(csv_text, year=ui_year)
+        availability = parse_availability_csv(csv_text, year=ui_year, ref_date=ui_ref)
 
         # custom cells (stringhe non interpretabili)
         custom_cells = self._collect_custom_cells(availability)
@@ -246,16 +247,16 @@ class ImportService:
                     if csv_name not in norm_parts:
                         parts.append(csv_name_raw.strip() or csv_name.title())
 
+                    # Passa TUTTI i campi del dipendente: employee_update riscrive l'intera riga,
+                    # quindi i campi omessi (work_days, max_daily_hours, weekly_hours_target)
+                    # verrebbero azzerati.
                     self.db.employee_update({
+                        **emp,
                         "id": emp_id,
-                        "name": emp["name"],
-                        "is_permanent": emp.get("is_permanent", False),
-                        "preferred_role": emp.get("preferred_role"),
-                        "slot_morning": emp.get("slot_morning", 1),
-                        "slot_evening": emp.get("slot_evening", 1),
                         "skills": emp.get("skills") or {},
                         "aliases": " | ".join(parts),
                     })
+                    emp["aliases"] = " | ".join(parts)
 
                     name_to_id[csv_name] = emp_id
 
@@ -263,7 +264,7 @@ class ImportService:
             emp_rows = self.db.employees_list()
 
             # ri-parse perché le custom_cells potrebbero dipendere da risoluzioni
-            availability = parse_availability_csv(csv_text, year=ui_year)
+            availability = parse_availability_csv(csv_text, year=ui_year, ref_date=ui_ref)
             custom_cells = self._collect_custom_cells(availability)
 
             if custom_cells and not custom_resolutions:
@@ -446,6 +447,30 @@ class ImportService:
         def _role_skill(emp: Employee, role_name: str) -> int:
             return int((emp.skills or {}).get(role_name, 0) or 0)
 
+        perm_by_id = {p.employee_id: p for p in perm_settings}
+        PERM_DEFAULT_DAILY_HALFHOURS = 16  # 8h: come build_plan, un indeterminato fa un turno al giorno
+
+        def _permanent_limits_ok(emp: Employee, d: int) -> bool:
+            """
+            Vincoli degli indeterminati che build_plan rispetta e che valgono anche
+            nel riempimento a mezz'ore e nello skill-upgrade:
+            - niente turni nel giorno di riposo
+            - niente oltre le ore settimanali (target_hours, default 40)
+            - max 8h al giorno se max_daily_hours non è impostato
+            """
+            if not (emp.is_permanent or emp.id in perm_ids_set):
+                return True
+            p = perm_by_id.get(emp.id)
+            if p is not None and p.day_off == d:
+                return False
+            if emp.max_daily_hours is None and daily_halfhours.get((emp.id, d), 0) >= PERM_DEFAULT_DAILY_HALFHOURS:
+                return False
+            target = int(p.target_hours) if p is not None else 40
+            weekly_hh = sum(daily_halfhours.get((emp.id, dd), 0) for dd in range(7))
+            if weekly_hh / 2.0 >= target:
+                return False
+            return True
+
         def _can_use_on_time(emp: Employee, d: int, iso_day: str, slot_name: str, role_name: str, t: str) -> bool:
             if _role_skill(emp, role_name) <= 0:
                 return False
@@ -468,6 +493,9 @@ class ImportService:
                 return False
 
             if emp.id in busy_by_time.get((d, t), set()):
+                return False
+
+            if not _permanent_limits_ok(emp, d):
                 return False
 
             if emp.max_daily_hours is not None:
@@ -579,6 +607,8 @@ class ImportService:
             if not self._is_available_label(
                     availability_for_sched, emp.name, week_days_iso[d], t,
                     emp.is_permanent or emp.id in perm_ids_set):
+                return False
+            if not _permanent_limits_ok(emp, d):
                 return False
             if emp.max_daily_hours is not None:
                 if daily_halfhours.get((emp.id, d), 0) >= round(float(emp.max_daily_hours) * 2):

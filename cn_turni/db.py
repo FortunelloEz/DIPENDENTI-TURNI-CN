@@ -6,9 +6,10 @@ import json
 import os
 import platform
 import sqlite3
-from datetime import date, timedelta
+from contextlib import contextmanager
+from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 from cn_turni.paths import paths
 
 # ---------- Cifratura API key (XOR + SHA-256 machine-specific) ----------
@@ -93,11 +94,42 @@ class Db:
         Path(os.path.dirname(db_path)).mkdir(parents=True, exist_ok=True)
         self._init_schema()
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        """
+        Apre una connessione, fa commit (o rollback in caso di errore) e la CHIUDE.
+        `with sqlite3.connect(...)` da solo fa commit ma lascia la connessione aperta.
+        """
         conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON;")
-        return conn
+        try:
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA foreign_keys = ON;")
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+
+    def _backup(self, tag: str, keep: int = 5) -> Optional[str]:
+        """Copia consistente del DB in <data>/backups, tiene solo gli ultimi `keep` file per tag."""
+        try:
+            backup_dir = Path(os.path.dirname(self.db_path)) / "backups"
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            dest = backup_dir / f"{Path(self.db_path).stem}_{tag}_{stamp}.db"
+            src = sqlite3.connect(self.db_path)
+            dst = sqlite3.connect(str(dest))
+            try:
+                src.backup(dst)
+            finally:
+                dst.close()
+                src.close()
+            old = sorted(backup_dir.glob(f"{Path(self.db_path).stem}_{tag}_*.db"))
+            for f in old[:-keep]:
+                f.unlink(missing_ok=True)
+            return str(dest)
+        except Exception as e:
+            print(f"[Backup] fallito: {e}", flush=True)
+            return None
 
     def _ensure_column(self, conn: sqlite3.Connection, table: str, col: str, ddl: str) -> None:
         cols = [r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
@@ -300,6 +332,19 @@ class Db:
     def purge_old_weeks(self, months: int = 6) -> int:
         cutoff = date.today() - timedelta(days=int(30.5 * months))
         cutoff_iso = cutoff.isoformat()
+        tables = ("schedule_override", "squads_required", "permanent_week", "availability_cache")
+        # Prima di cancellare, se c'è qualcosa da eliminare, fa un backup del DB.
+        with self._connect() as conn:
+            to_delete = sum(
+                int(conn.execute(f"SELECT COUNT(*) AS n FROM {t} WHERE week_id < ?", (cutoff_iso,)).fetchone()["n"])
+                for t in tables
+            )
+            to_delete += int(conn.execute(
+                "SELECT COUNT(*) AS n FROM imported_files WHERE week_key < ?", (cutoff_iso,)
+            ).fetchone()["n"])
+        if to_delete == 0:
+            return 0
+        self._backup("pre_retention")
         with self._connect() as conn:
             n = 0
             for table in ("schedule_override", "squads_required", "permanent_week", "availability_cache"):
