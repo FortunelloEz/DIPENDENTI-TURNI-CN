@@ -1,10 +1,10 @@
 [Setup]
 AppId=TurniCN
 AppName=TurniCN
-AppVersion=6.2.0
+AppVersion=6.3.0
 DefaultDirName={autopf}\TurniCN
 DefaultGroupName=Turni CN
-OutputBaseFilename=TurniCNSetup_6_2_0
+OutputBaseFilename=TurniCNSetup_6_3_0
 Compression=lzma
 SolidCompression=yes
 DisableProgramGroupPage=yes
