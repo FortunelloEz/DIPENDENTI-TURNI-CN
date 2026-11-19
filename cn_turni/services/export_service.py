@@ -132,7 +132,7 @@ def build_week_export_simple(db: Any, week_key: str) -> dict:
 
     rows = []
     for eid, by_day in grid.items():
-        name = id_to_name.get(eid, f"ID {eid}")
+        name = id_to_name.get(eid, "Ex dipendente")  # eliminato: resta nello storico
         cells: List[str] = []
         roles: List[str] = []
         any_cell = False
@@ -197,7 +197,7 @@ def build_week_export(db: Any, week_key: str) -> dict:
 
     rows = []
     for eid, by_day in grid.items():
-        name = id_to_name.get(eid, f"ID {eid}")
+        name = id_to_name.get(eid, "Ex dipendente")  # eliminato: resta nello storico
         cells: List[str] = []
         roles: List[str] = []   # parallelo a cells: ruolo per ogni cella
         any_cell = False

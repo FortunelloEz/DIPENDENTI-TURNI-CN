@@ -68,7 +68,7 @@
         <div class="modal-card modal-card-wide" role="dialog" aria-modal="true">
             <div class="modal-head">
                 <div class="modal-title">Modifica preset tipi giornata</div>
-                <button class="modal-close" id="dayTypeEditClose">✕</button>
+                <button type="button" class="modal-close" id="dayTypeEditClose" aria-label="Chiudi">✕</button>
             </div>
             <div class="modal-body">
                 <div class="day-type-tabs" id="dayTypeEditTabs">
@@ -79,7 +79,7 @@
                 </div>
             </div>
             <div class="modal-actions">
-                <button class="btn btn-ghost" id="dayTypeEditCancel">Fine</button>
+                <button class="btn btn-ghost" id="dayTypeEditCancel">Annulla</button>
                 <button class="btn primary" id="dayTypeEditSave">Salva preset</button>
             </div>
         </div>
@@ -98,7 +98,7 @@
 
             <div class="modal-actions">
                 <button class="btn btn-ghost" id="tplDeleteCancel">Annulla</button>
-                <button class="btn btn-danger" id="tplDeleteConfirm">Elimina</button>
+                <button class="btn btn-danger-solid" id="tplDeleteConfirm">Elimina template</button>
             </div>
         </div>
     </div>
@@ -113,10 +113,12 @@
             </div>
 
             <div class="modal-body">
+                <label class="modal-label" for="tplName">Nome del template</label>
                 <input
                         class="modal-input"
                         id="tplName"
-                        placeholder="Nome univoco (es. 'Inverno 2026')"
+                        placeholder="Es. Inverno 2026"
+                        autocomplete="off"
                 />
                 <div class="modal-hint">
                     Salva i valori attuali della tabella. Se il nome esiste già, ti viene chiesto se sostituire quel template.

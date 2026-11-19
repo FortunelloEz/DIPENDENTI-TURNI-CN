@@ -557,3 +557,18 @@ input:focus, select:focus, textarea:focus {
   animation: uiSpin .7s linear infinite;
 }
 @keyframes uiSpin { to { transform: rotate(360deg); } }
+
+/* ---------- pallino del tipo giornata (Leggera / Normale / Pesante) ---------- */
+.dt-dot {
+  display: inline-block;
+  flex: 0 0 9px;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .9);
+}
+.dt-dot--leggera { background: #10b981; }
+.dt-dot--normale { background: #f59e0b; }
+.dt-dot--pesante { background: #ef4444; }

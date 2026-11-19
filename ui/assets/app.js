@@ -66,6 +66,17 @@ let employees = [];
 function getEmployeeById(id){
   return employees.find(e => String(e.id) === String(id)) || null;
 }
+/**
+ * Nome da mostrare per un id di turno. Un dipendente eliminato resta nello storico delle
+ * settimane passate: si mostra «Ex dipendente» invece di un numero.
+ * titleCase: "MARIO ROSSI" -> "Mario Rossi".
+ */
+function employeeLabel(id, { titleCase = false } = {}){
+  const emp = getEmployeeById(id);
+  if (!emp) return "Ex dipendente";
+  if (!titleCase) return emp.label;
+  return emp.label.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+}
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 async function retryUntil(fn, predicate, { tries = 15, delayMs = 120 } = {}){
   for (let i = 0; i < tries; i++){
@@ -377,7 +388,6 @@ function renderWeekLabel(){
 async function renderDaySummary() {
   const container = document.getElementById("daySummaryBody");
   if (!container) return;
-  const DAY_TYPE_ICONS = { "Leggera": "🟢", "Normale": "🟡", "Pesante": "🔴" };
   let dayAssignments = {};
   try { dayAssignments = await apiCall("day_type_assignments_get") || {}; } catch(e) {}
   const cells = DAYS.map((day, dayIndex) => {
@@ -385,7 +395,7 @@ async function renderDaySummary() {
     date.setDate(date.getDate() + dayIndex);
     const dateStr = formatDate(date);
     const typeName = dayAssignments[String(dayIndex)] || dayAssignments[dayIndex] || null;
-    const icon = typeName ? (DAY_TYPE_ICONS[typeName] || "") : "—";
+    const icon = typeName ? `<span class="dt-dot dt-dot--${typeName.toLowerCase()}" aria-hidden="true"></span>` : "—";
     const typeColors = { "Leggera": "rgba(16,185,129,.10)", "Normale": "rgba(245,158,11,.10)", "Pesante": "rgba(239,68,68,.10)" };
     const typeBorders = { "Leggera": "rgba(16,185,129,.30)", "Normale": "rgba(245,158,11,.30)", "Pesante": "rgba(239,68,68,.30)" };
     const bg = typeName ? typeColors[typeName] : "transparent";
@@ -471,7 +481,7 @@ function renderCalendar(){
         td.classList.add("tl-filled");
         td.innerHTML = Object.entries(byRole).map(([role, ids]) => {
           const namesHtml = ids.map(id => {
-            const label = getEmployeeById(id)?.label || String(id);
+            const label = employeeLabel(id);
             return `<span class="tl-name" data-emp-id="${id}" data-emp-name="${label.toLowerCase()}">${label}</span>`;
           }).join(", ");
           return `<div class="tl-role-group" data-role="${role}">
@@ -583,7 +593,11 @@ function openDayModal(dayIndex){
   if (!bd || !titleEl || !bodyEl) return;
 
   const DAY_FULL = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
-  titleEl.textContent = `${DAY_FULL[dayIndex]} ${formatDate(date)}`;
+  // titolo + riepilogo copertura (stessa regola dei pallini del calendario)
+  const tl = computeDayTrafficLight(weekKey, dayIndex);
+  const tlText = tl.tooltip.split("\n").join(" · ");
+  titleEl.innerHTML = `${uiEscape(DAY_FULL[dayIndex])} ${uiEscape(formatDate(date))}
+    <span class="dm-cov"><span class="day-cov-dot day-cov-dot--${tl.color}" aria-hidden="true"></span>${uiEscape(tlText)}</span>`;
 
   const segments = computeTimeSegmentsForDay(weekKey, dayIndex);
   bodyEl.innerHTML = "";
@@ -653,17 +667,13 @@ function openDayModal(dayIndex){
       const ids = unionAssignedOverLabels(weekKey, dayIndex, role, timeLabels);
       if (!ids.length) return;
       hasAnyone = true;
-      const names = ids.map(id => {
-        const emp = getEmployeeById(id);
-        if (!emp) return String(id);
-        return emp.label.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-      });
+      const names = ids.map(id => employeeLabel(id, { titleCase: true }));
       const row = document.createElement("div");
       row.className = "dm-role-row";
       row.innerHTML = `
         <span class="sm-role-badge sm-badge-${roleCss(role)} dm-role-badge">${ROLE_SHORT[role]}</span>
         <span class="dm-role-label">${role}</span>
-        <span class="dm-role-names">${names.join("  ·  ")}</span>
+        <span class="dm-role-names">${names.map(uiEscape).join("  ·  ")}</span>
       `;
       cardBody.appendChild(row);
     });
@@ -703,11 +713,6 @@ function openDayModal(dayIndex){
     });
   });
 
-  const qaBtn = document.getElementById("dayModalQaBtn");
-  const qdBtn = document.getElementById("dayModalQdBtn");
-  if (qaBtn) qaBtn.style.display = "none";
-  if (qdBtn) qdBtn.style.display = "none";
-
   bd.style.display = "flex";
 }
 
@@ -729,7 +734,7 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = fal
 
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
-  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) closeModal(); });
+  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) guardedClose(); });
 
   const modal = document.createElement("div");
   modal.className = "modal slot-manage-modal";
@@ -741,7 +746,7 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = fal
     const backBtn = document.createElement("button");
     backBtn.className = "modal-back-btn";
     backBtn.textContent = "← Giorno";
-    backBtn.addEventListener("click", () => { closeModal(); openDayModal(dayIndex); });
+    backBtn.addEventListener("click", () => guardedClose(() => openDayModal(dayIndex)));
     head.appendChild(backBtn);
   }
 
@@ -750,10 +755,12 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = fal
   const date = new Date(currentWeekStart);
   date.setDate(date.getDate() + dayIndex);
   titleEl.textContent = `${DAYS[dayIndex]} ${formatDate(date)} · ${seg.label}`;
-  const closeBtn = document.createElement("div");
+  const closeBtn = document.createElement("button");
   closeBtn.className = "modal-close";
   closeBtn.textContent = "✕";
-  closeBtn.addEventListener("click", closeModal);
+  closeBtn.type = "button";
+  closeBtn.setAttribute("aria-label", "Chiudi");
+  closeBtn.addEventListener("click", () => guardedClose());
   head.appendChild(titleEl);
   head.appendChild(closeBtn);
   modal.appendChild(head);
@@ -765,7 +772,7 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = fal
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   activeModalEl = overlay;
-  _escKeyHandler = (e) => { if (e.key === "Escape") closeModal(); };
+  _escKeyHandler = (e) => { if (e.key === "Escape") guardedClose(); };
   document.addEventListener("keydown", _escKeyHandler);
 
   const localAssigned = {};
@@ -776,6 +783,24 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = fal
   });
 
   let openDropdownRole = null;
+
+  // Modifiche non salvate: chiudere chiede conferma (prima si perdevano senza avviso)
+  const snapshot = () => JSON.stringify(ROLES.map(r => [...localAssigned[r]].sort()));
+  const initialSnapshot = snapshot();
+  async function guardedClose(after) {
+    if (snapshot() !== initialSnapshot) {
+      const ok = await uiConfirm({
+        title: "Chiudere senza salvare?",
+        message: "Le modifiche a questo turno non sono state salvate e andranno perse.",
+        confirmText: "Chiudi senza salvare",
+        cancelText: "Continua a modificare",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    closeModal();
+    after?.();
+  }
 
   function getAssignedElsewhere() {
     const elsewhere = new Set();
@@ -849,11 +874,10 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = fal
         chipsWrap.innerHTML = `<span class="sm-none-text">—</span>`;
       } else {
         assignedIds.forEach(empId => {
-          const emp  = getEmployeeById(empId);
           const chip = document.createElement("span");
           chip.className = "sm-chip";
-          const name = emp ? emp.label.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ") : empId;
-          chip.innerHTML = `${name}<button class="sm-chip-remove" title="Rimuovi">×</button>`;
+          const name = employeeLabel(empId, { titleCase: true });
+          chip.innerHTML = `${uiEscape(name)}<button type="button" class="sm-chip-remove" aria-label="Togli ${uiEscape(name)} da ${uiEscape(role)}" title="Togli dal turno">×</button>`;
           chip.querySelector(".sm-chip-remove").addEventListener("click", () => {
             localAssigned[role].delete(String(empId));
             renderBody();
@@ -876,6 +900,8 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = fal
       const addBtn = document.createElement("button");
       addBtn.className = "sm-add-btn";
       addBtn.title = `Aggiungi a ${role}`;
+      addBtn.type = "button";
+      addBtn.setAttribute("aria-label", `Aggiungi un dipendente a ${role}`);
       addBtn.textContent = "+";
       addBtn.addEventListener("click", () => {
         openDropdownRole = openDropdownRole === role ? null : role;
@@ -966,13 +992,14 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = fal
     if (notInserted.length > 0) {
       const bar = document.createElement("div");
       bar.className = "sm-available-bar";
-      bar.innerHTML = `<span class="sm-available-label">Disponibili liberi</span>`;
-      notInserted.forEach((av, i) => {
-        if (i > 0) { const sep = document.createElement("span"); sep.className = "sm-available-sep"; sep.textContent = "·"; bar.appendChild(sep); }
+      bar.innerHTML = `<span class="sm-available-label">Disponibili liberi ${infoTip("Hanno dato disponibilità in questa fascia ma non sono ancora in turno. Clicca un nome: se manca un solo ruolo viene aggiunto lì, altrimenti scegli tu il ruolo.")}</span>`;
+      notInserted.forEach((av) => {
+        const name = employeeLabel(av.empId, { titleCase: true });
         const btn = document.createElement("button");
+        btn.type = "button";
         btn.className = "sm-available-quick-btn";
-        btn.title = `Aggiungi ${av.name} al turno`;
-        btn.innerHTML = `${av.name} <span class="sm-available-range">${av.range}</span>`;
+        btn.title = `Aggiungi ${name} al turno`;
+        btn.innerHTML = `${uiEscape(name)} <span class="sm-available-range">${uiEscape(av.range)}</span>`;
         btn.addEventListener("click", () => quickAddEmployee(String(av.empId)));
         bar.appendChild(btn);
       });
@@ -987,7 +1014,7 @@ function openSlotManageModal({ weekKey, dayIndex, seg, timeLabels, fromDay = fal
     const btnCancel = document.createElement("button");
     btnCancel.className = "btn btn-ghost";
     btnCancel.textContent = "Annulla";
-    btnCancel.addEventListener("click", closeModal);
+    btnCancel.addEventListener("click", () => guardedClose());
     const btnSave = document.createElement("button");
     btnSave.className = "btn primary";
     btnSave.textContent = "Salva turno";
@@ -1059,7 +1086,7 @@ function computeDayTrafficLight(weekKey, dayIndex) {
       const assigned = unionAssignedOverLabels(weekKey, dayIndex, role, shiftLabels).length;
       const covered = Math.min(assigned, req);
       totalCovered += covered;
-      if (covered < req) missing.push(`${role} ${covered}/${req}`);
+      if (covered < req) missing.push(`${role} ${shift === "morning" ? "mattina" : "pomeriggio"} ${covered}/${req}`);
     });
   }
 
@@ -1224,6 +1251,30 @@ async function initHome(){
   });
 }
 
+/**
+ * Giorno da proporre nelle finestre Aggiungi/Rimuovi turno.
+ * Oggi se cade nella settimana mostrata; altrimenti il primo giorno con fabbisogno ("need")
+ * o con turni assegnati ("shifts"); in mancanza, lunedì.
+ */
+function suggestedDayIndex(kind) {
+  const weekKey = weekKeyOf(currentWeekStart);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.round((today - currentWeekStart) / 86400000);
+  if (diff >= 0 && diff <= 6) return diff;
+  for (let d = 0; d < 7; d++) {
+    if (kind === "need") {
+      const sq = getWeekSquad(weekKey)?.[d] || {};
+      const total = ["morning", "evening"].reduce((acc, sh) =>
+        acc + ROLES.reduce((a, r) => a + Number(sq[sh]?.[r] || 0), 0), 0);
+      if (total > 0) return d;
+    } else if (Array.from(assignments.keys()).some(k => k.startsWith(`${weekKey}|${d}|`))) {
+      return d;
+    }
+  }
+  return 0;
+}
+
 /* ---------- INSERIMENTO RAPIDO ---------- */
 function initQuickInsert() {
   const backdrop = document.getElementById("qiModalBackdrop");
@@ -1299,7 +1350,7 @@ function initQuickInsert() {
     const preview  = window._lastAvailabilityPreview;
     const dayAvail = preview?.days?.find(d => d.day_index === dayIdx);
 
-    // "Già in turno" oggi: empId → range stringa "H1–H2"
+    // "Già in turno" quel giorno: empId → { ruolo → [ore] }, per mostrare ruolo e orario
     const alreadyMap = new Map();
     for (let h = 8; h < 24; h++) {
       for (const m of ["00","30"]) {
@@ -1307,18 +1358,19 @@ function initQuickInsert() {
         ROLES.forEach(r => {
           (assignments.get(keyOf(weekKey, dayIdx, r, tl)) || []).forEach(id => {
             const k = String(id);
-            if (!alreadyMap.has(k)) alreadyMap.set(k, []);
-            alreadyMap.get(k).push(h + (m === "30" ? 0.5 : 0));
+            if (!alreadyMap.has(k)) alreadyMap.set(k, {});
+            (alreadyMap.get(k)[r] ||= []).push(h + (m === "30" ? 0.5 : 0));
           });
         });
       }
     }
+    const fmtH = (x) => (x >= 24 ? "ch" : (x % 1 ? `${Math.floor(x)}:30` : String(x)));
     const alreadyRange = (k) => {
-      const slots = alreadyMap.get(k);
-      if (!slots) return "";
-      const minH = Math.floor(Math.min(...slots));
-      const maxH = Math.floor(Math.max(...slots)) + 1;
-      return ` · già in turno ${minH}–${maxH >= 24 ? "ch" : maxH}`;
+      const byRole = alreadyMap.get(k);
+      if (!byRole) return "";
+      const parts = Object.entries(byRole).map(([r, hs]) =>
+        `${r} ${fmtH(Math.min(...hs))}–${fmtH(Math.max(...hs) + 0.5)}`);
+      return ` · già in turno: ${parts.join(", ")}`;
     };
 
     // Gruppo 1: disponibili da CSV
@@ -1393,9 +1445,9 @@ function initQuickInsert() {
 
     el.innerHTML = `
       <div class="qi-emp-detail">
-        <span class="qi-emp-detail-item">📅 ${avRange ? `Disponibile ${avRange}` : "Nessuna disponibilità CSV"}</span>
+        <span class="qi-emp-detail-item"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>${avRange ? `Disponibile ${avRange}` : "Nessuna disponibilità CSV"}</span>
         <span class="qi-emp-detail-sep">·</span>
-        <span class="qi-emp-detail-item">⏱ ${Number(weekH) > 0 ? weekH + "h questa sett." : "Nessun turno questa sett."}</span>
+        <span class="qi-emp-detail-item"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${Number(weekH) > 0 ? weekH + "h questa sett." : "Nessun turno questa sett."}</span>
       </div>`;
   }
 
@@ -1510,13 +1562,9 @@ function initQuickInsert() {
 
   /* -------- OPEN / CLOSE -------- */
   function openQiModal() {
-    // Imposta giorno corrente
-    const today = new Date();
+    // Giorno proposto: oggi se è in questa settimana, altrimenti il primo giorno con fabbisogno
     const dayEl = document.getElementById("qiDay");
-    if (dayEl && currentWeekStart) {
-      const diff = Math.floor((today - currentWeekStart) / 86400000);
-      dayEl.value = (diff >= 0 && diff <= 6) ? String(diff) : "0";
-    }
+    if (dayEl && currentWeekStart) dayEl.value = String(suggestedDayIndex("need"));
 
     // Reset completo
     document.getElementById("qiRole").value = "Cassa";
@@ -1608,7 +1656,7 @@ function initQuickInsert() {
       renderCalendar();
       window.chatAiUpdateContext?.();
 
-      const empName   = (employees || []).find(e => String(e.id) === String(empId))?.label || String(empId);
+      const empName   = employeeLabel(empId);
       // fine turno = inizio dell'ultima mezz'ora + 30 minuti (es. ultima "15:30" -> "16:00")
       const shiftLbl  = _qiShift === "morning" ? "Mattina" : _qiShift === "evening" ? "Pomeriggio"
                         : `${timeLabels[0]}–${hoursToLabel(endHalf)}`;
@@ -1634,7 +1682,7 @@ function initQuickInsert() {
     } finally {
       // attivo solo se c'è di nuovo un dipendente scelto (dopo un successo il campo è azzerato)
       if (saveBtn) {
-        saveBtn.textContent = "✓ Aggiungi";
+        saveBtn.textContent = "Aggiungi turno";
         saveBtn.disabled = !document.getElementById("qiEmployee")?.value;
       }
     }
@@ -1728,10 +1776,10 @@ function initQuickRemove() {
     [...empSlots.entries()].forEach(([empId, info]) => {
       const emp = (employees || []).find(e => String(e.id) === empId);
       if (!emp) return;
-      const shifts = `${info.hasMorning ? "☀️" : ""}${info.hasEvening ? "🌙" : ""}`;
+      const shifts = [info.hasMorning && "mattina", info.hasEvening && "pomeriggio"].filter(Boolean).join(" e ");
       const opt = document.createElement("option");
       opt.value = empId;
-      opt.textContent = `${emp.label}  ${shifts}  — ${[...info.roles].join(", ")}`;
+      opt.textContent = `${emp.label} — ${[...info.roles].join(", ")} (${shifts})`;
       sel.appendChild(opt);
     });
 
@@ -1759,8 +1807,8 @@ function initQuickRemove() {
     }
 
     const parts = [];
-    if (mRoles.size) parts.push(`<span class="qi-emp-detail-item">☀️ Mattina: ${[...mRoles].join(", ")}</span>`);
-    if (eRoles.size) parts.push(`<span class="qi-emp-detail-item">🌙 Pomeriggio: ${[...eRoles].join(", ")}</span>`);
+    if (mRoles.size) parts.push(`<span class="qi-emp-detail-item"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Mattina: ${[...mRoles].join(", ")}</span>`);
+    if (eRoles.size) parts.push(`<span class="qi-emp-detail-item"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>Pomeriggio: ${[...eRoles].join(", ")}</span>`);
     el.innerHTML = `<div class="qi-emp-detail">${parts.join('<span class="qi-emp-detail-sep">·</span>')}</div>`;
   }
 
@@ -1833,12 +1881,9 @@ function initQuickRemove() {
 
   /* -------- OPEN / CLOSE -------- */
   function openRmModal() {
-    const today = new Date();
+    // Giorno proposto: oggi se è in questa settimana, altrimenti il primo giorno con turni
     const dayEl = document.getElementById("rmDay");
-    if (dayEl && currentWeekStart) {
-      const diff = Math.floor((today - currentWeekStart) / 86400000);
-      dayEl.value = (diff >= 0 && diff <= 6) ? String(diff) : "0";
-    }
+    if (dayEl && currentWeekStart) dayEl.value = String(suggestedDayIndex("shifts"));
     document.getElementById("rmEmployee").value = "";
     document.getElementById("rmEmpInfo").innerHTML = "";
     _rmResetStep3();
@@ -1910,7 +1955,7 @@ function initQuickRemove() {
       renderCalendar();
       window.chatAiUpdateContext?.();
 
-      const empName = (employees || []).find(e => String(e.id) === String(empId))?.label || String(empId);
+      const empName = employeeLabel(empId);
       showToast(`${empName} rimosso — ${DAYS[dayIdx]} ${shiftLbl}`);
 
       // Reset step 2+3, mantieni giorno per rimuovere altri
@@ -1924,7 +1969,7 @@ function initQuickRemove() {
       // una scrittura per ruolo: se una fallisce a metà, lo schermo torna uguale al DB
       await resyncWeekFromDb(weekKey);
     } finally {
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "✕ Rimuovi"; }
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Rimuovi turno"; }
     }
   }
 

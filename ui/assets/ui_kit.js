@@ -291,3 +291,20 @@ function infoTip(text, label = "Informazioni") {
   window.addEventListener("resize", () => { if (owner) hide(); });
   window.uiHideTip = hide;
 })();
+
+/* ---------- Esc chiude la finestra aperta ----------
+   Vale per le finestre .modal-backdrop (dettaglio giorno, aggiungi/rimuovi turno, template,
+   preset, ...): si "preme" la loro X, così restano valide le loro regole di chiusura
+   (es. conferma se ci sono modifiche non salvate). Le finestre di conferma dell'app
+   (uiConfirm/uiAlert) gestiscono Esc da sole e hanno la precedenza. */
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || e.defaultPrevented) return;
+  const open = [...document.querySelectorAll(".modal-backdrop")]
+    .filter(el => !el.classList.contains("hidden") && getComputedStyle(el).display !== "none");
+  const top = open[open.length - 1];
+  const closeBtn = top?.querySelector(".modal-close");
+  if (closeBtn) {
+    e.preventDefault();
+    closeBtn.click();
+  }
+});

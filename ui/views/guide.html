@@ -188,7 +188,9 @@
         <div class="guide-card">
           <div class="guide-card-title">Eliminare un dipendente</div>
           <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
-            Nella riga del dipendente clicca <strong>Elimina</strong> (rosso). Viene chiesta conferma prima della cancellazione definitiva.
+            Nella riga del dipendente clicca <strong>Elimina</strong> (rosso). La conferma ti dice cosa succede: i suoi turni
+            <strong>da questa settimana in avanti</strong> vengono tolti (quelle fasce restano da coprire), mentre nelle
+            settimane passate i turni restano come storico, con «Ex dipendente» al posto del nome. L'eliminazione non si può annullare.
           </p>
           <div class="guide-callout warning" style="margin-top:10px">
             <span class="guide-callout-icon">⚠️</span>
@@ -305,8 +307,10 @@
         <div class="guide-card">
           <div class="guide-card-title">Tipo giornata <span class="gtag gtag-orange">Leggera/Normale/Pesante</span></div>
           <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
-            In Home, nella barra "Riepilogo giornate", puoi assegnare a ogni giorno un tipo (Leggera, Normale, Pesante).
-            Questo è solo un riferimento visivo — non modifica automaticamente il fabbisogno squadre.
+            Nella pagina Squadre, sezione <strong>Tipi giornata</strong>, scegli per ogni giorno Leggera, Normale o Pesante:
+            i valori di quel tipo vengono copiati nella tabella del fabbisogno per quel giorno. In Home la barra
+            «Tipologia giornata» mostra il tipo scelto. Con <strong>Modifica preset</strong> cambi i valori dei tre tipi:
+            puoi passare da una scheda all'altra senza perdere le modifiche e salvarle tutte insieme con <strong>Salva preset</strong>.
           </p>
         </div>
       </div>
@@ -389,27 +393,40 @@
         <div class="guide-card">
           <div class="guide-card-title">Modifica cella <span class="gtag gtag-blue">Clic sulla cella</span></div>
           <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
-            Clicca su qualsiasi cella del calendario per aprire il <strong>modal gestione turno</strong>.
-            Puoi aggiungere o rimuovere dipendenti da ogni ruolo in quella fascia e salvare immediatamente.
+            Clicca su qualsiasi cella del calendario per aprire la <strong>gestione turno</strong> di quella fascia.
+            Con <strong>+</strong> aggiungi una persona a un ruolo, con la <strong>×</strong> sulla sua etichetta la togli.
+            In basso, <strong>Disponibili liberi</strong> elenca chi ha dato disponibilità ma non è ancora in turno: un clic
+            e viene aggiunto al ruolo scoperto. Le modifiche valgono solo dopo <strong>Salva turno</strong>; se chiudi prima,
+            l'app chiede conferma.
+          </p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title">Vedi disponibilità <span class="gtag gtag-blue">Pannello a sinistra</span></div>
+          <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+            Sotto la lista dei file, i pulsanti dei giorni aprono chi ha dato disponibilità nel CSV importato:
+            in alto chi <strong>non è ancora in turno</strong> (le persone a cui pensare per coprire i buchi), sotto chi
+            è già in turno con il ruolo svolto. La finestra si sposta trascinandola dal titolo.
           </p>
         </div>
       </div>
 
       <div class="guide-card">
-        <div class="guide-card-title">Inserimento rapido e rimozione rapida</div>
+        <div class="guide-card-title">Aggiungi e rimuovi turno</div>
         <div class="guide-grid2">
           <div>
-            <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px">➕ Inserimento rapido</div>
+            <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px">Aggiungi turno</div>
             <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
-              Usa il pulsante <strong>"+ Inserimento rapido"</strong> per aggiungere un dipendente a un turno in 4 passi guidati:
-              scegli giorno → ruolo → dipendente → fascia oraria. Il sistema mostra automaticamente chi è disponibile secondo il CSV e preseleziona la fascia quando possibile.
+              Usa il pulsante <strong>«Aggiungi turno»</strong> sopra il calendario per aggiungere un dipendente in 4 passi:
+              giorno → ruolo → dipendente → fascia oraria. Il giorno proposto è oggi, oppure il primo giorno con fabbisogno.
+              In cima alla lista ci sono i disponibili secondo il CSV, ordinati per skill; accanto al nome vedi se è già in turno
+              e in quale ruolo. La fascia viene preselezionata quando la disponibilità lo permette.
             </p>
           </div>
           <div>
-            <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px">✕ Rimozione rapida</div>
+            <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px">Rimuovi turno</div>
             <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
-              Usa il pulsante <strong>"✕ Rimozione rapida"</strong> per togliere un dipendente da un turno.
-              Il dropdown mostra solo chi è effettivamente in turno quel giorno, con indicazione delle fasce coperte.
+              Usa il pulsante <strong>«Rimuovi turno»</strong> per togliere un dipendente da una fascia (mattina, pomeriggio,
+              tutto il giorno o un orario a scelta). L'elenco mostra solo chi è in turno quel giorno, con ruoli e fasce coperte.
             </p>
           </div>
         </div>

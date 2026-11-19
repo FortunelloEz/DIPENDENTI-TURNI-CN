@@ -14,7 +14,10 @@ let _dayTypesCache = null;
 // =========================
 
 const DAY_TYPE_NAMES = ["Leggera", "Normale", "Pesante"];
-const DAY_TYPE_ICONS = { "Leggera": "🟢", "Normale": "🟡", "Pesante": "🔴" };
+/** Pallino colorato del tipo giornata (stile in ui_kit.css: .dt-dot--leggera/normale/pesante). */
+function dayTypeDot(tn) {
+  return tn ? `<span class="dt-dot dt-dot--${String(tn).toLowerCase()}" aria-hidden="true"></span>` : "";
+}
 
 function dayTypesDefault() {
   // Per ogni tipo: { morning: {role: qty}, evening: {role: qty} }
@@ -51,10 +54,6 @@ async function dayTypesLoadFromDb() {
   }
 }
 
-function dayTypesSave(data) {
-  _dayTypesCache = data;
-  return dayTypesSaveToDb(data);
-}
 function dayTypesLoad() {
   return _dayTypesCache || dayTypesDefault();
 }
@@ -103,13 +102,12 @@ async function renderDayTypesSection(weekKey) {
       const currentType = currentAssignments[dayIndex] || currentAssignments[String(dayIndex)] || null;
 
       const btns = DAY_TYPE_NAMES.map(tn => {
-        const icon = DAY_TYPE_ICONS[tn] || "";
         const activeClass = currentType === tn ? " dt-preset-btn--active" : "";
-        return `<button class="btn btn-small dt-preset-btn${activeClass}" data-day="${dayIndex}" data-type="${tn}">${icon} ${tn}</button>`;
+        return `<button type="button" class="btn btn-small dt-preset-btn${activeClass}" data-day="${dayIndex}" data-type="${tn}" aria-pressed="${currentType === tn}">${dayTypeDot(tn)}${tn}</button>`;
       }).join("");
 
       const badge = currentType
-        ? `<span class="dt-current-badge">${DAY_TYPE_ICONS[currentType]} ${currentType}</span>`
+        ? `<span class="dt-current-badge">${dayTypeDot(currentType)}${currentType}</span>`
         : `<span class="dt-current-badge dt-current-badge--empty">—</span>`;
 
       return `
@@ -135,19 +133,37 @@ async function renderDayTypesSection(weekKey) {
   });
 }
 
-// Modal modifica preset
+// Modal modifica preset — si lavora su una BOZZA delle tre schede:
+// cambiare scheda non perde nulla, "Salva preset" salva tutto insieme,
+// chiudere con modifiche non salvate chiede conferma.
 let _dayTypeEditCurrentType = DAY_TYPE_NAMES[0];
+let _dtDraft = null;
+let _dtDirty = false;
 
 function openDayTypeEditModal() {
   const m = document.getElementById("dayTypeEditModal");
   if (!m) return;
+  _dtDraft = deepClone(dayTypesLoad());
+  _dtDirty = false;
   _dayTypeEditCurrentType = DAY_TYPE_NAMES[0];
   renderDayTypeEditTabs();
   renderDayTypeEditContent();
   m.classList.remove("hidden");
 }
 
-function closeDayTypeEditModal() {
+async function closeDayTypeEditModal() {
+  if (_dtDirty) {
+    const ok = await uiConfirm({
+      title: "Uscire senza salvare?",
+      message: "Le modifiche ai preset non salvate andranno perse.",
+      confirmText: "Esci senza salvare",
+      cancelText: "Continua a modificare",
+      danger: true,
+    });
+    if (!ok) return;
+  }
+  _dtDraft = null;
+  _dtDirty = false;
   document.getElementById("dayTypeEditModal")?.classList.add("hidden");
 }
 
@@ -155,9 +171,9 @@ function renderDayTypeEditTabs() {
   const tabs = document.getElementById("dayTypeEditTabs");
   if (!tabs) return;
   tabs.innerHTML = DAY_TYPE_NAMES.map(tn => {
-    const active = tn === _dayTypeEditCurrentType ? "active" : "";
-    const icon = DAY_TYPE_ICONS[tn] || "";
-    return `<button class="dt-tab ${active}" data-type="${tn}">${icon} ${tn}</button>`;
+    const active = tn === _dayTypeEditCurrentType ? " active" : "";
+    return `<button type="button" class="dt-tab${active}" data-type="${tn}" aria-pressed="${active ? "true" : "false"}">
+      <span class="dt-dot dt-dot--${tn.toLowerCase()}" aria-hidden="true"></span>${tn}</button>`;
   }).join("");
 
   tabs.querySelectorAll(".dt-tab").forEach(btn => {
@@ -171,76 +187,59 @@ function renderDayTypeEditTabs() {
 
 function renderDayTypeEditContent() {
   const content = document.getElementById("dayTypeEditContent");
-  if (!content) return;
-
-  const types = dayTypesLoad();
-  const preset = types[_dayTypeEditCurrentType];
+  if (!content || !_dtDraft) return;
+  const preset = _dtDraft[_dayTypeEditCurrentType];
 
   const bands = [
     { key: "morning", label: "Mattina (08–16)" },
     { key: "evening", label: "Pomeriggio (16–24)" },
   ];
 
-  const rows = bands.map(({ key, label }) => {
-    const cells = ROLES.map(role => {
-      const v = preset[key][role] ?? 0;
-      return `
+  content.innerHTML = bands.map(({ key, label }) => `
+    <div class="dt-edit-band">
+      <div class="dt-edit-band-label">${label}</div>
+      <div class="dt-edit-cells">${ROLES.map(role => `
         <div class="dt-edit-cell">
           <div class="dt-edit-role">${role}</div>
           <div class="dt-edit-controls">
-            <button class="dt-stepper" data-band="${key}" data-role="${role}" data-delta="-1">−</button>
-            <span class="dt-edit-val" id="dte_${key}_${role}">${v}</span>
-            <button class="dt-stepper" data-band="${key}" data-role="${role}" data-delta="1">+</button>
+            <button type="button" class="dt-stepper" data-band="${key}" data-role="${role}" data-delta="-1" aria-label="Togli una persona: ${role}, ${label}">−</button>
+            <span class="dt-edit-val" id="dte_${key}_${role}">${preset[key][role] ?? 0}</span>
+            <button type="button" class="dt-stepper" data-band="${key}" data-role="${role}" data-delta="1" aria-label="Aggiungi una persona: ${role}, ${label}">+</button>
           </div>
-        </div>
-      `;
-    }).join("");
-    return `
-      <div class="dt-edit-band">
-        <div class="dt-edit-band-label">${label}</div>
-        <div class="dt-edit-cells">${cells}</div>
+        </div>`).join("")}
       </div>
-    `;
-  }).join("");
+    </div>`).join("");
 
-  content.innerHTML = rows;
-
-  // stepper +/-
   content.querySelectorAll(".dt-stepper").forEach(btn => {
     btn.addEventListener("click", () => {
-      const band = btn.dataset.band;
-      const role = btn.dataset.role;
-      const delta = Number(btn.dataset.delta);
-      const el = document.getElementById(`dte_${band}_${role}`);
-      if (!el) return;
-      const newVal = Math.max(0, Number(el.textContent) + delta);
-      el.textContent = newVal;
+      const { band, role } = btn.dataset;
+      const next = Math.max(0, Number(preset[band][role] || 0) + Number(btn.dataset.delta));
+      preset[band][role] = next;
+      document.getElementById(`dte_${band}_${role}`).textContent = next;
+      _dtDirty = true;
     });
   });
 }
 
-function saveDayTypeEditModal() {
-  const types = dayTypesLoad();
-  const preset = types[_dayTypeEditCurrentType];
-
-  ["morning","evening"].forEach(band => {
-    ROLES.forEach(role => {
-      const el = document.getElementById(`dte_${band}_${role}`);
-      if (el) preset[band][role] = Math.max(0, Number(el.textContent) || 0);
-    });
-  });
-
-  dayTypesSave(types)
-    .then(() => {
-      // ❌ NON chiudere il modal
-      // closeDayTypeEditModal();
-
-      setSquadsStatus(`Preset "${_dayTypeEditCurrentType}" salvato`, "chip-ok");
-    })
-    .catch((e) => {
-      console.error(e);
-      setSquadsStatus("Errore salvataggio preset", "chip-bad");
-    });
+async function saveDayTypeEditModal() {
+  if (!_dtDraft) return;
+  const btn = document.getElementById("dayTypeEditSave");
+  btn?.classList.add("is-busy");
+  if (btn) btn.disabled = true;
+  try {
+    await dayTypesSaveToDb(_dtDraft);
+    // la memoria della pagina si aggiorna solo dopo il salvataggio riuscito
+    _dayTypesCache = deepClone(_dtDraft);
+    _dtDirty = false;
+    await closeDayTypeEditModal();
+    setSquadsStatus("Preset salvati", "chip-ok");
+    showToast("Preset Leggera, Normale e Pesante salvati");
+  } catch (e) {
+    showToast(e.message, "err");
+  } finally {
+    btn?.classList.remove("is-busy");
+    if (btn) btn.disabled = false;
+  }
 }
 
 function bindDayTypeEditModal() {
@@ -430,7 +429,7 @@ function openDeleteTplModal(name){
   if (!m || !t) return;
 
   m.dataset.tplName = name;
-  t.textContent = `Eliminare il template "${name}"?`;
+  t.textContent = `Il template «${name}» viene eliminato. La tabella del fabbisogno attuale non cambia.`;
   m.classList.remove("hidden");
 }
 

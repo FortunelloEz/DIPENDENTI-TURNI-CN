@@ -1,194 +1,174 @@
 // ui/assets/availability_viewer.js
-// Mostra disponibilità per giorno come lista: "NOME : 18–24" (basata su window._lastAvailabilityPreview)
+// "Vedi disponibilità": per un giorno, chi ha dato disponibilità nel CSV importato
+// e chi di loro è già in turno (dati: window._lastAvailabilityPreview + calendario).
 
 const AV_DAYS = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+const AV_DAYS_FULL = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
 
-function avEscape(s){
-  return String(s ?? "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
-
-function avNormName(s){
+function avNormName(s) {
   return String(s ?? "").trim().toUpperCase().replace(/\s+/g, " ");
 }
-function avCloseOverlay(){
+
+/** "2026-05-30" -> "30/05" (senza passare da Date/UTC) */
+function avDayMonth(iso) {
+  const [, m, d] = String(iso || "").split("-");
+  return d && m ? `${d}/${m}` : "";
+}
+
+let _avCleanup = null;
+function avCloseOverlay() {
+  _avCleanup?.();
+  _avCleanup = null;
   document.getElementById("avOverlay")?.remove();
 }
 
-function avOpenDay(dayIndex){
+function avOpenDay(dayIndex) {
   const preview = window._lastAvailabilityPreview;
-  if (!preview || !Array.isArray(preview.days) || !preview.days.length){
+  if (!preview || !Array.isArray(preview.days) || !preview.days.length) {
     uiAlert({ title: "Nessuna disponibilità", message: "Per questa settimana non ci sono disponibilità importate. Usa «Importa CSV» in alto." });
     return;
   }
-
   const day = preview.days.find(d => Number(d.day_index) === Number(dayIndex));
-  if (!day){
+  if (!day) {
     uiAlert({ title: "Nessuna disponibilità", message: "Il CSV importato non contiene questo giorno." });
     return;
   }
+  avCloseOverlay();
 
   const items = Array.isArray(day.items) ? day.items : [];
-  // ===== calcolo "chi è stato inserito in calendario" per quel giorno =====
-  const wk =
-    (typeof window.currentWeekKey !== "undefined" && window.currentWeekKey)
-      ? window.currentWeekKey
-      : (typeof weekKeyOf === "function" ? weekKeyOf(currentWeekStart) : null);
+  const wk = weekKeyOf(currentWeekStart);
 
-  const scheduledIds = new Set();
+  // nome (normalizzato) -> dipendente
+  const byName = new Map();
+  (employees || []).forEach(e => { if (e?.label) byName.set(avNormName(e.label), e); });
 
-  // mappa "NOME" -> employeeId (match per label)
-  const nameToId = new Map();
-  if (Array.isArray(employees)) {
-    employees.forEach(e => {
-      const k = avNormName(e?.label);
-      if (k) nameToId.set(k, e.id);
-    });
-  }
-
-  // unione di TUTTE le assegnazioni del giorno, su tutti i ruoli e tutte le mezz'ore
-  if (wk && Array.isArray(HALF_HOURS) && Array.isArray(ROLES) && typeof getAssignedIdsFor === "function") {
-    HALF_HOURS.forEach(t => {
-      ROLES.forEach(role => {
-        const ids = getAssignedIdsFor(wk, dayIndex, role, t) || [];
-        ids.forEach(id => scheduledIds.add(String(id)));
+  // ruoli svolti quel giorno da ogni dipendente (tutte le mezz'ore, tutti i ruoli)
+  const rolesById = new Map();
+  HALF_HOURS.forEach(t => {
+    ROLES.forEach(role => {
+      (getAssignedIdsFor(wk, dayIndex, role, t) || []).forEach(id => {
+        const k = String(id);
+        if (!rolesById.has(k)) rolesById.set(k, new Set());
+        rolesById.get(k).add(role);
       });
     });
-  }
+  });
 
-  function isNotScheduled(itName){
-    const id = nameToId.get(avNormName(itName));
-    if (id === undefined || id === null) return false; // se non matcho il nome, non lo marco rosa
-    return !scheduledIds.has(String(id));
-  }
+  const rows = items.map(it => {
+    const emp = byName.get(avNormName(it.name));
+    const roles = emp ? [...(rolesById.get(String(emp.id)) || [])] : [];
+    return { name: emp?.label || it.name, range: it.range, roles, known: !!emp };
+  }).sort((a, b) => a.name.localeCompare(b.name, "it"));
+
+  const free = rows.filter(r => r.roles.length === 0);
+  const busy = rows.filter(r => r.roles.length > 0);
+
+  const rowHtml = (r) => `
+    <div class="av-row${r.roles.length ? " is-busy" : ""}">
+      <div class="av-name">${uiEscape(r.name)}</div>
+      ${r.roles.length
+        ? `<div class="av-roles">${r.roles.map(role => `<span class="sm-role-badge sm-badge-${roleCss(role)}" title="${uiEscape(role)}">${uiEscape(ROLE_SHORT[role] || role)}</span>`).join("")}</div>`
+        : ""}
+      <div class="av-range" title="Disponibile dalle alle">${uiEscape(r.range)}</div>
+    </div>`;
+
   const overlay = document.createElement("div");
   overlay.id = "avOverlay";
   overlay.className = "av-overlay";
-
-  const modal = document.createElement("div");
-  modal.className = "av-modal";
-
-  modal.innerHTML = `
-    <div class="av-head">
-      <div class="av-title">Disponibilità — ${avEscape(AV_DAYS[dayIndex])} (${avEscape(day.iso_day)})</div>
-      <button class="av-x" id="avCloseBtn">✕</button>
-    </div>
-
-    <div class="av-body-list">
-      ${
-        items.length
-          ? items.map(it => {
-              const missing = isNotScheduled(it.name);
-              return `
-                <div class="av-row ${missing ? "av-missing" : ""}">
-                  <div class="av-name">
-                    ${avEscape(it.name)}
-                    ${missing ? `<span class="av-badge-missing">non inserito</span>` : ``}
-                  </div>
-                  <div class="av-range">${avEscape(it.range)}</div>
-                </div>
-              `;
-            }).join("")
-          : `<div class="av-empty">Nessuno</div>`
-      }
-    </div>
-  `;
-
-  overlay.appendChild(modal);
+  overlay.innerHTML = `
+    <div class="av-modal" role="dialog" aria-modal="true" aria-labelledby="avTitle">
+      <div class="av-head">
+        <div>
+          <div class="av-title" id="avTitle">Disponibilità · ${uiEscape(AV_DAYS_FULL[dayIndex])} ${uiEscape(avDayMonth(day.iso_day))}</div>
+          <div class="av-sub">${rows.length} ${rows.length === 1 ? "persona disponibile" : "persone disponibili"} nel CSV · ${free.length} non ancora in turno</div>
+        </div>
+        <button type="button" class="modal-close" id="avCloseBtn" aria-label="Chiudi">✕</button>
+      </div>
+      <div class="av-body">
+        ${rows.length === 0 ? `<div class="av-empty">Nessuno ha dato disponibilità per questo giorno.</div>` : ""}
+        ${free.length ? `
+          <div class="av-group-title">Non ancora in turno
+            ${infoTip("Hanno dato disponibilità ma non sono in nessun turno di questo giorno: sono le persone a cui pensare per coprire i buchi.")}
+          </div>
+          ${free.map(rowHtml).join("")}` : ""}
+        ${busy.length ? `
+          <div class="av-group-title">In turno <span class="av-group-hint">con il ruolo svolto</span></div>
+          ${busy.map(rowHtml).join("")}` : ""}
+      </div>
+    </div>`;
   document.body.appendChild(overlay);
-  // ===== draggable modal =====
-  makeAvDraggable(modal, modal.querySelector(".av-head"));
-  document.getElementById("avCloseBtn")?.addEventListener("click", avCloseOverlay);
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) avCloseOverlay();
-  });
+
+  const modal = overlay.querySelector(".av-modal");
+  const stopDrag = makeAvDraggable(modal, overlay.querySelector(".av-head"));
+  const onKey = (e) => { if (e.key === "Escape") avCloseOverlay(); };
+  document.addEventListener("keydown", onKey);
+  _avCleanup = () => { stopDrag(); document.removeEventListener("keydown", onKey); };
+
+  overlay.querySelector("#avCloseBtn").addEventListener("click", avCloseOverlay);
+  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) avCloseOverlay(); });
+  overlay.querySelector("#avCloseBtn").focus();
 }
 
-function avRenderButtons(){
+function avRenderButtons() {
   const host = document.getElementById("availabilityActions");
-  if (!host) return;
-
-  // evita doppio render
-  if (host.dataset.built === "1") return;
+  if (!host || host.dataset.built === "1") return;
   host.dataset.built = "1";
-
   host.className = "av-csv-section";
   host.innerHTML = `
-    <div class="av-csv-title">👁 Vedi disponibilità</div>
-    <div class="av-csv-days" id="avBtns"></div>
-  `;
-
+    <div class="av-csv-title">Vedi disponibilità
+      ${infoTip("Per ogni giorno: chi ha dato disponibilità nel CSV importato e chi di loro è già in turno.")}
+    </div>
+    <div class="av-csv-days" id="avBtns"></div>`;
   const btns = host.querySelector("#avBtns");
   AV_DAYS.forEach((d, i) => {
     const b = document.createElement("button");
+    b.type = "button";
     b.className = "av-day-pill";
     b.textContent = d;
-    b.title = `Disponibilità ${d}`;
+    b.title = `Disponibilità di ${AV_DAYS_FULL[i].toLowerCase()}`;
     b.addEventListener("click", () => avOpenDay(i));
     btns.appendChild(b);
   });
 }
-function makeAvDraggable(modal, handle){
-  if (!modal || !handle) return;
 
-  modal.style.position = "absolute";
+/**
+ * Finestra trascinabile dall'intestazione. Restituisce la funzione che rimuove i listener
+ * (prima venivano aggiunti a window a ogni apertura e non tolti mai).
+ */
+function makeAvDraggable(modal, handle) {
+  if (!modal || !handle) return () => {};
+  let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
 
-  // centra iniziale
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const r = modal.getBoundingClientRect();
-  modal.style.left = `${Math.max(10, (vw - r.width) / 2)}px`;
-  modal.style.top  = `${Math.max(10, (vh - r.height) / 2)}px`;
-
-  let dragging = false;
-  let startX = 0, startY = 0;
-  let startLeft = 0, startTop = 0;
-
-  handle.style.cursor = "move";
-  handle.style.userSelect = "none";
-  let isResizing = false;
-
-  // se l'utente sta ridimensionando (drag del resize handle), non trascinare
-  modal.addEventListener("mousedown", (e) => {
-    const rr = modal.getBoundingClientRect();
-    const nearRight = (rr.right - e.clientX) < 18;
-    const nearBottom = (rr.bottom - e.clientY) < 18;
-    isResizing = nearRight && nearBottom; // angolo resize
-  });
-
-  window.addEventListener("mouseup", () => { isResizing = false; });
-  handle.addEventListener("mousedown", (e) => {
-    if (isResizing) return;
-    if (e.target && e.target.closest && e.target.closest(".av-x")) return;
-
+  const onDown = (e) => {
+    if (e.target.closest("button")) return;
+    const r = modal.getBoundingClientRect();
+    modal.style.position = "fixed";
+    modal.style.margin = "0";
+    modal.style.left = `${r.left}px`;
+    modal.style.top = `${r.top}px`;
     dragging = true;
-    const rr = modal.getBoundingClientRect();
-    startX = e.clientX;
-    startY = e.clientY;
-    startLeft = rr.left;
-    startTop = rr.top;
+    startX = e.clientX; startY = e.clientY; startLeft = r.left; startTop = r.top;
     e.preventDefault();
-  });
-
-  window.addEventListener("mousemove", (e) => {
+  };
+  const onMove = (e) => {
     if (!dragging) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
+    const r = modal.getBoundingClientRect();
+    const left = Math.min(window.innerWidth - r.width - 10, Math.max(10, startLeft + e.clientX - startX));
+    const top = Math.min(window.innerHeight - r.height - 10, Math.max(10, startTop + e.clientY - startY));
+    modal.style.left = `${left}px`;
+    modal.style.top = `${top}px`;
+  };
+  const onUp = () => { dragging = false; };
 
-    const rr = modal.getBoundingClientRect();
-    const newLeft = Math.min(window.innerWidth - rr.width - 10, Math.max(10, startLeft + dx));
-    const newTop  = Math.min(window.innerHeight - rr.height - 10, Math.max(10, startTop + dy));
-
-    modal.style.left = `${newLeft}px`;
-    modal.style.top  = `${newTop}px`;
-  });
-
-  window.addEventListener("mouseup", () => { dragging = false; });
+  handle.addEventListener("mousedown", onDown);
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onUp);
+  return () => {
+    window.removeEventListener("mousemove", onMove);
+    window.removeEventListener("mouseup", onUp);
+  };
 }
-window.bindAvailabilityViewer = function bindAvailabilityViewer(){
+
+window.bindAvailabilityViewer = function bindAvailabilityViewer() {
   avRenderButtons();
 };

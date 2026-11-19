@@ -38,7 +38,7 @@
     <div class="modal" style="max-width:760px">
         <div class="modal-head">
             <div class="modal-title" id="empModalTitle">Dipendente</div>
-            <button class="modal-close" id="empModalClose">✕</button>
+            <button type="button" class="modal-close" id="empModalClose" aria-label="Chiudi">✕</button>
         </div>
 
         <div class="modal-body">
@@ -154,36 +154,13 @@
     </div>
 </div>
 
-<!-- MODAL: Conferma eliminazione dipendente -->
-<div class="modal-backdrop hidden" id="empDeleteModal">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="empDeleteTitle">
-
-        <div class="modal-head">
-            <div class="modal-title" id="empDeleteTitle">Elimina dipendente</div>
-            <button class="modal-close" id="empDeleteClose">✕</button>
-        </div>
-
-        <div class="modal-body">
-            <div class="modal-hint" id="empDeleteText">
-                Eliminare il dipendente?
-            </div>
-        </div>
-
-        <div class="modal-actions">
-            <button class="btn btn-ghost" id="empDeleteCancel">Annulla</button>
-            <button class="btn btn-danger" id="empDeleteConfirm">Elimina</button>
-        </div>
-
-    </div>
-</div>
-
 <!-- MODAL: Aggiornamento massivo skill -->
 <div class="modal-backdrop hidden" id="empBulkModal">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="empBulkTitle">
 
         <div class="modal-head">
             <div class="modal-title" id="empBulkTitle">Aggiornamento massivo skill</div>
-            <button class="modal-close" id="empBulkClose">✕</button>
+            <button type="button" class="modal-close" id="empBulkClose" aria-label="Chiudi">✕</button>
         </div>
 
         <div class="modal-body">

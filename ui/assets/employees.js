@@ -296,11 +296,35 @@
       E.inpWeeklyHours.value = (emp?.weekly_hours_target != null) ? String(emp.weekly_hours_target) : "";
     }
     showModalBanner(E, "", "");
+    // stato iniziale del modulo: serve a capire se ci sono modifiche non salvate alla chiusura
+    E._formSnap = empFormSnapshot(E);
+    setTimeout(() => E.inpName?.focus(), 50);
+  }
 
+  function empFormSnapshot(E) {
+    return [...E.backdrop.querySelectorAll("input, select")]
+      .map(el => (el.type === "checkbox" ? el.checked : el.value))
+      .join("|");
+  }
+
+  /** Chiusura da X, Annulla, clic fuori o Esc: se ci sono modifiche non salvate si chiede conferma. */
+  async function requestCloseEmpModal(E) {
+    if (E._formSnap !== undefined && empFormSnapshot(E) !== E._formSnap) {
+      const ok = await uiConfirm({
+        title: "Chiudere senza salvare?",
+        message: "Le modifiche alla scheda del dipendente non sono state salvate e andranno perse.",
+        confirmText: "Chiudi senza salvare",
+        cancelText: "Continua a modificare",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    closeEmpModal(E);
   }
 
   function closeEmpModal(E) {
     E.backdrop.style.display = "none";
+    E._formSnap = undefined;
     _editingId = null;
   }
 
@@ -595,9 +619,9 @@
       E.empSearch.addEventListener("input", () => renderFiltered(E));
     }
 
-    E.btnClose.onclick = () => closeEmpModal(E);
-    E.btnCancel.onclick = () => closeEmpModal(E);
-    E.backdrop.onmousedown = (e) => { if (e.target === E.backdrop) closeEmpModal(E); };
+    E.btnClose.onclick = () => requestCloseEmpModal(E);
+    E.btnCancel.onclick = () => requestCloseEmpModal(E);
+    E.backdrop.onmousedown = (e) => { if (e.target === E.backdrop) requestCloseEmpModal(E); };
     E.btnSave.onclick = async () => { await onSave(E); };
 
     renderSkillsGrid(E, {});
@@ -617,32 +641,37 @@
       );
     }
   }
-  function openDeleteModal(E, id, name) {
-    const modal = document.getElementById("empDeleteModal");
-    const text = document.getElementById("empDeleteText");
-    const confirmBtn = document.getElementById("empDeleteConfirm");
+  async function openDeleteModal(E, id, name) {
+    // conseguenze reali, lette dal DB: quanti turni futuri vengono liberati e se c'è storico
+    const usage = await apiCall("employee_usage", Number(id)) || {};
+    const fut = Number(usage.future_slots || 0);
+    const lines = [`«${name}» viene tolto dall'anagrafica.`];
+    if (fut > 0) {
+      const weeks = Number(usage.future_weeks || 0);
+      lines.push(`Ha turni in ${weeks === 1 ? "1 settimana" : `${weeks} settimane`} da questa in avanti (${(fut / 2).toLocaleString("it-IT")} ore): vengono tolti e quelle fasce restano da coprire.`);
+    }
+    if (Number(usage.past_weeks || 0) > 0) {
+      lines.push("Nelle settimane passate i suoi turni restano come storico, con «Ex dipendente» al posto del nome.");
+    }
+    lines.push("L'operazione non si può annullare.");
 
-    text.textContent = `Eliminare '${name}'?`;
-    modal.classList.remove("hidden");
+    const ok = await uiConfirm({
+      title: "Eliminare il dipendente?",
+      message: lines.join("\n"),
+      confirmText: "Elimina dipendente",
+      danger: true,
+    });
+    if (!ok) return;
 
-    const close = () => {
-      modal.classList.add("hidden");
-      confirmBtn.onclick = null;
-    };
-
-    document.getElementById("empDeleteCancel").onclick = close;
-    document.getElementById("empDeleteClose").onclick = close;
-
-    confirmBtn.onclick = async () => {
-      try {
-        await employeeDelete(id);
-        await refreshEmployeesUI(E);
-      } catch (err) {
-        console.error(err);
-        showBanner(E, `<b>Errore</b>: ${escapeHtml(err?.message || String(err))}`, "error");
-      }
-      close();
-    };
+    try {
+      const res = await employeeDelete(id);
+      const freed = Number(res?.freed_slots || 0);
+      showToast(freed ? `«${name}» eliminato · ${(freed / 2).toLocaleString("it-IT")} ore di turno liberate` : `«${name}» eliminato`);
+    } catch (err) {
+      showToast(`Eliminazione non riuscita: ${String(err?.message || err).replace(/^\w*Error:\s*/, "")}`, "err");
+    }
+    await refreshEmployeesUI(E);
+    await loadEmployeesFromDb();
   }
 
   window.initEmployees = initEmployees;

@@ -122,3 +122,28 @@ def test_squads_single_table_wins_over_old_week_copy(tmp_path):
     # la settimana A deve vedere la tabella unica attuale, non la sua copia vecchia
     assert db.squads_week_get("2026-05-05")["1"]["morning"]["Cassa"] == 3
     assert db.squads_week_get("2026-06-30")["1"]["morning"]["Cassa"] == 3
+
+
+def test_employee_delete_frees_future_shifts_and_keeps_history(tmp_path):
+    db = _db(tmp_path)
+    a = db.employee_create({"name": "Anna"})
+    b = db.employee_create({"name": "Bruno"})
+    # settimana passata e settimana futura, entrambe con Anna
+    db.overrides_bulk_save("2026-05-05", [
+        {"day_index": 1, "role": "Cassa", "time_label": "10:00", "employee_ids": [a]},
+    ])
+    db.overrides_bulk_save("2026-06-02", [
+        {"day_index": 1, "role": "Cassa", "time_label": "10:00", "employee_ids": [a, b]},
+        {"day_index": 2, "role": "Bar", "time_label": "18:00", "employee_ids": [a]},
+    ])
+    usage = db.employee_usage(a, "2026-06-02")
+    assert usage == {"future_slots": 2, "future_weeks": 1, "past_weeks": 1}
+
+    freed = db.employee_delete(a, from_week_id="2026-06-02")
+    assert freed == 2
+    assert all(e["id"] != a for e in db.employees_list())
+    # futuro: Anna tolta, Bruno resta, la cella rimasta vuota sparisce
+    fut = db.overrides_week_get("2026-06-02")
+    assert fut == [dict(fut[0], employee_ids=[b])] and len(fut) == 1
+    # passato: storico invariato
+    assert db.overrides_week_get("2026-05-05")[0]["employee_ids"] == [a]

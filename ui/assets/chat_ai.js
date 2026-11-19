@@ -116,12 +116,12 @@ function _chatBuildContext() {
         if (mIds.length) turni.push({
           giorno: dayName, data: dataStr, fascia: 'mattina (08-16)',
           ruolo: role,
-          dipendenti: mIds.map(id => getEmployeeById(id)?.label || `ID:${id}`)
+          dipendenti: mIds.map(id => employeeLabel(id))
         });
         if (eIds.length) turni.push({
           giorno: dayName, data: dataStr, fascia: 'pomeriggio (16-24)',
           ruolo: role,
-          dipendenti: eIds.map(id => getEmployeeById(id)?.label || `ID:${id}`)
+          dipendenti: eIds.map(id => employeeLabel(id))
         });
       });
     });
@@ -373,7 +373,7 @@ function _chatUpdateCtxBar() {
   const weekEl = document.getElementById('chatAiCtxWeek');
   const infoEl = document.getElementById('chatAiCtxInfo');
   if (weekEl && typeof currentWeekStart !== 'undefined' && currentWeekStart) {
-    weekEl.textContent = weekKeyOf(currentWeekStart);
+    weekEl.textContent = weekRangeText(currentWeekStart);
   }
   if (infoEl && Array.isArray(employees)) {
     const hasAvail = !!(window._lastAvailabilityPreview?.days?.length);

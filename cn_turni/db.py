@@ -532,9 +532,65 @@ class Db:
 
             return len(emp_rows)
 
-    def employee_delete(self, emp_id: int) -> None:
+    @staticmethod
+    def _ids_of(raw: Optional[str]) -> List[int]:
+        try:
+            return [int(x) for x in (json.loads(raw) if raw else [])]
+        except (ValueError, TypeError):
+            return []
+
+    def employee_usage(self, emp_id: int, from_week_id: str) -> Dict[str, int]:
+        """Mezz'ore di turno e settimane della persona da `from_week_id` in avanti, e settimane passate."""
+        emp_id = int(emp_id)
+        future_slots, future_weeks, past_weeks = 0, set(), set()
         with self._connect() as conn:
-            conn.execute("DELETE FROM employees WHERE id=?", (int(emp_id),))
+            for r in conn.execute("SELECT week_id, employee_ids FROM schedule_override").fetchall():
+                if emp_id not in self._ids_of(r["employee_ids"]):
+                    continue
+                if r["week_id"] >= from_week_id:
+                    future_slots += 1
+                    future_weeks.add(r["week_id"])
+                else:
+                    past_weeks.add(r["week_id"])
+        return {"future_slots": future_slots, "future_weeks": len(future_weeks), "past_weeks": len(past_weeks)}
+
+    def employee_delete(self, emp_id: int, from_week_id: Optional[str] = None) -> int:
+        """
+        Elimina il dipendente e, nella stessa transazione, lo toglie dai turni dalla settimana
+        `from_week_id` in avanti (le settimane passate restano come storico).
+        Senza questa pulizia i turni restavano con un id senza nome, contati nella copertura.
+        Restituisce quante mezz'ore di turno sono state liberate.
+        """
+        emp_id = int(emp_id)
+        freed = 0
+        with self._connect() as conn:
+            if from_week_id:
+                rows = conn.execute(
+                    "SELECT week_id, day_index, role, time_label, employee_ids "
+                    "FROM schedule_override WHERE week_id >= ?",
+                    (from_week_id,),
+                ).fetchall()
+                for r in rows:
+                    ids = self._ids_of(r["employee_ids"])
+                    if emp_id not in ids:
+                        continue
+                    rest = [i for i in ids if i != emp_id]
+                    key = (r["week_id"], r["day_index"], r["role"], r["time_label"])
+                    if rest:
+                        conn.execute(
+                            "UPDATE schedule_override SET employee_ids=?, updated_at=datetime('now') "
+                            "WHERE week_id=? AND day_index=? AND role=? AND time_label=?",
+                            (json.dumps(rest), *key),
+                        )
+                    else:
+                        conn.execute(
+                            "DELETE FROM schedule_override WHERE week_id=? AND day_index=? AND role=? AND time_label=?",
+                            key,
+                        )
+                    freed += 1
+            conn.execute("DELETE FROM permanent_week WHERE employee_id=?", (emp_id,))
+            conn.execute("DELETE FROM employees WHERE id=?", (emp_id,))
+        return freed
 
     # ---------- Permanent week ----------
     def permanent_week_get(self, week_id: str) -> List[Dict[str, Any]]:

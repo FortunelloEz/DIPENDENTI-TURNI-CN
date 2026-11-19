@@ -10,6 +10,7 @@ from cn_turni.services.excel_export import build_excel_from_export, build_excel_
 import webview
 import base64
 import os
+from datetime import date, timedelta
 
 class Api:
     def __init__(self, db_path: Optional[str] = None):
@@ -112,8 +113,19 @@ class Api:
     def employee_update(self, payload: Dict[str, Any]) -> None:
         self.db.employee_update(payload)
 
-    def employee_delete(self, emp_id: int) -> None:
-        self.db.employee_delete(int(emp_id))
+    @staticmethod
+    def _current_week_id() -> str:
+        """week_id della settimana in corso (lunedì di oggi -> martedì, come week_id_from_ui_weekkey)."""
+        today = date.today()
+        return week_id_from_ui_weekkey((today - timedelta(days=today.weekday())).isoformat())
+
+    def employee_usage(self, emp_id: int) -> Dict[str, int]:
+        """Turni della persona da questa settimana in avanti (per la conferma di eliminazione)."""
+        return self.db.employee_usage(int(emp_id), self._current_week_id())
+
+    def employee_delete(self, emp_id: int) -> Dict[str, Any]:
+        freed = self.db.employee_delete(int(emp_id), from_week_id=self._current_week_id())
+        return {"ok": True, "freed_slots": freed}
 
     def employees_bulk_set_skill(self, role: str, value: int) -> Dict[str, Any]:
         count = self.db.employees_bulk_set_skill(role, value)
