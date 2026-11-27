@@ -24,3 +24,8 @@ data/exports/
 
 # Node (solo strumenti di sviluppo)
 node_modules/
+
+# File di lavoro di Claude Code (restano solo in locale)
+CLAUDE.md
+chat_memory_claude.md
+.claude/
